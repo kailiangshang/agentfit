@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "status": "selection_pending_user_approval",
+  "selection_policy": "docs/internal/cross-scenario-project-suite/v0-selection-matrix.md",
+  "project_ids": [],
+  "transfer_pairs": []
+}
+

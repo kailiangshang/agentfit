@@ -15,6 +15,11 @@
 - [AgentFit 总体执行路线图](plans/2026-08-07-agentfit-execution-roadmap.md)
 - [Phase 1：证据基础与 v0 项目选择](plans/2026-08-07-agentfit-phase1-evidence-foundation-plan.md)
 
+## 内部事实源
+
+- [证据研究规则](internal/evidence-research/README.md)
+- [跨场景 ProjectCase 契约](internal/cross-scenario-project-suite/project-case-template.md)
+
 ## 参考材料
 
 - [《新智基座》Agent Infra 参赛手册](reference/新智基座-参赛手册.pdf)：比赛要求的原始材料。
