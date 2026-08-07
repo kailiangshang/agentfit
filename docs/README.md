@@ -8,7 +8,12 @@
 
 ## 已确认设计
 
-- [AgentFit 证据研究、成长机制与参赛交付设计](design/2026-08-07-agentfit-evidence-and-submission-design.md)：定义跨场景项目集、元团队成长、初赛材料包和双版本文档治理；待用户完成书面复核后进入执行计划。
+- [AgentFit 证据研究、成长机制与参赛交付设计](design/2026-08-07-agentfit-evidence-and-submission-design.md)：用户已批准的执行规划基线，定义跨场景项目集、元团队成长、初赛材料包和双版本文档治理。
+
+## 执行计划
+
+- [AgentFit 总体执行路线图](plans/2026-08-07-agentfit-execution-roadmap.md)
+- [Phase 1：证据基础与 v0 项目选择](plans/2026-08-07-agentfit-phase1-evidence-foundation-plan.md)
 
 ## 参考材料
 
