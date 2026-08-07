@@ -6,6 +6,10 @@
 
 - [AgentFit 整体架构与方法论](architecture/agentfit-methodology.md)：当前唯一有效的总体设计基线。
 
+## 已确认设计
+
+- [AgentFit 证据研究、成长机制与参赛交付设计](design/2026-08-07-agentfit-evidence-and-submission-design.md)：定义跨场景项目集、元团队成长、初赛材料包和双版本文档治理；待用户完成书面复核后进入执行计划。
+
 ## 参考材料
 
 - [《新智基座》Agent Infra 参赛手册](reference/新智基座-参赛手册.pdf)：比赛要求的原始材料。
