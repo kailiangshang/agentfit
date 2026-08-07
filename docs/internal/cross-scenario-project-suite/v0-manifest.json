@@ -1,8 +1,23 @@
 {
   "schema_version": "1.0.0",
-  "status": "selection_pending_user_approval",
+  "status": "proposed_for_user_approval",
   "selection_policy": "docs/internal/cross-scenario-project-suite/v0-selection-matrix.md",
-  "project_ids": [],
-  "transfer_pairs": []
+  "project_ids": [
+    "swe-bench",
+    "aiopslab",
+    "itbench",
+    "tau-bench",
+    "gaia",
+    "contract-nli"
+  ],
+  "transfer_pairs": [
+    {
+      "transfer_id": "aiopslab-to-itbench",
+      "source_project_id": "aiopslab",
+      "target_project_id": "itbench",
+      "reusable_prior": "operational task decomposition, trace and evaluator schema, fault-injection taxonomy, safe-action boundaries, and candidate-graph initialization",
+      "expected_cold_start_benefit": "fewer architecture or prompt trials, evaluation episodes, or token and tool cost before reaching an accepted ITBench candidate than target-from-scratch search",
+      "holdout_non_regression_condition": "under the same budget on a sealed ITBench holdout, task success, safety, and audit completeness must each be no worse than the target-from-scratch candidate"
+    }
+  ]
 }
-
