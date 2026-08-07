@@ -160,6 +160,7 @@ CapabilitySemanticSpec = {
   capability_id,          稳定标识和版本
   capability_type,        Rule / LLM / Skill / Tool / MCP / Human / State
   purpose,                能力解决的问题
+  applicability,          适用任务类型、场景域与已知边界
   input_contract,         输入 Schema 与前置条件
   output_contract,        输出 Schema 与质量承诺
   trigger_condition,      适用条件与门控规则
@@ -178,22 +179,59 @@ CapabilitySemanticSpec = {
 
 Skill、MCP 和 Memory 可以是私有或共享资源。共享资源不会自动合并 Agent，私有资源也不会自动生成 Agent。
 
-### 4.3 比赛 Skill 模板到 ML 语义的映射
+比赛手册中的 Skill 清单只是构建能力语义的一类原始输入，可以按以下方式适配到 `CapabilitySemanticSpec`：
 
-比赛手册中的 Skill 清单可以作为能力语义的原始来源：
+| 比赛 Skill 字段 | CapabilitySemanticSpec 字段 |
+|---|---|
+| 使用场景 | purpose、applicability |
+| 输入参数 | input_contract |
+| 输出结果 | output_contract |
+| 调用条件 | trigger_condition |
+| 依赖工具 / 系统 | dependencies |
+| 失败处理 | failure_modes、recovery |
+| 权限与安全 | permissions、side_effects、scope_policy |
+| 复用价值 | reuse_value |
 
-| Skill 描述 | AgentFit 语义 | ML / 搜索语义 |
+这个适配只负责把比赛要求的 Skill 描述纳入能力注册表，不能代表 AgentFit 到 ML 的整体方法映射。
+
+### 4.3 AgentFit 整体方法到 ML、NAS 与 Meta-learning 的映射
+
+AgentFit 借用的不是某个 Skill 的 ML 类比，而是一套覆盖问题定义、搜索空间、候选结构、局部适配、全局选择和跨任务学习的完整方法论：
+
+| AgentFit 方法对象 | ML / NAS / Meta-learning 语义 | 映射说明 |
 |---|---|---|
-| 使用场景 | purpose、适用域 | 数据域与适用分布 |
-| 输入参数 | input_contract | 输入空间 X |
-| 输出结果 | output_contract | 目标或中间表示 Y |
-| 调用条件 | trigger_condition | 门控函数 |
-| 依赖工具 | dependencies | 特征源与行动接口 |
-| 失败处理 | failure_modes、recovery | 拒识、重试和降级 |
-| 权限与安全 | permissions、side_effects | 搜索约束 |
-| 复用价值 | reuse_value | 迁移能力与先验价值 |
+| 业务材料、问题和历史案例 | 原始数据与问题来源 | 尚未形成可训练、可评测对象的原始材料 |
+| TaskSemanticSpec | 学习问题与评测协议 | 定义输入空间 X、目标输出 Y、任务分布、指标、损失、约束和验收阈值 |
+| 训练样例与留出样例 | Train / Validation / Test Split | 候选配置只使用训练样例，留出样例用于选择和审计 |
+| CapabilitySemanticRegistry | 算子集合与假设空间 | Rule、LLM、Skill、Tool、MCP、Human 和 State 构成可搜索能力集合 |
+| Task–Capability Alignment | 可学习性与特征/算子覆盖分析 | 判断现有能力是否足以表达任务，以及缺口、冲突和不可观测部分 |
+| 基础能力图 G | 计算图与模型架构 | 节点表示能力操作，边表示数据、控制、反馈和状态依赖 |
+| DAG 主干 | 前馈计算图 | 表示有明确推进顺序和终止路径的主任务结构 |
+| 局部 SCC | 循环网络或迭代精化模块 | 表示反思、工具反馈、验证和有界协商循环 |
+| Agent 分区 Π | 模块划分与控制边界搜索 | 决定哪些子图拥有独立策略、状态、权限、生命周期和责任；不是传统 ML 中完全等价的单一对象 |
+| Agentize | 架构变换算子 | 将普通能力子图提升为可独立决策和负责的模块，是 AgentFit 特有的搜索操作 |
+| 参数 θ | 参数、超参数与配置 | 包括模型、Prompt、阈值、工具配置、预算、重试和局部策略 |
+| 共享范围 ρ | 参数/状态共享策略 | 决定 Skill、MCP、Memory、数据和上下文的私有、团队、项目或全局范围 |
+| Candidate = (G, Π, θ, ρ) | 一个完整候选模型 | 同时包含结构、模块边界、配置与共享策略 |
+| 内循环 | Task Adaptation / Parameter Optimization | 在外部契约和 Agent 边界不变时优化局部子图与配置 |
+| 外循环 | Architecture Search / Model Selection | 根据留出表现改变全局图、Agent 分区和共享结构 |
+| EvaluationReport | 验证指标与模型选择证据 | 比较正确性、泛化、成本、风险、复杂度和可审计性 |
+| Project Dossier 与 Trace | Experiment Tracking 与 Provenance | 记录数据、候选、配置、运行、审批和结论的完整来源链 |
+| MetaAsset 与搜索先验 | Meta-parameters、Initialization 与 Transfer Prior | 从多个项目沉淀初始架构、Agentize 条件、能力组合和失败模式 |
+| DeploymentBundle / RejectionReport | 模型部署、拒识或 No-deploy 决策 | 合法结果包括部署、部分自动化、保留人工和拒绝自动化 |
 
-该映射让 ML 方法论作用于结构化对象，而不是停留在修辞类比。
+整体映射可以压缩为：
+
+```text
+任务语义定义：优化什么
+能力语义定义：可以用什么搜索
+能力图与 Agent 分区定义：候选长什么样
+内循环定义：如何让固定候选变好
+外循环定义：如何让整个任务结果变好
+Meta-learning 定义：如何让下一类任务从更好的先验开始
+```
+
+因此，Skill 只是能力搜索空间中的一种可复用算子；任务语义、能力图、Agent 分区、内外循环和跨项目先验共同构成 AgentFit 的 ML 方法论映射。
 
 ### 4.4 任务—能力对齐
 
