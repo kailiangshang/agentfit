@@ -4,3 +4,6 @@ __pycache__/
 dist/
 build/
 .env
+
+# Local simulation sandbox; never part of the formal AgentFit implementation.
+/demo/
