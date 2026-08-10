@@ -1,33 +1,63 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
-  <p class="eyebrow">06 / 12 · OFFICIAL CASE DEEP DIVE</p>
-  <h1 class="title">软件研发案例先拆任务，不先拆 Agent。</h1>
-  <p class="subtitle">设计模拟，非运行证据：沿用官网五段流程，再补齐可验收输出与责任边界。</p><div class="top-rule"></div>
+  <p class="eyebrow">06 / 12 · 双层优化</p>
+  <h1 class="title">内循环套外循环——和 NAS 同构。</h1>
+  <p class="subtitle">bi-level optimization · NAS 核心范式 · AgentFit 搜索引擎骨架</p><div class="top-rule"></div>
 
-  <div class="line" style="left:118px;top:320px;width:1038px;background:#102a43;height:4px;"></div>
-  <div class="node" style="left:92px;top:292px;border-color:#426b86;"><p style="color:#426b86;">01</p></div>
-  <div class="node" style="left:322px;top:292px;border-color:#426b86;"><p style="color:#426b86;">02</p></div>
-  <div class="node" style="left:552px;top:292px;border-color:#f26b4b;"><p style="color:#f26b4b;">03</p></div>
-  <div class="node" style="left:782px;top:292px;border-color:#d6a43b;"><p style="color:#a5781c;">04</p></div>
-  <div class="node" style="left:1012px;top:292px;border-color:#1a8d85;"><p style="color:#1a8d85;">05</p></div>
-  <p class="section-title" style="left:78px;top:374px;width:150px;text-align:center;font-size:18px;">多源聚合</p>
-  <p class="section-title" style="left:308px;top:374px;width:150px;text-align:center;font-size:18px;">代码定位</p>
-  <p class="section-title" style="left:538px;top:374px;width:150px;text-align:center;font-size:18px;">修复生成</p>
-  <p class="section-title" style="left:768px;top:374px;width:150px;text-align:center;font-size:18px;">验证发布</p>
-  <p class="section-title" style="left:998px;top:374px;width:150px;text-align:center;font-size:18px;">经验沉淀</p>
-  <p class="small-copy" style="left:76px;top:416px;width:154px;text-align:center;">Issue / 日志 / 反馈<br>去重问题单</p>
-  <p class="small-copy" style="left:306px;top:416px;width:154px;text-align:center;">候选文件<br>影响面报告</p>
-  <p class="small-copy" style="left:536px;top:416px;width:154px;text-align:center;">补丁候选<br>变更解释</p>
-  <p class="small-copy" style="left:766px;top:416px;width:154px;text-align:center;">冻结测试<br>审批与发布</p>
-  <p class="small-copy" style="left:996px;top:416px;width:154px;text-align:center;">复盘条目<br>研发资产</p>
+  <div class="panel panel-dark" style="left:72px;top:226px;width:640px;height:360px;border-radius:18px;border-color:#f26b4b;"></div>
+  <p class="label" style="left:92px;top:244px;color:#f6aa92;">L5 外循环 · 架构搜索</p>
+  <p class="small-copy mono" style="left:92px;top:264px;width:600px;color:#c6d3dd;font-size:10px;">A* = argminA [ L_val(A,θ*A) + complexity + cost + risk + unobservability ]</p>
 
-  <div class="panel soft-teal" style="left:72px;top:514px;width:534px;height:108px;border-radius:16px;"></div>
-  <p class="label" style="left:98px;top:534px;color:#1a8d85;">MUST DELIVER</p>
-  <p class="body-copy" style="left:98px;top:562px;width:470px;font-size:15px;">定位 / 影响报告 · 补丁候选 · 测试证据 · 审批记录 · 可追溯复盘</p>
-  <div class="panel soft-coral" style="left:626px;top:514px;width:582px;height:108px;border-radius:16px;"></div>
-  <p class="label" style="left:652px;top:534px;color:#c64c32;">MUST NOT ASSUME</p>
-  <p class="body-copy" style="left:652px;top:562px;width:520px;font-size:15px;">不预设多 Agent 更强 · 不允许无测试发布 · 不把纸面设计当运行证据</p>
-  <div class="status" style="left:484px;top:636px;width:312px;height:28px;"><p>TaskSemanticSpec · versioned</p></div>
-  <p class="footer-left">AGENTFIT · TASK FIRST</p><p class="footer-right">设计模拟 · 非运行证据 · 06</p>
+  <div class="panel panel-dark" style="left:104px;top:296px;width:576px;height:248px;border-radius:14px;border-color:#1a8d85;"></div>
+  <p class="label" style="left:124px;top:314px;color:#74d0c7;">L4 内循环 · 参数优化(固定 A)</p>
+  <p class="small-copy mono" style="left:124px;top:334px;width:540px;color:#c6d3dd;font-size:10px;">θ*A = argminθ L_adaptation(A, θ)</p>
+
+  <p class="label" style="left:124px;top:360px;color:#74d0c7;font-size:10px;">可调对象:</p>
+  <div class="pill" style="left:124px;top:376px;width:108px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">Prompt</p></div>
+  <div class="pill" style="left:240px;top:376px;width:92px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">模型</p></div>
+  <div class="pill" style="left:340px;top:376px;width:92px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">阈值</p></div>
+  <div class="pill" style="left:440px;top:376px;width:108px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">工具配置</p></div>
+  <div class="pill" style="left:556px;top:376px;width:108px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">检索参数</p></div>
+  <div class="pill" style="left:124px;top:418px;width:108px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">重试策略</p></div>
+  <div class="pill" style="left:240px;top:418px;width:92px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">规则权重</p></div>
+  <div class="pill" style="left:340px;top:418px;width:92px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">Skill 选择</p></div>
+  <div class="pill" style="left:440px;top:418px;width:108px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">上下文压缩</p></div>
+  <div class="pill" style="left:556px;top:418px;width:108px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">局部拓扑</p></div>
+
+  <div class="line" style="left:124px;top:466px;width:540px;background:#28516d;"></div>
+  <p class="small-copy" style="left:124px;top:478px;width:540px;color:#74d0c7;font-size:10px;font-weight:700;">不得:创建/销毁 Agent · 扩权 · 改验收标准 · 改责任边界</p>
+
+  <p class="label" style="left:124px;top:506px;color:#f6aa92;font-size:10px;">外循环可改对象(改 G 的结构):</p>
+  <div class="pill" style="left:124px;top:522px;width:96px;background:#132f47;border-color:#f26b4b;"><p style="color:#ffffff;font-size:10px;">Agentize</p></div>
+  <div class="pill" style="left:228px;top:522px;width:96px;background:#132f47;border-color:#f26b4b;"><p style="color:#ffffff;font-size:10px;">拆分/合并</p></div>
+  <div class="pill" style="left:332px;top:522px;width:96px;background:#132f47;border-color:#f26b4b;"><p style="color:#ffffff;font-size:10px;">增删 SCC</p></div>
+  <div class="pill" style="left:436px;top:522px;width:110px;background:#132f47;border-color:#f26b4b;"><p style="color:#ffffff;font-size:10px;">改 DAG 拓扑</p></div>
+  <div class="pill" style="left:554px;top:522px;width:124px;background:#132f47;border-color:#f26b4b;"><p style="color:#ffffff;font-size:10px;">无↔单↔多迁移</p></div>
+
+  <div class="panel soft-teal" style="left:736px;top:226px;width:468px;height:172px;border-radius:18px;"></div>
+  <p class="label" style="left:756px;top:244px;color:#1a8d85;">数据隔离(ML 标准)</p>
+  <p class="small-copy" style="left:756px;top:268px;width:430px;font-size:10px;font-weight:700;color:#1a8d85;">单项目:</p>
+  <div class="pill" style="left:756px;top:286px;width:120px;border-color:#1a8d85;"><p style="font-size:10px;">adaptation</p></div>
+  <p style="position:absolute;left:884px;top:290px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+  <div class="pill" style="left:908px;top:286px;width:100px;border-color:#1a8d85;"><p style="font-size:10px;">validation</p></div>
+  <p style="position:absolute;left:1018px;top:290px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+  <div class="pill" style="left:1042px;top:286px;width:140px;border-color:#1a8d85;"><p style="font-size:10px;">holdout</p></div>
+  <p class="small-copy" style="left:756px;top:326px;width:430px;font-size:10px;">候选只接触 adaptation · holdout 独立选择 · 不随机切分,按仓库/环境/任务族隔离</p>
+  <div class="line" style="left:756px;top:360px;width:430px;background:#1a8d85;"></div>
+  <p class="small-copy" style="left:756px;top:370px;width:430px;font-size:10px;font-weight:700;color:#1a8d85;">跨项目(L6):</p>
+  <p class="small-copy" style="left:756px;top:386px;width:430px;font-size:10px;">meta-train → meta-validation → meta-test</p>
+
+  <div class="panel soft-amber" style="left:736px;top:412px;width:468px;height:174px;border-radius:18px;"></div>
+  <p class="label" style="left:756px;top:430px;color:#a5781c;">停止规则(满足任一)</p>
+  <div class="pill" style="left:756px;top:448px;width:210px;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">① 达阈值且无更简候选</p></div>
+  <div class="pill" style="left:976px;top:448px;width:210px;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">② 连续若干代无改进</p></div>
+  <div class="pill" style="left:756px;top:486px;width:210px;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">③ 预算/时间/复杂度上限</p></div>
+  <div class="pill" style="left:976px;top:486px;width:210px;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">④ 能力缺口无法补齐</p></div>
+  <div class="pill" style="left:756px;top:524px;width:210px;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">⑤ holdout 不可接受风险</p></div>
+  <div class="pill" style="left:976px;top:524px;width:210px;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">⑥ 责任无法安全转移</p></div>
+  <div class="pill" style="left:866px;top:556px;width:210px;border-color:#f26b4b;"><p style="font-size:10px;color:#c64c32;">⑦ 新 Agent 成本 > 收益</p></div>
+
+  <p class="small-copy" style="left:72px;top:600px;width:1136px;text-align:center;font-size:11px;color:#a5781c;font-weight:700;">停止 ≠ 失败 → 输出:部署 / 降级 / 部分自动化 / 保留人工 / 拒绝自动化(五种合法结论)</p>
+  <p class="footer-left">AGENTFIT · 双层优化</p><p class="footer-right">方法论 · 已收敛 · 06</p>
 </body></html>

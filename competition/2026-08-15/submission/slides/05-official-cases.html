@@ -1,48 +1,97 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
-  <p class="eyebrow">05 / 12 · OFFICIAL REFERENCE CASES</p>
-  <h1 class="title">官网四类案例换了业务外壳，没有换闭环骨架。</h1>
-  <p class="subtitle">官网参考案例用于场景启发；AgentFit 先识别共同任务结构，再决定是否需要 Agent。</p><div class="top-rule"></div>
+  <p class="eyebrow">05 / 12 · 搜索空间</p>
+  <h1 class="title">无/单/多 Agent = 同一图上 Agentize 不同程度。</h1>
+  <p class="subtitle">不是三种系统,是同一能力图 G 上,对哪些子图施加 Π 分区(身份/决策/责任)的不同选择。</p><div class="top-rule"></div>
 
-  <p class="label" style="left:340px;top:218px;width:130px;text-align:center;">聚合输入</p>
-  <p class="label" style="left:520px;top:218px;width:130px;text-align:center;">定位判断</p>
-  <p class="label" style="left:700px;top:218px;width:130px;text-align:center;">生成处置</p>
-  <p class="label" style="left:880px;top:218px;width:130px;text-align:center;">验证确认</p>
-  <p class="label" style="left:1060px;top:218px;width:130px;text-align:center;">经验沉淀</p>
+  <p class="label" style="left:72px;top:226px;color:#53697c;font-size:10px;">同一任务的能力图 G · DAG 主干(横向) + 局部 SCC(反思循环) + Π 分区(虚线 = Agentize)</p>
+  <div class="line" style="left:72px;top:248px;width:1136px;background:#d6ddd9;"></div>
 
-  <div style="position:absolute;left:72px;top:254px;width:1136px;height:70px;border-radius:14px;background:#dceeea;"></div>
-  <p class="section-title" style="left:94px;top:275px;width:220px;color:#1a8d85;font-size:18px;">零人工运维</p>
-  <div class="pill" style="left:342px;top:272px;width:122px;"><p>告警</p></div><p style="position:absolute;left:476px;top:267px;margin:0;font-size:26px;color:#1a8d85;">→</p>
-  <div class="pill" style="left:522px;top:272px;width:122px;"><p>根因</p></div><p style="position:absolute;left:656px;top:267px;margin:0;font-size:26px;color:#1a8d85;">→</p>
-  <div class="pill" style="left:702px;top:272px;width:122px;"><p>修复</p></div><p style="position:absolute;left:836px;top:267px;margin:0;font-size:26px;color:#1a8d85;">→</p>
-  <div class="pill" style="left:882px;top:272px;width:122px;"><p>恢复</p></div><p style="position:absolute;left:1016px;top:267px;margin:0;font-size:26px;color:#1a8d85;">→</p>
-  <div class="pill" style="left:1062px;top:272px;width:122px;"><p>复盘</p></div>
+  <div class="panel soft-blue" style="left:72px;top:262px;width:272px;height:152px;border-radius:12px;"></div>
+  <p class="label" style="left:92px;top:278px;color:#426b86;">无 Agent · Π = ∅</p>
+  <p class="small-copy" style="left:92px;top:296px;width:240px;font-size:9px;color:#426b86;">所有节点在同一分区,无独立身份</p>
 
-  <div style="position:absolute;left:72px;top:338px;width:1136px;height:70px;border-radius:14px;background:#f8ddd4;"></div>
-  <p class="section-title" style="left:94px;top:359px;width:220px;color:#c64c32;font-size:18px;">智能客服自主闭环</p>
-  <div class="pill" style="left:342px;top:356px;width:122px;border-color:#f26b4b;"><p style="color:#c64c32;">会话</p></div><p style="position:absolute;left:476px;top:351px;margin:0;font-size:26px;color:#f26b4b;">→</p>
-  <div class="pill" style="left:522px;top:356px;width:122px;border-color:#f26b4b;"><p style="color:#c64c32;">意图</p></div><p style="position:absolute;left:656px;top:351px;margin:0;font-size:26px;color:#f26b4b;">→</p>
-  <div class="pill" style="left:702px;top:356px;width:122px;border-color:#f26b4b;"><p style="color:#c64c32;">方案</p></div><p style="position:absolute;left:836px;top:351px;margin:0;font-size:26px;color:#f26b4b;">→</p>
-  <div class="pill" style="left:882px;top:356px;width:122px;border-color:#f26b4b;"><p style="color:#c64c32;">客户确认</p></div><p style="position:absolute;left:1016px;top:351px;margin:0;font-size:26px;color:#f26b4b;">→</p>
-  <div class="pill" style="left:1062px;top:356px;width:122px;border-color:#f26b4b;"><p style="color:#c64c32;">知识</p></div>
+  <div style="position:absolute;left:92px;top:320px;width:44px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #426b86;"><p style="margin:1px 0 0;text-align:center;font-size:8px;color:#426b86;">去重</p></div>
+  <p style="position:absolute;left:140px;top:322px;margin:0;font-size:11px;color:#53697c;">→</p>
+  <div style="position:absolute;left:156px;top:320px;width:44px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:1px 0 0;text-align:center;font-size:8px;color:#1a8d85;">检索</p></div>
+  <p style="position:absolute;left:204px;top:322px;margin:0;font-size:11px;color:#53697c;">→</p>
+  <div style="position:absolute;left:220px;top:320px;width:44px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #f26b4b;"><p style="margin:1px 0 0;text-align:center;font-size:8px;color:#f26b4b;">生成</p></div>
+  <p style="position:absolute;left:268px;top:322px;margin:0;font-size:11px;color:#53697c;">→</p>
+  <div style="position:absolute;left:284px;top:320px;width:44px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:1px 0 0;text-align:center;font-size:8px;color:#1a8d85;">测试</p></div>
 
-  <div style="position:absolute;left:72px;top:422px;width:1136px;height:70px;border-radius:14px;background:#dfeaf2;"></div>
-  <p class="section-title" style="left:94px;top:443px;width:220px;color:#102a43;font-size:18px;">软件研发全流程协同</p>
-  <div class="pill" style="left:342px;top:440px;width:122px;border-color:#426b86;"><p style="color:#426b86;">缺陷</p></div><p style="position:absolute;left:476px;top:435px;margin:0;font-size:26px;color:#426b86;">→</p>
-  <div class="pill" style="left:522px;top:440px;width:122px;border-color:#426b86;"><p style="color:#426b86;">代码</p></div><p style="position:absolute;left:656px;top:435px;margin:0;font-size:26px;color:#426b86;">→</p>
-  <div class="pill" style="left:702px;top:440px;width:122px;border-color:#426b86;"><p style="color:#426b86;">补丁</p></div><p style="position:absolute;left:836px;top:435px;margin:0;font-size:26px;color:#426b86;">→</p>
-  <div class="pill" style="left:882px;top:440px;width:122px;border-color:#426b86;"><p style="color:#426b86;">测试发布</p></div><p style="position:absolute;left:1016px;top:435px;margin:0;font-size:26px;color:#426b86;">→</p>
-  <div class="pill" style="left:1062px;top:440px;width:122px;border-color:#426b86;"><p style="color:#426b86;">研发资产</p></div>
+  <p class="small-copy" style="left:92px;top:354px;width:240px;font-size:9px;color:#426b86;">DAG 主干 · LLM 不决定下一步</p>
+  <p class="small-copy" style="left:92px;top:372px;width:240px;font-size:9px;font-weight:700;color:#426b86;">无 SCC · 无 Π</p>
 
-  <div style="position:absolute;left:72px;top:506px;width:1136px;height:70px;border-radius:14px;background:#f3e5b8;"></div>
-  <p class="section-title" style="left:94px;top:527px;width:220px;color:#a5781c;font-size:18px;">金融风控与理赔自动化</p>
-  <div class="pill" style="left:342px;top:524px;width:122px;border-color:#d6a43b;"><p style="color:#a5781c;">风险</p></div><p style="position:absolute;left:476px;top:519px;margin:0;font-size:26px;color:#d6a43b;">→</p>
-  <div class="pill" style="left:522px;top:524px;width:122px;border-color:#d6a43b;"><p style="color:#a5781c;">影响</p></div><p style="position:absolute;left:656px;top:519px;margin:0;font-size:26px;color:#d6a43b;">→</p>
-  <div class="pill" style="left:702px;top:524px;width:122px;border-color:#d6a43b;"><p style="color:#a5781c;">处置</p></div><p style="position:absolute;left:836px;top:519px;margin:0;font-size:26px;color:#d6a43b;">→</p>
-  <div class="pill" style="left:882px;top:524px;width:122px;border-color:#d6a43b;"><p style="color:#a5781c;">合规审计</p></div><p style="position:absolute;left:1016px;top:519px;margin:0;font-size:26px;color:#d6a43b;">→</p>
-  <div class="pill" style="left:1062px;top:524px;width:122px;border-color:#d6a43b;"><p style="color:#a5781c;">风控资产</p></div>
+  <p style="position:absolute;left:354px;top:330px;margin:0;font-size:20px;color:#1a8d85;font-weight:800;">+SCC</p>
 
-  <p class="small-copy mono" style="left:124px;top:610px;width:1032px;text-align:center;font-size:12px;">来源：GOAI Agent Infra 官网 · 核验日期 2026-08-10 · https://goaihz.com/tracks?track=infra</p>
-  <p class="footer-left">AGENTFIT · OFFICIAL CASE MAPPING</p><p class="footer-right" style="right:72px;">官网参考 · 非运行证据 · 05</p>
+  <div class="panel soft-teal" style="left:416px;top:262px;width:272px;height:152px;border-radius:12px;"></div>
+  <p class="label" style="left:436px;top:278px;color:#1a8d85;">加局部 SCC · 仍无 Π</p>
+  <p class="small-copy" style="left:436px;top:296px;width:240px;font-size:9px;color:#1a8d85;">生成-验证-重试反思循环(有界)</p>
+
+  <div style="position:absolute;left:436px;top:320px;width:44px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #426b86;"><p style="margin:1px 0 0;text-align:center;font-size:8px;color:#426b86;">去重</p></div>
+  <p style="position:absolute;left:484px;top:322px;margin:0;font-size:11px;color:#53697c;">→</p>
+  <div style="position:absolute;left:500px;top:320px;width:44px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:1px 0 0;text-align:center;font-size:8px;color:#1a8d85;">检索</p></div>
+  <p style="position:absolute;left:548px;top:322px;margin:0;font-size:11px;color:#53697c;">→</p>
+
+  <div style="position:absolute;left:564px;top:310px;width:92px;height:40px;border:1.5px dashed #f26b4b;border-radius:10px;background:rgba(242,107,75,0.05);"></div>
+  <div style="position:absolute;left:572px;top:318px;width:36px;height:14px;border-radius:7px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:7px;color:#f26b4b;">生成</p></div>
+  <p style="position:absolute;left:612px;top:320px;margin:0;font-size:9px;color:#f26b4b;">↺</p>
+  <div style="position:absolute;left:572px;top:336px;width:36px;height:14px;border-radius:7px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:7px;color:#f26b4b;">验证</p></div>
+
+  <p style="position:absolute;left:660px;top:322px;margin:0;font-size:11px;color:#53697c;">→</p>
+  <div style="position:absolute;left:676px;top:320px;width:0;height:0;"></div>
+
+  <p class="small-copy" style="left:436px;top:372px;width:240px;font-size:9px;font-weight:700;color:#1a8d85;">有 SCC · 无 Π(尚未 Agentize)</p>
+
+  <p style="position:absolute;left:698px;top:330px;margin:0;font-size:18px;color:#f26b4b;font-weight:800;">+Π</p>
+
+  <div class="panel soft-coral" style="left:760px;top:262px;width:220px;height:152px;border-radius:12px;"></div>
+  <p class="label" style="left:780px;top:278px;color:#c64c32;">单 Agent · Π = {A₁}</p>
+  <p class="small-copy" style="left:780px;top:296px;width:200px;font-size:9px;color:#c64c32;">把反思 SCC Agentize 为一个独立主体</p>
+
+  <div style="position:absolute;left:780px;top:318px;width:184px;height:66px;border:2px dashed #f26b4b;border-radius:12px;background:rgba(242,107,75,0.08);"></div>
+  <p class="small-copy" style="left:786px;top:322px;width:170px;font-size:8px;font-weight:700;color:#c64c32;">Π · Agent A₁</p>
+  <div style="position:absolute;left:790px;top:338px;width:34px;height:14px;border-radius:7px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:7px;color:#f26b4b;">定位</p></div>
+  <p style="position:absolute;left:826px;top:340px;margin:0;font-size:8px;color:#f26b4b;">→</p>
+  <div style="position:absolute;left:840px;top:338px;width:34px;height:14px;border-radius:7px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:7px;color:#f26b4b;">生成</p></div>
+  <p style="position:absolute;left:876px;top:340px;margin:0;font-size:9px;color:#f26b4b;">↺</p>
+  <div style="position:absolute;left:790px;top:358px;width:34px;height:14px;border-radius:7px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:7px;color:#f26b4b;">测试</p></div>
+
+  <p class="small-copy" style="left:780px;top:392px;width:200px;font-size:9px;font-weight:700;color:#c64c32;">A₁ 拥有独立身份/决策/责任</p>
+
+  <p style="position:absolute;left:990px;top:330px;margin:0;font-size:18px;color:#f26b4b;font-weight:800;">+Π</p>
+
+  <div class="panel soft-amber" style="left:1052px;top:262px;width:156px;height:152px;border-radius:12px;"></div>
+  <p class="label" style="left:1068px;top:278px;color:#a5781c;">多 Agent</p>
+  <p class="small-copy" style="left:1068px;top:296px;width:128px;font-size:9px;color:#a5781c;">按权限/并行/责任再拆分</p>
+
+  <div style="position:absolute;left:1068px;top:318px;width:60px;height:36px;border:1.5px dashed #f26b4b;border-radius:8px;background:rgba(242,107,75,0.08);"></div>
+  <p class="small-copy" style="left:1072px;top:330px;width:52px;font-size:8px;font-weight:700;color:#c64c32;">Π A₁</p>
+  <div style="position:absolute;left:1074px;top:340px;width:26px;height:10px;border-radius:5px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:6px;color:#f26b4b;">定位</p></div>
+
+  <p style="position:absolute;left:1132px;top:330px;margin:0;font-size:14px;color:#53697c;">⇄</p>
+
+  <div style="position:absolute;left:1148px;top:318px;width:52px;height:36px;border:1.5px dashed #1a8d85;border-radius:8px;background:rgba(26,141,133,0.08);"></div>
+  <p class="small-copy" style="left:1152px;top:330px;width:44px;font-size:8px;font-weight:700;color:#1a8d85;">Π A₂</p>
+  <div style="position:absolute;left:1152px;top:340px;width:22px;height:10px;border-radius:5px;background:#effaf8;border:1px solid #1a8d85;"><p style="margin:0;text-align:center;font-size:6px;color:#1a8d85;">测试</p></div>
+
+  <p class="small-copy" style="left:1068px;top:370px;width:128px;font-size:8px;color:#a5781c;">A₁ 定位/生成 ↔ A₂ 独立验证</p>
+  <p class="small-copy" style="left:1068px;top:392px;width:128px;font-size:9px;font-weight:700;color:#a5781c;">权限/审计隔离</p>
+
+  <div class="line" style="left:72px;top:432px;width:1136px;background:#d6ddd9;"></div>
+
+  <div class="panel panel-dark" style="left:72px;top:448px;width:640px;height:184px;border-radius:14px;border-color:#0b2236;"></div>
+  <p class="label" style="left:92px;top:466px;color:#74d0c7;">复杂度递进(连续搜索空间)</p>
+  <p class="small-copy" style="left:92px;top:490px;width:600px;color:#ffffff;font-size:11px;line-height:1.6;">DAG 主干(保证推进 + 终止)<br>→ 加入 LLM 节点<br>→ 加入局部反馈 SCC(反思/验证/工具反馈)<br>→ Agentize 局部子图(施加 Π)<br>→ 按上下文/权限/并行/责任再拆分 Π<br>→ 多 Agent 协同(多个 Π 分区)</p>
+
+  <div class="panel soft-coral" style="left:736px;top:448px;width:472px;height:88px;border-radius:14px;"></div>
+  <p class="label" style="left:756px;top:466px;color:#c64c32;">Baseline-first 纪律</p>
+  <p class="small-copy" style="left:756px;top:488px;width:432px;font-size:10px;line-height:1.5;">① 从最简 DAG 开始 · ② 局部不足才加 SCC<br>③ 独立决策需求才 Agentize · ④ 单 Agent 遇边界问题才拆分<br>⑤ 选满足门槛的最小充分候选</p>
+
+  <div class="panel soft-amber" style="left:736px;top:548px;width:472px;height:84px;border-radius:14px;"></div>
+  <p class="label" style="left:756px;top:566px;color:#a5781c;">公开校准(SWE-bench)</p>
+  <p class="small-copy" style="left:756px;top:588px;width:432px;font-size:10px;">Agentless(Π=∅) · SWE-agent(Π={A₁}) · MASAI(Π={A₁,A₂,A₃}) · OpenHands(Π 可扩展)</p>
+  <p class="small-copy" style="left:756px;top:610px;width:432px;font-size:10px;color:#a5781c;font-weight:700;">证明同任务能表达不同 Π;但未在统一预算下证明谁赢。</p>
+  <p class="footer-left">AGENTFIT · 连续复杂度空间</p><p class="footer-right">方法论 + 公开校准 · 05</p>
 </body></html>

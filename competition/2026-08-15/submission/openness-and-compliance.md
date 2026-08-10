@@ -1,0 +1,158 @@
+# AgentFit 开放与合规披露
+
+> 状态:初赛披露草案。满足官方硬约束"必须披露开放范围、协议、依赖、商业 API、闭源模型、数据授权、脱敏、可复现方式、部署依赖和后续维护计划"。
+
+## 事实源
+
+本清单从以下文件派生:
+
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §12.4(红线)、§13(未实现范围);
+- [AgentTeams 落地设计](../design/agentteams-landing-design.md) §6(必须用代码保证的部分);
+- 官方要求矩阵 §2(开放与合规)、§5(阶段边界);
+- [红线检查表](../../../docs/internal/competition/preliminary-red-line-checklist.md)。
+
+## 1. 开放范围
+
+### 1.1 初赛计划开放
+
+| 资产 | 开放形式 | 状态 |
+|---|---|---|
+| 任务说明书 Schema(TaskSemanticSpec) | 结构化 Schema 文档 + JSON/YAML 样例 | 设计中,初赛后开放 |
+| 能力语义 Schema(CapabilitySemanticSpec) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
+| 执行轨迹 Schema(ExecutionTrace) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
+| 候选方案描述 Schema(Candidate) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
+| 元 Agent Identity 与责任契约 | 本仓库 [agent-identity.md](agent-identity.md) | 已开放(设计契约) |
+| 核心 Skill 契约 | 本仓库 [skill-catalog.md](skill-catalog.md) | 已开放(设计契约) |
+| 路演 PPT/PDF | 本仓库 [submission/](.) | 已开放(内部草案) |
+| 设计模拟案例 | [research/official-case-simulation.md](../research/official-case-simulation.md) | 已开放(设计模拟,非运行证据) |
+
+### 1.2 复赛计划开放
+
+| 资产 | 条件 |
+|---|---|
+| AgentFit 元团队 AgentTeams 配置 | 首个真实 ProjectCase 跑通后 |
+| 核心 Skill 实现(S1-S7) | 代码固化并通过干净环境复现后 |
+| 首个 ProjectCase 可复现包 | 数据、模型、依赖、配置脱敏后 |
+| 统一对照实验(无 Agent/单 Agent/多 Agent)证据 | 真实运行并保留完整 Trace 后 |
+
+### 1.3 不开放
+
+- 原始客户数据、密钥、凭证、内部业务系统访问权;
+- 被显式标注为内部材料的 docs/internal/ 下证据研究卡(含第三方 benchmark 的事实摘要,遵循各自 license);
+- 未脱敏的 ProjectAsset。
+
+## 2. 依赖清单
+
+### 2.1 平台依赖
+
+| 依赖 | 角色 | 版本 | License |
+|---|---|---|---|
+| AgentTeams | 运行底座(身份/通信/容器/权限/共享状态/Skill/MCP/Human) | 待真实集成时固定并披露 | 按官方许可 |
+| 阿里云官方 Skills | 按必要性复用运行底座类能力 | 按需 | 按官方许可 |
+
+### 2.2 模型依赖
+
+| 依赖 | 角色 | 披露 |
+|---|---|---|
+| LLM | 任务编译、候选设计、局部推理、审计辅助 | **闭源商业 API**。真实运行时披露具体模型、版本、API 边界、成本与闭源风险 |
+| Embedding(如采用) | 文档表示(非主上下文机制) | 真实采用时披露 |
+
+AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、审计结论是模型无关的结构化产物;模型是候选的参数 θ,可替换并重新评测。
+
+### 2.3 第三方库与工具
+
+真实实现时在 `pyproject.toml` 或等价文件中固定并披露。当前仓库未锁定实现依赖,因为核心实现尚未完成。
+
+### 2.4 数据来源
+
+| 数据 | 来源 | License / 授权 | 用途 |
+|---|---|---|---|
+| 官网四类参考案例 | [GOAI Agent Infra 官网](https://goaihz.com/tracks?track=infra) | 官网公开,场景启发,非运行证据 | 路演第 5 页 |
+| 参赛手册 | 新智基座 Agent Infra 参赛手册 | 官方文件 | 要求矩阵与红线 |
+| 跨场景证据卡(SWE-bench/GAIA/CyBench/τ-bench/CUAD 等) | 各 benchmark 官方 | 各自 license,内部研究用,不二次分发 | v0 项目集选择依据 |
+
+### 2.5 商业 API 与闭源模型披露
+
+AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须披露的项**,承诺:
+
+- 真实运行时披露具体模型、API 边界、调用方式、成本口径;
+- 不隐瞒任何商业 API 或闭源模型依赖;
+- 评测结果中明确标注哪些环节依赖闭源模型,及其可替换性与迁移成本。
+
+## 3. 既有基础与团队新增贡献
+
+### 3.1 既有基础(不构成 AgentFit 贡献)
+
+- AgentTeams 平台(身份、通信、容器、Skill/MCP 绑定、Human 入口等);
+- 阿里云官方 Skills;
+- 使用的任何开源框架、库、benchmark。
+
+### 3.2 团队新增贡献(AgentFit 独有)
+
+- 任务编译与任务说明书 Schema;
+- 能力语义对齐方法与缺口报告;
+- 候选图与 Agent 分区(Agentize)必要性判定;
+- 无 Agent/单 Agent/多 Agent/人工混合统一对照试验设计;
+- 独立审计与 holdout 完整性校验;
+- 人工门禁与责任契约模板;
+- ProjectAsset/MetaAsset 沉淀与晋升门禁。
+
+## 4. 可复现方式
+
+### 4.1 当前可复现
+
+- 路演 PPT/PDF 生成链:`build_presentation.py` → PPTX → PDF(命令见 [ppt-outline.md](ppt-outline.md));
+- 设计模拟推理链:[official-case-simulation.md](../research/official-case-simulation.md) 可人工逐步复现。
+
+### 4.2 复赛后可复现
+
+- 元团队 AgentTeams 配置 + 运行入口;
+- 首个 ProjectCase 的样例输入输出;
+- 统一对照实验的冻结数据划分、预算、模型版本、Trace;
+- 干净环境复现脚本。
+
+## 5. 部署依赖
+
+真实部署需要:
+
+- AgentTeams 实例(版本待固定);
+- 模型 API 访问凭证(由基础设施持有);
+- 沙箱执行环境(容器、资源限制、网络隔离);
+- 共享存储(项目档案、执行轨迹、决策账本);
+- 人工审批入口(AgentTeams Human)。
+
+不部署独立前端;不修改 AgentTeams 核心;不依赖飞书或外部 IM。
+
+## 6. 维护计划
+
+| 阶段 | 维护承诺 |
+|---|---|
+| 初赛(8 月 16 日) | 方案、Schema 设计契约、路演材料维护 |
+| 复赛 | 首个真实 ProjectCase 代码包、可复现实验、完整 Trace 维护 |
+| 赛后 | Schema、Skill、评测模板作为开源资产持续维护;MetaAsset 跨项目验证按路线图推进 |
+
+## 7. 红线对齐
+
+本披露对齐官方红线清单:
+
+- ✓ 不把概念图或本地模拟写成真实运行;
+- ✓ 不把 AgentTeams 名称当作集成证据;
+- ✓ 不隐瞒既有仓库、第三方贡献、商业 API 或闭源模型(本文件 §2.5 明确披露);
+- ✓ 不未披露数据授权、许可证、密钥、权限和依赖;
+- ✓ 高风险动作有审批、拒绝、回滚和审计(见 [risk-and-human-gates.md](risk-and-human-gates.md));
+- ✓ 不只展示成功,失败、降级、否决证据同等保留;
+- ✓ 比赛材料与内部证据状态一致。
+
+## 8. 当前未实现范围
+
+明确披露以下尚未完成:
+
+- TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、TrialSpec、ExecutionTrace 的正式机器可执行 Schema;
+- 自动候选生成、内外循环搜索、Pareto 选择;
+- ProjectAsset/MetaAsset 的正式存储、晋升、回归系统;
+- 任一完整 ProjectCase;
+- 真实 AgentTeams 元团队、Skill、MCP、共享状态、Trace;
+- 统一预算下的无 Agent/单 Agent/多 Agent 真实对照;
+- 真实业务或生产效果。
+
+下一门禁不是扩展总体概念,而是:审批首个 ProjectCase → 冻结数据与预算 → 实现 Schema → 在 AgentTeams 跑通最小闭环 → 完成统一对照 → 形成真实证据后才派生路演声明。

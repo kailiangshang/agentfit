@@ -1,33 +1,58 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
-  <p class="eyebrow">09 / 12 · ADOPTION LAYERS</p>
-  <h1 class="title">AgentTeams 让团队运行，AgentFit 让方案可选择。</h1>
-  <p class="subtitle">不重造身份、通信和容器；只增加任务语义、候选试验、证据账本与可部署方案包。</p><div class="top-rule"></div>
+  <p class="eyebrow">09 / 12 · 系统边界</p>
+  <h1 class="title">AgentTeams 是运行底座,AgentFit 是搜索与学习层。</h1>
+  <p class="subtitle">不重造身份/通信/容器;只增加 NAS 式搜索所需的任务语义、候选表示、双层优化、证据治理。</p><div class="top-rule"></div>
 
-  <div class="panel soft-teal" style="left:72px;top:228px;width:1136px;height:130px;border-radius:20px;"></div>
-  <p class="label" style="left:98px;top:248px;color:#1a8d85;">AGENTFIT · SOLUTION ENGINEERING PLANE</p>
-  <p class="section-title" style="left:98px;top:286px;font-size:18px;">TaskSemanticSpec</p>
-  <p class="section-title" style="left:338px;top:286px;font-size:18px;">Capability Graph</p>
-  <p class="section-title" style="left:578px;top:286px;font-size:18px;">Candidate / TrialSpec</p>
-  <p class="section-title" style="left:848px;top:286px;font-size:18px;">AgentSolutionPackage</p>
-  <div class="line" style="left:258px;top:299px;width:62px;background:#1a8d85;"></div><p style="position:absolute;left:308px;top:285px;margin:0;font-size:22px;color:#1a8d85;">›</p>
-  <div class="line" style="left:498px;top:299px;width:62px;background:#1a8d85;"></div><p style="position:absolute;left:548px;top:285px;margin:0;font-size:22px;color:#1a8d85;">›</p>
-  <div class="line" style="left:778px;top:299px;width:52px;background:#1a8d85;"></div><p style="position:absolute;left:818px;top:285px;margin:0;font-size:22px;color:#1a8d85;">›</p>
-  <p class="small-copy" style="left:98px;top:324px;width:1030px;">回答：任务是什么、能力在哪里、哪些拓扑值得试、交付物怎样复验。</p>
+  <div class="panel soft-teal" style="left:72px;top:226px;width:1136px;height:172px;border-radius:18px;"></div>
+  <p class="label" style="left:92px;top:244px;color:#1a8d85;">AGENTFIT · 搜索与学习层(NAS 对应)</p>
 
-  <div class="line-v" style="left:638px;top:358px;height:58px;background:#1a8d85;"></div>
-  <div class="panel panel-dark" style="left:214px;top:392px;width:852px;height:86px;border-radius:43px;border-color:#0b2236;"></div>
-  <p class="label" style="left:248px;top:412px;color:#74d0c7;">PROJECT DOSSIER</p>
-  <p class="body-copy mono" style="left:430px;top:406px;width:600px;color:#ffffff;font-size:17px;text-align:center;">versioned state · Artifact · ExecutionTrace · DecisionLedger</p>
-  <div class="line-v" style="left:638px;top:478px;height:58px;background:#d6a43b;"></div>
+  <p class="label" style="left:92px;top:270px;width:60px;color:#1a8d85;font-size:11px;">L1</p>
+  <p class="section-title" style="left:146px;top:270px;font-size:13px;">任务语义</p>
+  <p class="small-copy" style="left:146px;top:288px;width:240px;font-size:10px;color:#1a8d85;">= 学习问题 + 评测协议</p>
+  <p class="small-copy" style="left:146px;top:304px;width:240px;font-size:10px;">→ 目标/输入空间/输出/指标/预算/红线/Human 边界</p>
 
-  <div class="panel panel-dark" style="left:72px;top:520px;width:1136px;height:146px;border-radius:20px;border-color:#0b2236;"></div>
-  <p class="label" style="left:98px;top:540px;color:#8fa6b9;">AGENTTEAMS · RUNTIME & COLLABORATION PLANE</p>
-  <div class="pill" style="left:98px;top:576px;width:176px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:14px;">Identity / Human</p></div>
-  <div class="pill" style="left:294px;top:576px;width:222px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:14px;">Manager / Worker / Team</p></div>
-  <div class="pill" style="left:536px;top:576px;width:176px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:14px;">Matrix / Chat</p></div>
-  <div class="pill" style="left:732px;top:576px;width:258px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:14px;">Container / File / Cron</p></div>
-  <div class="pill" style="left:1010px;top:576px;width:176px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:14px;">Skill / MCP</p></div>
-  <p class="footer-left">AGENTFIT × AGENTTEAMS</p><p class="footer-right">基于框架，不修改核心 · 09</p>
+  <p class="label" style="left:406px;top:270px;width:60px;color:#53697c;font-size:11px;">L2</p>
+  <p class="section-title" style="left:460px;top:270px;font-size:13px;">能力语义</p>
+  <p class="small-copy" style="left:460px;top:288px;width:240px;font-size:10px;color:#53697c;">= 算子集合 + 假设空间</p>
+  <p class="small-copy" style="left:460px;top:304px;width:240px;font-size:10px;">→ 规则/LLM/Skill/Tool/MCP/Human 输入输出契约</p>
+
+  <p class="label" style="left:720px;top:270px;width:60px;color:#c64c32;font-size:11px;">L3</p>
+  <p class="section-title" style="left:774px;top:270px;font-size:13px;">候选 (G,Π,θ,ρ)</p>
+  <p class="small-copy" style="left:774px;top:288px;width:240px;font-size:10px;color:#c64c32;">= 完整候选模型</p>
+  <div style="position:absolute;left:774px;top:302px;width:28px;height:14px;border-radius:7px;background:#fff5f2;border:1px solid #f26b4b;"><p style="margin:0;text-align:center;font-size:7px;color:#f26b4b;">DAG</p></div>
+  <p style="position:absolute;left:806px;top:304px;margin:0;font-size:9px;color:#53697c;">→</p>
+  <div style="position:absolute;left:818px;top:298px;width:40px;height:22px;border:1px dashed #f26b4b;border-radius:6px;background:rgba(242,107,75,0.08);"></div>
+  <p style="position:absolute;left:824px;top:310px;margin:0;font-size:8px;color:#f26b4b;">SCC ↺</p>
+  <p style="position:absolute;left:862px;top:304px;margin:0;font-size:9px;color:#53697c;">→</p>
+  <div style="position:absolute;left:874px;top:298px;width:40px;height:22px;border:1px dashed #1a8d85;border-radius:6px;background:rgba(26,141,133,0.08);"></div>
+  <p style="position:absolute;left:880px;top:310px;margin:0;font-size:8px;color:#1a8d85;">Π 分区</p>
+  <p class="small-copy" style="left:920px;top:304px;width:80px;font-size:9px;color:#c64c32;">θ 参数 · ρ 共享</p>
+
+  <p class="label" style="left:92px;top:328px;width:60px;color:#a5781c;font-size:11px;">L4/L5</p>
+  <p class="section-title" style="left:146px;top:328px;font-size:13px;">双层优化</p>
+  <p class="small-copy" style="left:146px;top:346px;width:560px;font-size:10px;color:#a5781c;">= 参数优化 + 架构搜索 · 内循环 θ*A + 外循环 A* + Pareto/阈值/门禁选择</p>
+
+  <p class="label" style="left:720px;top:328px;width:60px;color:#426b86;font-size:11px;">L6</p>
+  <p class="section-title" style="left:774px;top:328px;font-size:13px;">元学习</p>
+  <p class="small-copy" style="left:774px;top:346px;width:280px;font-size:10px;color:#426b86;">= 跨项目先验 · ProjectAsset → MetaAsset · 未见项目验证</p>
+  <p class="small-copy" style="left:92px;top:370px;width:1100px;font-size:10px;">回答:优化什么 · 拿什么搜 · 候选长什么样 · 固定候选怎么变好 · 整体结构怎么变好 · 下一任务从哪起步</p>
+
+  <div class="line-v" style="left:638px;top:398px;height:40px;background:#1a8d85;"></div>
+  <div class="panel panel-dark" style="left:240px;top:434px;width:800px;height:62px;border-radius:31px;border-color:#0b2236;"></div>
+  <p class="label" style="left:280px;top:452px;color:#74d0c7;">项目档案 = Experiment Tracking</p>
+  <p class="body-copy mono" style="left:560px;top:448px;width:460px;color:#ffffff;font-size:13px;text-align:center;">版本状态 · 候选 · Trace · 决策账本 · 来源链</p>
+  <div class="line-v" style="left:638px;top:496px;height:40px;background:#d6a43b;"></div>
+
+  <div class="panel panel-dark" style="left:72px;top:540px;width:1136px;height:104px;border-radius:18px;border-color:#0b2236;"></div>
+  <p class="label" style="left:92px;top:558px;color:#8fa6b9;">AGENTTEAMS · 运行与协同底座(AgentFit 不修改)</p>
+  <div class="pill" style="left:92px;top:586px;width:160px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:12px;">身份 / Human</p></div>
+  <div class="pill" style="left:266px;top:586px;width:186px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:12px;">Manager / Worker / Team</p></div>
+  <div class="pill" style="left:464px;top:586px;width:170px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:12px;">容器 / 文件 / Cron</p></div>
+  <div class="pill" style="left:648px;top:586px;width:186px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:12px;">通信房间 / 人工入口</p></div>
+  <div class="pill" style="left:846px;top:586px;width:170px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:12px;">共享存储</p></div>
+  <div class="pill" style="left:1028px;top:586px;width:160px;background:#132f47;border-color:#426b86;"><p style="color:#ffffff;font-size:12px;">Skill / MCP 绑定</p></div>
+  <p class="small-copy" style="left:92px;top:626px;width:1100px;font-size:10px;color:#8fa6b9;">AgentFit 代码通过 Worker 包 / Skill / CLI / MCP 接入 AgentTeams;不修改 Dashboard/Controller/Manager 核心。</p>
+  <p class="footer-left">AGENTFIT × AGENTTEAMS</p><p class="footer-right">基于框架,不修改核心 · 09</p>
 </body></html>

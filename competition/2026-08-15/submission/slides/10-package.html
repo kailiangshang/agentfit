@@ -1,32 +1,88 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
-  <p class="eyebrow">10 / 12 · DELIVERABLE</p>
-  <h1 class="title">真正的交付物，是一份能部署、复验和回滚的方案包。</h1>
-  <p class="subtitle">不是一段 Prompt，也不是一张 Agent 名单，而是架构、运行契约、证据和安全边界的整体。</p><div class="top-rule"></div>
+  <p class="eyebrow">10 / 12 · 交付物</p>
+  <h1 class="title">交付 = 搜索结果 + 证据链。</h1>
+  <p class="subtitle">像 Model Card:能回答"为什么是这个架构"。合法结果五种,拒绝也算交付。</p><div class="top-rule"></div>
 
-  <p class="label" style="left:104px;top:242px;color:#1a8d85;">AGENT SOLUTION PACKAGE</p>
-  <div class="panel soft-blue" style="left:98px;top:278px;width:840px;height:74px;border-radius:16px;"></div>
-  <p class="section-title" style="left:126px;top:299px;font-size:18px;">WHAT</p>
-  <p class="body-copy" style="left:248px;top:294px;width:650px;font-size:18px;">任务契约 · Agent 身份 · 拓扑 · Human 责任边界</p>
-  <div class="panel soft-teal" style="left:126px;top:366px;width:812px;height:74px;border-radius:16px;"></div>
-  <p class="section-title" style="left:154px;top:387px;font-size:18px;">HOW</p>
-  <p class="body-copy" style="left:276px;top:382px;width:620px;font-size:18px;">Skill · MCP · Memory · 共享状态 · 失败恢复</p>
-  <div class="panel soft-coral" style="left:154px;top:454px;width:784px;height:74px;border-radius:16px;"></div>
-  <p class="section-title" style="left:182px;top:475px;font-size:18px;">PROOF</p>
-  <p class="body-copy" style="left:304px;top:470px;width:590px;font-size:18px;">统一评测 · 结果 · Trace · 审计 · 来源</p>
-  <div class="panel soft-amber" style="left:182px;top:542px;width:756px;height:74px;border-radius:16px;"></div>
-  <p class="section-title" style="left:210px;top:563px;font-size:18px;">SAFETY</p>
-  <p class="body-copy" style="left:332px;top:558px;width:550px;font-size:18px;">权限 · 拒绝 · 回滚 · Provenance · 许可证</p>
+  <div class="panel panel-dark" style="left:72px;top:226px;width:208px;height:100px;border-radius:14px;border-color:#1a8d85;"></div>
+  <p class="label" style="left:92px;top:244px;color:#74d0c7;">搜索输出</p>
+  <p class="section-title" style="left:92px;top:270px;width:168px;text-align:center;color:#ffffff;font-size:14px;">最优候选 (G,Π,θ,ρ)</p>
+  <p class="small-copy" style="left:92px;top:298px;width:168px;text-align:center;color:#c6d3dd;font-size:10px;">+ Trace + 决策账本</p>
 
-  <div class="line" style="left:950px;top:448px;width:90px;background:#1a8d85;"></div><p style="position:absolute;left:1028px;top:433px;margin:0;font-size:26px;color:#1a8d85;">→</p>
-  <div class="panel panel-dark" style="left:1056px;top:312px;width:152px;height:276px;border-radius:76px;border-color:#0b2236;"></div>
-  <p class="label" style="left:1082px;top:350px;width:100px;text-align:center;color:#74d0c7;">REUSE LOOP</p>
-  <div class="node" style="left:1103px;top:402px;width:58px;height:58px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;">P</p></div>
-  <p class="small-copy" style="left:1082px;top:470px;width:100px;text-align:center;color:#ffffff;">ProjectAsset</p>
-  <p style="position:absolute;left:1116px;top:500px;margin:0;font-size:24px;color:#d6a43b;">↓</p>
-  <p class="small-copy" style="left:1082px;top:536px;width:100px;text-align:center;color:#d6a43b;">MetaAsset</p>
-  <div style="position:absolute;left:958px;top:606px;width:250px;height:46px;border-radius:12px;background:#f3e5b8;border:2px solid #d6a43b;"></div>
-  <p style="position:absolute;left:974px;top:618px;width:218px;margin:0;color:#806015;font-size:15px;font-weight:700;text-align:center;">未见项目验证前，<br>不宣称 Meta-learning。</p>
-  <p class="footer-left">AGENTFIT · PORTABLE DELIVERY</p><p class="footer-right">实际方案包待补 · 10</p>
+  <p style="position:absolute;left:290px;top:268px;margin:0;font-size:24px;color:#1a8d85;font-weight:800;">→</p>
+
+  <div class="panel soft-blue" style="left:324px;top:226px;width:200px;height:48px;border-radius:10px;"></div>
+  <p class="section-title" style="left:344px;top:238px;font-size:13px;">WHAT</p>
+  <p class="small-copy" style="left:410px;top:240px;width:100px;font-size:10px;">架构 + 身份 + 拓扑</p>
+
+  <div class="panel soft-teal" style="left:324px;top:282px;width:200px;height:48px;border-radius:10px;"></div>
+  <p class="section-title" style="left:344px;top:294px;font-size:13px;">WHY</p>
+  <p class="small-copy" style="left:410px;top:296px;width:100px;font-size:10px;">架构决策链</p>
+
+  <p style="position:absolute;left:534px;top:268px;margin:0;font-size:24px;color:#1a8d85;font-weight:800;">→</p>
+
+  <div class="panel soft-coral" style="left:568px;top:226px;width:200px;height:48px;border-radius:10px;"></div>
+  <p class="section-title" style="left:588px;top:238px;font-size:13px;color:#c64c32;">PROOF</p>
+  <p class="small-copy" style="left:660px;top:240px;width:100px;font-size:10px;">评测 + Trace + 审计</p>
+
+  <div class="panel soft-amber" style="left:568px;top:282px;width:200px;height:48px;border-radius:10px;"></div>
+  <p class="section-title" style="left:588px;top:294px;font-size:13px;color:#a5781c;">SAFETY</p>
+  <p class="small-copy" style="left:660px;top:296px;width:100px;font-size:10px;">权限 + 回滚 + 门禁</p>
+
+  <p style="position:absolute;left:778px;top:268px;margin:0;font-size:24px;color:#1a8d85;font-weight:800;">→</p>
+
+  <div class="panel panel-dark" style="left:812px;top:226px;width:396px;height:104px;border-radius:14px;border-color:#d6a43b;"></div>
+  <p class="label" style="left:832px;top:242px;color:#d6a43b;">五种合法结果</p>
+  <div class="pill" style="left:832px;top:262px;width:120px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">① 全自动</p></div>
+  <div class="pill" style="left:960px;top:262px;width:120px;background:#132f47;border-color:#1a8d85;"><p style="color:#ffffff;font-size:10px;">② 部分</p></div>
+  <div class="pill" style="left:1088px;top:262px;width:104px;background:#132f47;border-color:#d6a43b;"><p style="color:#ffffff;font-size:10px;">③ 降级</p></div>
+  <div class="pill" style="left:832px;top:294px;width:120px;background:#132f47;border-color:#d6a43b;"><p style="color:#ffffff;font-size:10px;">④ 保留人工</p></div>
+  <div class="pill" style="left:960px;top:294px;width:140px;background:#132f47;border-color:#f26b4b;"><p style="color:#ffffff;font-size:10px;">⑤ 拒绝自动化</p></div>
+
+  <div class="line" style="left:72px;top:346px;width:1136px;background:#d6ddd9;"></div>
+  <p class="label" style="left:72px;top:358px;color:#1a8d85;">资产回流 = L6 元学习闭环</p>
+
+  <div class="node" style="left:92px;top:386px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">项目</p></div>
+  <div class="pill" style="left:140px;top:392px;width:140px;border-color:#1a8d85;"><p style="font-size:10px;">ProjectAsset</p></div>
+  <p style="position:absolute;left:288px;top:396px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:312px;top:386px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:9px;">脱敏</p></div>
+  <p style="position:absolute;left:352px;top:396px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:376px;top:386px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:9px;">参数</p></div>
+  <p style="position:absolute;left:416px;top:396px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:440px;top:386px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:9px;">适配</p></div>
+  <p style="position:absolute;left:480px;top:396px;margin:0;font-size:16px;color:#f26b4b;">→</p>
+
+  <div class="node" style="left:504px;top:386px;width:36px;height:36px;border-radius:18px;background:#f26b4b;border-color:#f26b4b;"><p style="color:#ffffff;margin-top:9px;font-size:9px;">比较</p></div>
+  <p style="position:absolute;left:544px;top:396px;margin:0;font-size:16px;color:#f26b4b;">→</p>
+
+  <div class="node" style="left:568px;top:386px;width:36px;height:36px;border-radius:18px;background:#f26b4b;border-color:#f26b4b;"><p style="color:#ffffff;margin-top:9px;font-size:9px;">审计</p></div>
+  <p style="position:absolute;left:608px;top:396px;margin:0;font-size:16px;color:#d6a43b;">→</p>
+
+  <div class="pill" style="left:632px;top:392px;width:180px;background:#f3e5b8;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;font-weight:700;">晋升 MetaAsset</p></div>
+  <p style="position:absolute;left:820px;top:396px;margin:0;font-size:16px;color:#426b86;">→</p>
+  <div class="pill" style="left:844px;top:392px;width:180px;border-color:#426b86;"><p style="font-size:10px;color:#426b86;">持续回归 + 回滚</p></div>
+  <p style="position:absolute;left:1032px;top:396px;margin:0;font-size:16px;color:#426b86;">→</p>
+  <div class="pill" style="left:1056px;top:392px;width:140px;border-color:#426b86;"><p style="font-size:10px;color:#426b86;">更新搜索先验</p></div>
+
+  <div class="panel panel-dark" style="left:72px;top:440px;width:1136px;height:200px;border-radius:18px;border-color:#0b2236;"></div>
+  <p class="label" style="left:92px;top:458px;color:#74d0c7;">评测维度(PROOF 证据内容)</p>
+
+  <div class="pill" style="left:92px;top:480px;width:160px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">正确性 + 关键子群</p></div>
+  <div class="pill" style="left:264px;top:480px;width:160px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">稳定性/重试/恢复</p></div>
+  <div class="pill" style="left:436px;top:480px;width:160px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">成本/时延/步数</p></div>
+  <div class="pill" style="left:608px;top:480px;width:160px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">权限/副作用/回滚</p></div>
+  <div class="pill" style="left:780px;top:480px;width:160px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">Agent 边际价值</p></div>
+  <div class="pill" style="left:952px;top:480px;width:240px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">adapt/val/holdout 差距</p></div>
+
+  <div class="line" style="left:92px;top:530px;width:1100px;background:#28516d;"></div>
+
+  <p class="label" style="left:92px;top:542px;color:#d6a43b;">架构决策必答链(WHY)</p>
+  <p class="small-copy" style="left:92px;top:566px;width:1100px;color:#ffffff;font-size:11px;line-height:1.5;">为什么这样理解任务 → 为什么这些能力 → 为什么这张图 → 为什么 Agentize/不 → 为什么优于更简/更复杂候选</p>
+
+  <p class="small-copy" style="left:92px;top:610px;width:1100px;color:#d6a43b;font-size:10px;font-weight:700;">⑤ 拒绝也是合法交付:搜索表明"这个任务不该自动化" = 有证据的结论,不是失败。</p>
+  <p class="footer-left">AGENTFIT · 搜索交付</p><p class="footer-right">实际方案包待补 · 10</p>
 </body></html>

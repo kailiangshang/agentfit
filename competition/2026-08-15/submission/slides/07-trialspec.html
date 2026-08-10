@@ -1,36 +1,87 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
-<body class="slide sand">
-  <p class="eyebrow">07 / 12 · CANDIDATE SELECTION</p>
-  <h1 class="title">设计模拟的正确结果是一张 TrialSpec，不是宣布赢家。</h1>
-  <p class="subtitle">三条候选赛道共享输入、模型、工具、预算和安全红线；真实运行前只允许进入受控试验。</p><div class="top-rule"></div>
+<body class="slide">
+  <p class="eyebrow">07 / 12 · 元学习</p>
+  <h1 class="title">单项目搜索 + 跨项目先验更新 = 元学习。</h1>
+  <p class="subtitle">严格区分三层。L6 把多项目轨迹更新成可复用先验,在未见项目验证。</p><div class="top-rule"></div>
 
-  <div style="position:absolute;left:72px;top:240px;width:962px;height:94px;border-radius:18px;background:#dceeea;"></div>
-  <p class="label" style="left:98px;top:260px;color:#1a8d85;">C0 · AGENTLESS</p>
-  <p class="section-title" style="left:98px;top:290px;font-size:17px;">规则去重 → 仓库检索 → 冻结测试</p>
-  <p class="small-copy" style="left:660px;top:272px;width:340px;text-align:right;">强基线 · 低自由度 · 易复现</p>
+  <div class="panel" style="left:72px;top:226px;width:372px;height:152px;border-radius:14px;border-color:#53697c;"></div>
+  <p class="label" style="left:92px;top:242px;color:#53697c;">不是元学习</p>
+  <p class="section-title" style="left:92px;top:262px;font-size:14px;">单项目 NAS</p>
+  <div class="node" style="left:108px;top:292px;width:36px;height:36px;border-radius:18px;border-color:#53697c;"><p style="color:#53697c;margin-top:9px;font-size:11px;">L4</p></div>
+  <p style="position:absolute;left:150px;top:300px;margin:0;font-size:14px;color:#53697c;">+</p>
+  <div class="node" style="left:170px;top:292px;width:36px;height:36px;border-radius:18px;border-color:#53697c;"><p style="color:#53697c;margin-top:9px;font-size:11px;">L5</p></div>
+  <p class="small-copy" style="left:220px;top:300px;width:220px;font-size:10px;color:#53697c;">一个任务上跑双层优化<br>选出该项目最优候选</p>
+  <p class="small-copy" style="left:92px;top:344px;width:340px;font-size:10px;color:#53697c;font-weight:700;">换新任务 → 从零开始搜</p>
 
-  <div style="position:absolute;left:72px;top:354px;width:962px;height:94px;border-radius:18px;background:#f8ddd4;"></div>
-  <p class="label" style="left:98px;top:374px;color:#c64c32;">C1 · SINGLE AGENT</p>
-  <p class="section-title" style="left:98px;top:404px;width:530px;font-size:16px;">定位 + 修复 + 测试，由一个执行体完成</p>
-  <p class="small-copy" style="left:660px;top:386px;width:340px;text-align:right;">上下文连续 · 责任集中 · 串行风险</p>
+  <p style="position:absolute;left:460px;top:290px;margin:0;font-size:32px;color:#d6a43b;font-weight:800;">+</p>
 
-  <div style="position:absolute;left:72px;top:468px;width:962px;height:94px;border-radius:18px;background:#dfeaf2;"></div>
-  <p class="label" style="left:98px;top:488px;color:#426b86;">C2 · MULTI AGENT</p>
-  <p class="section-title" style="left:98px;top:518px;width:530px;font-size:16px;">定位 Agent → 修复 Agent → 验证 Agent</p>
-  <p class="small-copy" style="left:660px;top:500px;width:340px;text-align:right;">并行与复核 · 协调成本 · 责任切分</p>
+  <div class="panel soft-amber" style="left:510px;top:226px;width:372px;height:152px;border-radius:14px;"></div>
+  <p class="label" style="left:530px;top:242px;color:#a5781c;">迁移 ≠ 元学习</p>
+  <p class="section-title" style="left:530px;top:262px;font-size:14px;">跨项目资产复用</p>
+  <div class="node" style="left:546px;top:292px;width:36px;height:36px;border-radius:18px;background:#d6a43b;border-color:#d6a43b;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">A</p></div>
+  <p style="position:absolute;left:588px;top:300px;margin:0;font-size:14px;color:#a5781c;">→</p>
+  <div class="node" style="left:608px;top:292px;width:36px;height:36px;border-radius:18px;background:#d6a43b;border-color:#d6a43b;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">B</p></div>
+  <p class="small-copy" style="left:658px;top:300px;width:210px;font-size:10px;color:#a5781c;">A 资产作 B 起点<br>用了先验,没更新先验</p>
+  <p class="small-copy" style="left:530px;top:344px;width:340px;font-size:10px;color:#a5781c;font-weight:700;">Transfer Learning,非 Meta-learning</p>
 
-  <div class="panel soft-amber" style="left:1062px;top:240px;width:146px;height:322px;border-radius:22px;"></div>
-  <p class="label" style="left:1084px;top:270px;width:102px;text-align:center;color:#a5781c;">HUMAN GATE</p>
-  <p style="position:absolute;left:1028px;top:268px;margin:0;font-size:24px;color:#d6a43b;">→</p>
-  <p style="position:absolute;left:1028px;top:382px;margin:0;font-size:24px;color:#d6a43b;">→</p>
-  <p style="position:absolute;left:1028px;top:496px;margin:0;font-size:24px;color:#d6a43b;">→</p>
-  <div class="node" style="left:1106px;top:310px;width:58px;height:58px;border-color:#d6a43b;"><p style="color:#a5781c;">01</p></div>
-  <p class="small-copy" style="left:1080px;top:376px;width:110px;text-align:center;color:#806015;">冻结预算<br>与权限</p>
-  <div class="node" style="left:1106px;top:430px;width:58px;height:58px;border-color:#d6a43b;"><p style="color:#a5781c;">02</p></div>
-  <p class="small-copy" style="left:1080px;top:496px;width:110px;text-align:center;color:#806015;">批准发布<br>或拒绝</p>
+  <p style="position:absolute;left:900px;top:290px;margin:0;font-size:32px;color:#1a8d85;font-weight:800;">=</p>
 
-  <div class="panel panel-dark" style="left:72px;top:586px;width:1136px;height:70px;border-radius:14px;border-color:#0b2236;"></div>
-  <p class="body-copy mono" style="left:102px;top:608px;width:1080px;color:#ffffff;font-size:14px;text-align:center;">selected_candidate = null · decision = requires_runtime_trial · 设计模拟，非运行证据</p>
-  <p class="footer-left">AGENTFIT · FAIR TRIAL</p><p class="footer-right">统一预算 · Human 门禁 · 07</p>
+  <div class="panel soft-teal" style="left:950px;top:226px;width:254px;height:152px;border-radius:14px;"></div>
+  <p class="label" style="left:970px;top:242px;color:#1a8d85;">才是元学习</p>
+  <p class="section-title" style="left:970px;top:262px;font-size:14px;">L6 先验更新</p>
+  <div class="node" style="left:986px;top:292px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">N</p></div>
+  <p style="position:absolute;left:1028px;top:300px;margin:0;font-size:14px;color:#1a8d85;">→</p>
+  <div class="node" style="left:1048px;top:292px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">π</p></div>
+  <p class="small-copy" style="left:1098px;top:300px;width:100px;font-size:10px;color:#1a8d85;">多项目<br>更新先验</p>
+  <p class="small-copy" style="left:970px;top:344px;width:220px;font-size:10px;color:#1a8d85;font-weight:700;">+ 未见项目验证改善</p>
+
+  <div class="line" style="left:72px;top:396px;width:1132px;background:#d6ddd9;"></div>
+  <p class="label" style="left:72px;top:408px;color:#1a8d85;">MetaAsset 晋升门禁(8 步流程)</p>
+
+  <div class="node" style="left:92px;top:436px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">1</p></div>
+  <div class="pill" style="left:138px;top:442px;width:120px;border-color:#1a8d85;"><p style="font-size:10px;">脱敏</p></div>
+  <p style="position:absolute;left:266px;top:446px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:290px;top:436px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">2</p></div>
+  <div class="pill" style="left:336px;top:442px;width:120px;border-color:#1a8d85;"><p style="font-size:10px;">参数化</p></div>
+  <p style="position:absolute;left:464px;top:446px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:488px;top:436px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">3</p></div>
+  <div class="pill" style="left:534px;top:442px;width:140px;border-color:#1a8d85;"><p style="font-size:10px;">适用域标注</p></div>
+  <p style="position:absolute;left:682px;top:446px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:706px;top:436px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">4</p></div>
+  <div class="pill" style="left:752px;top:442px;width:140px;border-color:#1a8d85;"><p style="font-size:10px;">其他项目适配</p></div>
+  <p style="position:absolute;left:900px;top:446px;margin:0;font-size:16px;color:#1a8d85;">→</p>
+
+  <div class="node" style="left:924px;top:436px;width:36px;height:36px;border-radius:18px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">5</p></div>
+  <div class="pill" style="left:970px;top:442px;width:200px;border-color:#1a8d85;"><p style="font-size:10px;">vs 无先验 baseline 比较</p></div>
+
+  <div class="node" style="left:92px;top:492px;width:36px;height:36px;border-radius:18px;background:#f26b4b;border-color:#f26b4b;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">6</p></div>
+  <div class="pill" style="left:138px;top:498px;width:180px;border-color:#f26b4b;"><p style="font-size:10px;color:#c64c32;">污染 + 负迁移检查</p></div>
+  <p style="position:absolute;left:326px;top:502px;margin:0;font-size:16px;color:#f26b4b;">→</p>
+
+  <div class="node" style="left:350px;top:492px;width:36px;height:36px;border-radius:18px;background:#f26b4b;border-color:#f26b4b;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">7</p></div>
+  <div class="pill" style="left:396px;top:498px;width:140px;border-color:#f26b4b;"><p style="font-size:10px;color:#c64c32;">独立审计</p></div>
+  <p style="position:absolute;left:544px;top:502px;margin:0;font-size:16px;color:#f26b4b;">→</p>
+
+  <div class="node" style="left:568px;top:492px;width:36px;height:36px;border-radius:18px;background:#f26b4b;border-color:#f26b4b;"><p style="color:#ffffff;margin-top:9px;font-size:10px;">8</p></div>
+  <div class="pill" style="left:614px;top:498px;width:180px;border-color:#f26b4b;"><p style="font-size:10px;color:#c64c32;">版本化晋升 MetaAsset</p></div>
+  <p style="position:absolute;left:800px;top:502px;margin:0;font-size:16px;color:#d6a43b;">→</p>
+  <div class="pill" style="left:824px;top:498px;width:200px;background:#f3e5b8;border-color:#d6a43b;"><p style="font-size:10px;color:#a5781c;">持续回归 + 回滚</p></div>
+
+  <div class="panel panel-dark" style="left:72px;top:548px;width:700px;height:88px;border-radius:14px;border-color:#0b2236;"></div>
+  <p class="label" style="left:92px;top:564px;color:#74d0c7;">可学习先验(L6 学习对象)</p>
+  <div class="pill" style="left:92px;top:582px;width:140px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">初始架构</p></div>
+  <div class="pill" style="left:240px;top:582px;width:140px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">Agentize 条件</p></div>
+  <div class="pill" style="left:388px;top:582px;width:140px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">Skill 组合</p></div>
+  <div class="pill" style="left:536px;top:582px;width:100px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">失败模式</p></div>
+  <div class="pill" style="left:644px;top:582px;width:116px;background:#132f47;border-color:#74d0c7;"><p style="color:#ffffff;font-size:10px;">搜索顺序</p></div>
+
+  <div class="panel soft-coral" style="left:792px;top:548px;width:416px;height:88px;border-radius:14px;"></div>
+  <p class="label" style="left:812px;top:564px;color:#c64c32;">首个迁移假设</p>
+  <p class="small-copy" style="left:812px;top:586px;width:380px;font-size:11px;font-weight:700;color:#c64c32;">AIOpsLab → ITBench(运维域)</p>
+  <p class="small-copy" style="left:812px;top:606px;width:380px;font-size:10px;">未见项目 holdout 改善才算成功 · 当前:待验证</p>
+  <p class="footer-left">AGENTFIT · 跨项目元学习</p><p class="footer-right">方法论 + 迁移假设 · 07</p>
 </body></html>

@@ -24,18 +24,29 @@
 
 ## 2. 目录内容
 
+### 2.1 提交材料(submission/)
+
 | 文件 | 作用 | 当前地位 |
 |---|---|---|
-| [`design/agentteams-landing-design.md`](design/agentteams-landing-design.md) | 记录 AgentFit 如何基于 AgentTeams 落地 | 已批准方向的设计记录，待书面复核 |
-| [`design/presentation-redesign.md`](design/presentation-redesign.md) | 路演叙事、视觉令牌与 HTML-first 生产决策 | 已批准并执行 |
-| [`planning/readiness-board.md`](planning/readiness-board.md) | 8 月 15 日前的交付顺序、门禁和状态 | 当前执行入口 |
-| [`planning/presentation-production-plan.md`](planning/presentation-production-plan.md) | PPTX/PDF 的可复现生成与质量门禁 | HTML-first 版本已执行，后续证据更新继续沿用 |
-| [`research/official-case-simulation.md`](research/official-case-simulation.md) | 官网四类案例拆解与软件研发设计模拟 | 已核验，非运行证据 |
-| [`submission/work-introduction-draft.md`](submission/work-introduction-draft.md) | 500 字以内作品简介草案 | 内部草案，不可直接提交 |
+| [`submission/work-introduction-draft.md`](submission/work-introduction-draft.md) | 500 字以内作品简介(Fit 概念版) | 内部草案,不可直接提交 |
 | [`submission/ppt-outline.md`](submission/ppt-outline.md) | 初赛方案 PPT/PDF 的逐页说明和生成入口 | 与 HTML-first 12 页稿一致 |
 | [`submission/slides/`](submission/slides/) | 1280×720 HTML/CSS 幻灯片布局事实源 | 已编译并通过视觉审阅 |
-| [`submission/agentfit-preliminary-draft.pptx`](submission/agentfit-preliminary-draft.pptx) | HTML 编译的可编辑初赛演示稿 | 12 页内部草案，结构检查为零问题 |
+| [`submission/agentfit-preliminary-draft.pptx`](submission/agentfit-preliminary-draft.pptx) | HTML 编译的可编辑初赛演示稿 | 12 页内部草案,结构检查为零问题 |
 | [`submission/agentfit-preliminary-draft.pdf`](submission/agentfit-preliminary-draft.pdf) | 与 PPTX 同版的审阅文件 | 内部草案 |
+| [`submission/agent-identity.md`](submission/agent-identity.md) | 五个元 Agent Identity 清单(8 字段,中文名) | 设计契约,真实实例化待完成 |
+| [`submission/skill-catalog.md`](submission/skill-catalog.md) | 核心 Skill 清单(10 字段,含与官方 Skill 关系) | 设计契约,真实 Skill 绑定待完成 |
+| [`submission/risk-and-human-gates.md`](submission/risk-and-human-gates.md) | 高风险动作清单与人工门禁 | 设计契约 |
+| [`submission/openness-and-compliance.md`](submission/openness-and-compliance.md) | 开放范围、依赖、许可证、数据授权披露 | 初赛披露草案 |
+
+### 2.2 设计与规划
+
+| 文件 | 作用 | 当前地位 |
+|---|---|---|
+| [`design/agentteams-landing-design.md`](design/agentteams-landing-design.md) | 记录 AgentFit 如何基于 AgentTeams 落地 | 已批准方向的设计记录,待书面复核 |
+| [`design/presentation-redesign.md`](design/presentation-redesign.md) | 路演叙事、视觉令牌与 HTML-first 生产决策 | 已批准并执行 |
+| [`planning/readiness-board.md`](planning/readiness-board.md) | 8 月 15 日前的交付顺序、门禁和状态 | 当前执行入口 |
+| [`planning/presentation-production-plan.md`](planning/presentation-production-plan.md) | PPTX/PDF 的可复现生成与质量门禁 | HTML-first 版本已执行,后续证据更新继续沿用 |
+| [`research/official-case-simulation.md`](research/official-case-simulation.md) | 官网四类案例拆解与软件研发设计模拟 | 已核验,非运行证据 |
 
 ## 3. 事实源优先级
 

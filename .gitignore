@@ -7,3 +7,9 @@ build/
 
 # Local simulation sandbox; never part of the formal AgentFit implementation.
 /demo/
+
+# macOS / editor artifacts
+.DS_Store
+
+# Local render output (regeneratable)
+competition/2026-08-15/submission/_screenshots/
