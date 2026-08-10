@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.1-design-simulation",
+  "evidence_status": "design_simulation_not_runtime_evidence",
+  "display_label": "设计模拟，非运行证据",
+  "source": {
+    "name": "GOAI Agent Infra 官网",
+    "url": "https://goaihz.com/tracks?track=infra",
+    "verified_on": "2026-08-10"
+  },
+  "official_reference_directions": [
+    "零人工运维",
+    "智能客服自主闭环",
+    "软件研发全流程协同",
+    "金融风控与理赔自动化"
+  ],
+  "selected_reference_case": {
+    "name": "软件研发全流程协同",
+    "official_flow": [
+      "多源缺陷和需求信息聚合与去重",
+      "代码缺陷定位与影响面分析",
+      "修复方案生成与自动化编码执行",
+      "测试验证与灰度发布结果确认",
+      "上线复盘与研发知识沉淀"
+    ]
+  },
+  "task_semantic_spec": {
+    "objective": "从多源缺陷线索形成可验证的修复候选，并在人工批准前停止真实发布",
+    "inputs": [
+      "Issue",
+      "日志片段",
+      "用户反馈",
+      "仓库快照",
+      "测试与发布策略"
+    ],
+    "outputs": [
+      "去重问题单",
+      "定位与影响报告",
+      "补丁候选",
+      "测试证据",
+      "发布审批记录",
+      "复盘资产"
+    ],
+    "hard_gates": [
+      "通过冻结测试",
+      "定位与影响结论可追溯",
+      "无未批准外部写入",
+      "失败可回滚"
+    ],
+    "budget_policy": "候选共享模型、工具、token、调用、时间、重试和人工投入口径",
+    "human_boundary": "Human 冻结任务契约、批准试验范围和真实发布，并可拒绝或撤销"
+  },
+  "capabilities": [
+    "线索标准化与去重",
+    "仓库检索与依赖分析",
+    "修复候选生成",
+    "隔离测试执行",
+    "结果审计",
+    "Human 发布批准"
+  ],
+  "candidates": [
+    {
+      "id": "C0",
+      "kind": "Agentless",
+      "boundary": "固定 Workflow 完成去重、规则筛选、检索和冻结测试"
+    },
+    {
+      "id": "C1",
+      "kind": "单 Agent",
+      "boundary": "单一责任主体完成定位、补丁与测试重试，Human 批准真实发布"
+    },
+    {
+      "id": "C2",
+      "kind": "多 Agent",
+      "boundary": "定位影响、修复和独立验证由不同责任主体完成，Human 保留发布门禁"
+    }
+  ],
+  "paper_trace": [
+    "EngagementLead 建立 design-simulation dossier",
+    "BusinessEngineer 生成 TaskSemanticSpec",
+    "AgentArchitect 生成 C0/C1/C2 和统一边界",
+    "ValidationEngineer 生成 TrialSpec，不生成虚构结果",
+    "GovernanceAuditor 阻止把纸面模拟写成 PoC",
+    "EngagementLead 输出 requires_runtime_trial"
+  ],
+  "decision": {
+    "status": "requires_runtime_trial",
+    "selected_candidate": null,
+    "reason": "没有真实仓库执行、冻结测试、成本和失败证据，当前不能选择赢家",
+    "next_gate": "在统一输入、预算和安全边界下执行 C0、C1、C2"
+  }
+}
