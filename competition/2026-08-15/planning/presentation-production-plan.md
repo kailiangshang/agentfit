@@ -151,6 +151,6 @@ soffice --headless --convert-to pdf \
 
 Expected: PPTX/PDF 均为 12 页，内容门禁通过。
 
-- [ ] **Step 4: 完整仓库门禁与提交**
+- [x] **Step 4: 完整仓库门禁与提交**
 
 运行 `git diff --check`、占位符扫描、敏感信息扫描和 `git status --ignored`；仅提交比赛材料，不提交 `__pycache__`、临时渲染或本地配置，然后推送 `main`。
