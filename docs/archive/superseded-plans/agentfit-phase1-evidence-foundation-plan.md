@@ -1,5 +1,9 @@
 # AgentFit Phase 1 Evidence Foundation Implementation Plan
 
+> 归档状态：该 Phase 1 计划已经完成并退役，不得继续作为执行入口。
+>
+> 当前唯一方案：[AgentFit 整体方案](../../agentfit-solution.md)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a traceable evidence registry for twelve cross-domain sources and produce a scored 4–6 project v0 shortlist for user approval.

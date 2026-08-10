@@ -1,5 +1,9 @@
 # AgentFit Evidence-to-Submission Execution Roadmap
 
+> 归档状态：该路线图已被当前唯一方案取代，不得继续作为执行入口。
+>
+> 当前唯一方案：[AgentFit 整体方案](../../agentfit-solution.md)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn the approved AgentFit methodology into an evidence-backed cross-scenario project suite, governed meta-agent growth mechanism, internal solution dossier, and competition-ready preliminary submission.
