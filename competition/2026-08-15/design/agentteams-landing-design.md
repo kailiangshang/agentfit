@@ -1,0 +1,123 @@
+# AgentFit 基于 AgentTeams 的落地设计
+
+> 决策日期：2026-08-10
+>
+> 决策状态：方向已获用户认可，等待书面设计复核
+>
+> 适用阶段：GOAI Agent Infra 初赛准备及首个真实 ProjectCase
+
+## 1. 决策
+
+AgentFit 采用“AgentTeams 原生底座 + AgentFit 能力包”的落地方式：
+
+- 不开发独立产品界面；
+- 不修改 AgentTeams 核心源码；
+- 优先使用 AgentTeams 已有 Dashboard、Manager/聊天入口、声明式资源、Worker、Team、Human、Skill、MCP、共享存储和通信能力；
+- AgentFit 只开发 AgentTeams 原生配置无法可靠保证的领域能力；
+- 第一阶段先在 AgentTeams 上手动或半自动跑通最小闭环，再根据真实失败点确定代码边界。
+
+## 2. 已排除方案
+
+### 2.1 纯界面和 Prompt 配置
+
+该方式适合快速展示角色协作，但不能稳定保证 Schema、阶段门禁、候选隔离、统一预算、holdout 隔离、审计和可重复评测。它可以作为 walking skeleton，不作为最终工程边界。
+
+### 2.2 修改 AgentTeams 核心
+
+把 AgentFit 逻辑直接加入 Dashboard、Controller 或 Manager 会造成上游耦合，并重复承担运行平台的维护责任。除非真实试验证明某项必要能力无法通过公开资源、Agent 包、Skill、MCP 或 API 实现，否则不进入该路径。
+
+### 2.3 自建 Agent 平台和独立前端
+
+该方式重复实现身份、通信、资源编排、凭证、文件和运行环境，与 AgentFit 的方案工程定位冲突。初赛不需要独立前端，展示与人工介入使用 AgentTeams 原有入口。
+
+## 3. 系统边界
+
+| 层级 | 负责内容 | 不负责内容 |
+|---|---|---|
+| AgentTeams | Agent 身份、Worker/Team/Human、容器、房间、通信、文件、凭证、Skill/MCP 绑定、生命周期与基础状态 | Task/Capability 语义、候选搜索、统一评测和 AgentFit 审计结论 |
+| AgentFit 能力包 | 五个元 Agent 配置、领域 Prompt、Skill、Schema、状态门禁、候选描述、评测、Trace、审计和交付模板 | 通用 Agent 运行时、IM、容器编排、通用权限平台和新产品界面 |
+| Human | 提供材料、确认任务契约、批准高风险动作、处理责任边界、接受或否决交付 | 替 AgentFit 静默补全证据或修改评测结果 |
+
+界面只是控制与观察入口，不是 AgentFit 的事实源。聊天中的结论只有写入版本化结构化产物并通过相应门禁后，才能推进项目状态。
+
+## 4. AgentFit 在 AgentTeams 中的映射
+
+| AgentFit 对象 | AgentTeams 落点 | 第一阶段实现方式 |
+|---|---|---|
+| EngagementLead | Manager 或 Team Leader 入口 | 身份配置、阶段控制 Skill、项目状态文件 |
+| BusinessEngineer | 独立 Worker | Worker 配置、任务语义 Skill、`TaskSemanticSpec` |
+| AgentArchitect | 独立 Worker | Worker 配置、能力对齐与候选设计 Skill |
+| ValidationEngineer | 独立 Worker | Worker 配置、沙箱执行和统一评测工具 |
+| GovernanceAuditor | 独立 Worker | 独立权限与上下文、审计 Skill、只读证据输入 |
+| Project Dossier | AgentTeams 共享存储 | 版本化目录与机器可读 Manifest |
+| 阶段委派 | AgentTeams 房间与任务通信 | 结构化 Task Envelope + @mention 通知 |
+| Human 审批 | AgentTeams Human/房间 | 明确的批准、拒绝和撤销记录 |
+| Skill/MCP | Worker 包、Skill 与 MCP 绑定 | 优先 Skill；需要确定性执行或外部接口时使用工具/MCP |
+| Trace | 共享 Artifact + AgentTeams 消息/状态引用 | 统一事件 Schema，保留来源与运行版本 |
+
+最终由实际 AgentTeams 版本支持的资源字段决定打包格式，但不得改变上述责任边界。
+
+## 5. 最小闭环
+
+首个 ProjectCase 只验证以下链路：
+
+```text
+Human 提交材料和目标
+→ EngagementLead 建立 Project Dossier
+→ BusinessEngineer 生成 TaskSemanticSpec
+→ AgentArchitect 生成 Capability Registry、AlignmentReport 和候选集
+→ Human 批准 TrialSpec、权限和预算
+→ ValidationEngineer 运行受控候选试验
+→ GovernanceAuditor 独立检查证据、安全和复杂度
+→ EngagementLead 交付 SelectedSolution 或 RejectionDecision
+```
+
+初次运行允许由人触发阶段和创建资源，但结构化产物、责任归属、候选输入、预算和审计结果不得靠人工口头补齐。
+
+## 6. 必须用代码保证的部分
+
+以下能力一旦仅依赖自然语言就会破坏可复现性，因此应在最小闭环验证后优先固化：
+
+1. `TaskSemanticSpec`、`CapabilitySemanticSpec`、`AlignmentReport`、`Candidate`、`TrialSpec`、`ExecutionTrace` 和审计结果的 Schema 与校验；
+2. 阶段状态、产物版本、批准主体和失败状态的确定性门禁；
+3. adaptation、validation、holdout 和 failure set 的隔离；
+4. Agentless、单 Agent、多 Agent候选的统一输入、预算和指标；
+5. Trace、依赖、模型、AgentTeams 版本和证据指针的自动记录；
+6. 高风险动作的拒绝、审批、回滚和超时；
+7. 评测汇总和比赛声明到内部证据的反向定位。
+
+代码优先存在 AgentFit 仓库中，通过 Worker 包、Skill、CLI 或 MCP 接入 AgentTeams。只有平台级缺口得到真实复现后，才讨论修改 AgentTeams fork。
+
+## 7. 错误与降级
+
+- Agent 不可用：阶段保持未完成，记录失败，不由其他 Agent 静默冒充责任产物；
+- 结构化产物不合法：拒绝推进，返回具体字段错误；
+- 能力或权限缺失：请求补充、缩小范围或产生 `RejectionDecision`；
+- AgentTeams 通信或房间异常：以 Project Dossier 状态为准，消息恢复后幂等重发；
+- 评测预算耗尽：停止候选扩展，审计当前证据，不自动提高预算；
+- holdout 泄漏或审计隔离失效：该轮结果无效，重新建立试验；
+- 高风险动作无批准：拒绝执行并保留 Trace。
+
+## 8. 首轮验证门禁
+
+只有同时满足以下条件，才可以声称“AgentFit 已在 AgentTeams 上跑通最小闭环”：
+
+1. 五个不同职能 Agent 在 AgentTeams 中具有可检查的身份和独立责任产物；
+2. 一个冻结的 ProjectCase 完成从 Intake 到 Deliver 的状态流转；
+3. 至少有一个真实候选被执行，并保留输入、输出、模型、工具、成本或用量和 Trace；
+4. 至少记录一个失败、降级、拒绝或人工门禁分支；
+5. GovernanceAuditor 的输入与结论可独立追溯；
+6. AgentTeams 版本、配置、已验证能力和未验证边界被记录；
+7. 运行结果可由仓库中的说明和非敏感配置重复执行。
+
+在这些条件满足前，只能表述为“设计完成”“AgentTeams 平台能力已单独试用”或“AgentFit 集成进行中”。
+
+## 9. 第一阶段非目标
+
+- 独立 AgentFit 前端或 Dashboard；
+- 飞书集成；
+- 修改 AgentTeams Controller、Dashboard 或运行时；
+- 自动探索全部候选空间；
+- 完成六个 ProjectCase；
+- 宣称跨项目 Meta-learning 已被验证；
+- 生产部署或真实业务收益声明。
