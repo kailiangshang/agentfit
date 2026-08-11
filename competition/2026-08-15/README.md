@@ -4,7 +4,7 @@
 >
 > 官方提交截止：2026-08-16
 >
-> 当前状态：必交材料提交候选已通过生成、内容、几何、逐页视觉与红线复核。
+> 当前状态：必交材料提交候选已生成；17 页 PPTX/PDF 的结构、内容与几何验证通过，4 个受 Sample 影响的关键页视觉复核通过；完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成。
 
 本目录是 AgentFit 参加 GOAI「新智基座｜Agent Infra」初赛的唯一提交工作区。总体方法以 [`docs/agentfit-solution.md`](../../docs/agentfit-solution.md) 为事实源，路演以 [`design/presentation-redesign.md`](design/presentation-redesign.md) 为唯一叙事基线。
 
@@ -16,7 +16,7 @@
 2. 12 页主路演 + 5 页附录的可编辑 PPTX；
 3. 与 PPTX 同版的 17 页 PDF；
 4. Agent Identity、Skill、Human/风险、开放与合规披露；
-5. 17 页 PPTX/PDF 的结构、内容与几何验证通过；4 个受 Sample 影响的关键页完成视觉复核；事实与隐私红线全部通过。
+5. 17 页 PPTX/PDF 的结构、内容与几何验证通过；全部 17 页 PPTX/PDF 完成逐页视觉复核；事实与隐私红线全部通过。
 
 真实 AgentFit 运行证据不是冻结初赛方案的前置条件。若截止前仍未形成可复现闭环，第 11 页必须如实保留“真实运行证据仍待补”；初赛可选代码包不提交。
 

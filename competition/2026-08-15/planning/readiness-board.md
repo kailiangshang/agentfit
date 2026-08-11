@@ -19,7 +19,7 @@
 | Human、风险、异常与回滚 | READY | `submission/risk-and-human-gates.md`；设计契约 |
 | 开放与合规披露 | READY | `submission/openness-and-compliance.md`；仓库私有、License 未选择 |
 | 500 字作品简介 | READY | `submission/work-introduction-draft.md`；实测 488 个非空白字符，符合不超过 500 的门禁 |
-| 17 页 HTML / PPTX / PDF | READY | 已重建为 17 页；PPTX/PDF 的结构、内容与几何验证通过，4 个受 Sample 影响的关键页视觉复核通过 |
+| 17 页 HTML / PPTX / PDF | IN_PROGRESS | 已重建为 17 页；PPTX/PDF 的结构、内容与几何验证通过，4 个受 Sample 影响的关键页视觉复核通过；完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成 |
 | 首个正式 ProjectCase | NOT_STARTED | 尚未冻结真实任务、数据和预算 |
 | AgentFit 真实 AgentTeams 元团队 | NOT_STARTED | 历史 smoke test 只证明平台能力 |
 | 真实候选对照评测 | NOT_STARTED | 无冻结 ProjectCase |
