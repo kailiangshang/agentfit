@@ -97,9 +97,15 @@ class SubmissionContractTest(unittest.TestCase):
             "安全",
             "开放",
             "未实现",
+            "Sample",
+            "TaskSample",
+            "Episode",
+            "七层 ML 映射",
+            "同一冻结样本集",
         ):
             with self.subTest(term=term):
                 self.assertIn(term, required)
+        self.assertIn("六层 ML 映射", validator.FORBIDDEN_TERMS)
 
     def test_sample_semantics_propagates_to_active_sources(self) -> None:
         required_by_file = {
@@ -117,6 +123,56 @@ class SubmissionContractTest(unittest.TestCase):
                 with self.subTest(path=path.name, term=term):
                     self.assertIn(term, text)
 
+        solution_text = SOLUTION.read_text(encoding="utf-8")
+        self.assertIn(
+            "Sample 是在特定任务契约下，可以被独立冻结、重放、执行和评价的最小业务语义单元。",
+            solution_text,
+        )
+        for contract in (
+            "SourceObservation = 原始业务观察",
+            "TaskSample = 当前任务契约下可独立冻结、重放、执行和评价的最小单位",
+            "Episode = 固定候选在固定 TaskSample 上的一次完整执行",
+            "EvaluationUnit = CandidateVersion × SampleVersion × RunIndex",
+        ):
+            with self.subTest(contract=contract):
+                self.assertIn(contract, solution_text)
+
+        project_case_text = PROJECT_CASE.read_text(encoding="utf-8")
+        manifest_match = re.search(
+            r"^## sample_set_manifests\s*$\n(?P<body>.*?)(?=^##\s|\Z)",
+            project_case_text,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        self.assertIsNotNone(manifest_match)
+        manifest_text = manifest_match.group("body") if manifest_match else ""
+        for purpose in (
+            "adaptation",
+            "validation",
+            "sealed_holdout",
+            "stress_and_failure",
+        ):
+            with self.subTest(manifest_purpose=purpose):
+                self.assertIn(purpose, manifest_text)
+        for manifest_field in ("content_hash", "access_policy"):
+            with self.subTest(manifest_field=manifest_field):
+                self.assertIn(manifest_field, manifest_text)
+
+        identity_and_skill_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in (IDENTITIES, SKILLS)
+        )
+        self.assertRegex(
+            identity_and_skill_text,
+            r"GovernanceAuditor.{0,200}sealed holdout.{0,100}(?:after|候选冻结|freeze)",
+        )
+        self.assertRegex(
+            identity_and_skill_text,
+            r"(?:AgentArchitect|候选).{0,250}(?:never|不得|不能).{0,100}sealed[- ]holdout",
+        )
+        self.assertRegex(
+            identity_and_skill_text,
+            r"(?:ValidationEngineer|执行).{0,250}(?:adaptation/validation/failure only|不得|不能).{0,100}(?:holdout|sealed)",
+        )
+
     def test_sample_case_json_uses_machine_readable_contracts(self) -> None:
         payload = json.loads(OFFICIAL_CASE_JSON.read_text(encoding="utf-8"))
         self.assertIn("sample_semantic_spec", payload)
@@ -133,6 +189,24 @@ class SubmissionContractTest(unittest.TestCase):
         for term in ("七层 ML 映射", "同一冻结样本集", "TaskSample", "Episode"):
             with self.subTest(term=term):
                 self.assertIn(term, source)
+        layer_positions = []
+        for index, layer in enumerate(
+            (
+                "L1 样本语义",
+                "L2 任务语义",
+                "L3 能力语义",
+                "L4 候选表示",
+                "L5 内循环",
+                "L6 外循环",
+                "L7 跨项目学习",
+            ),
+            start=1,
+        ):
+            position = source.find(layer)
+            with self.subTest(layer=layer):
+                self.assertNotEqual(-1, position)
+            layer_positions.append(position)
+        self.assertEqual(sorted(layer_positions), layer_positions)
         self.assertNotIn("六层 ML 映射", source)
 
 
