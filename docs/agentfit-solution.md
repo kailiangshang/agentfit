@@ -54,7 +54,7 @@ AgentFit 不预设多 Agent 更好，也不以 Agent 数量为优化目标。它
 | 层级 | 回答的问题 | 冻结表述 |
 |---|---|---|
 | 产品价值：Fit / Agent 建筑师 | 为用户解决什么 | 给 Agent 量体裁衣，交付最小充分、可验收的方案 |
-| 核心方法：Agent Architecture Search | 如何作出选择 | 任务语义 + 能力语义 + 受约束的架构搜索 + 统一评测 |
+| 核心方法：Agent Architecture Search | 如何作出选择 | 样本语义 + 任务语义 + 能力语义 + 受约束的架构搜索 + 统一评测 |
 | 未来方向：Meta-learning | 如何跨项目变好 | 经脱敏、适配、比较和未见项目验证后，才更新跨项目搜索先验 |
 
 三者不是并列定位。Architecture Search 是核心方法，不覆盖全部审批、审计和交付责任；Meta-learning 是未来跨项目方向，不是当前已实现能力。
@@ -123,7 +123,7 @@ AgentTeams
 
 界面和聊天只是控制与观察入口。正式状态由 Project Dossier 中版本化、机器可读的产物决定；聊天结论只有被结构化写入并通过门禁后才能推进项目状态。
 
-## 4. 任务语义、能力语义与 Agent 定义
+## 4. 样本语义、任务语义、能力语义与 Agent 定义
 
 ### 4.1 语义编译
 
@@ -131,23 +131,116 @@ AgentTeams
 
 LLM、Embedding、规则解析、Schema 映射、知识图谱、SVD、聚类、传统 ML 和人工标注都可以参与。大模型是实现手段之一；任何生成表示都不能覆盖原始证据或自动成为新事实。
 
-### 4.2 TaskSemanticSpec
+### 4.2 七层映射
+
+| 层级 | AgentFit 对象 | ML / 搜索含义 |
+|---|---|---|
+| L1 | Sample 语义 | 样本单位、实例空间、边界、重放与标注契约 |
+| L2 | Task 语义 | 样本分布、目标、输出、损失、指标与权衡 |
+| L3 | Capability 语义 | 可用算子、契约、权限、成本和适用域 |
+| L4 | Candidate 表示 | 能力图、Agent 分区、参数与共享范围 |
+| L5 | Inner Loop | 固定架构，在 adaptation samples 上优化局部参数 |
+| L6 | Outer Loop | 在 validation samples 上比较和更新候选架构 |
+| L7 | Cross-project Learning | 经未见项目验证后更新搜索先验 |
+
+### 4.3 Sample 的对象层次
+
+```text
+SourceObservation = 原始业务观察
+TaskSample = 当前任务契约下可独立冻结、重放、执行和评价的最小单位
+Episode = 固定候选在固定 TaskSample 上的一次完整执行
+EvaluationUnit = CandidateVersion × SampleVersion × RunIndex
+```
+
+`SourceObservation` 是告警、用户反馈、Issue、日志或工单等原始业务观察，保留来源与时间边界；是否构成可评价样本由当前任务契约决定。`TaskSample` 是当前 `TaskSemanticSpec` 下可独立执行和验收的单位，`Episode` 是固定候选在固定 `TaskSample` 上的一次完整运行轨迹，而不是输入样本。
+
+Sample can be independently frozen, replayed, executed, and evaluated under one task contract. 因此 `ProjectCase != Sample`：前者描述任务分布、样本集合、候选空间、预算和评测协议，后者是其中一个具体评价单位。样本边界不得由候选运行时临时改变；从告警级改为事故级会创建新的 Sample 和 Task 版本，并重新批准试验。
+
+### 4.4 SampleSemanticSpec
+
+`SampleSemanticSpec` 定义样本类型，而不是保存某条业务数据：
+
+```text
+SampleSemanticSpec = {
+  sample_spec_id, version, task_spec_ref,
+  sample_type, sample_level, unit_description,
+  input_schema, context_schema, expected_output_contract,
+  temporal_boundary, grouping_rule, identity_rule,
+  label_or_oracle, replay_contract,
+  metric_applicability,
+  sensitivity_policy, provenance_requirements
+}
+```
+
+`temporal_boundary` 限定可见事实以防止未来信息泄漏；`grouping_rule` 规定多条原始观察何时组成同一样本；`identity_rule` 规定稳定业务 ID 以避免重复计数；`label_or_oracle` 可以是自动标签、规则 Oracle、人工复核或仅契约验收；`replay_contract` 固定重放所需输入、环境快照、模拟器与允许的外部依赖；`metric_applicability` 说明单样本计算与跨样本聚合的指标边界。
+
+### 4.5 Sample
+
+`Sample` 是不可变、可寻址的具体实例：
+
+```text
+Sample = {
+  sample_id, version, sample_spec_ref,
+  source_observation_refs,
+  input_snapshot_ref, input_hash,
+  context_snapshot_ref, context_hash,
+  expected_contract_ref,
+  event_time, cutoff_time, grouping_keys,
+  split, sensitivity, provenance,
+  content_hash
+}
+```
+
+sealed holdout 可以隐藏 `expected_contract_ref` 的实际内容，但必须保留由审计者解析的受控引用；候选、Prompt 和普通执行 Agent 不得读取该引用。
+
+### 4.6 SampleSetManifest
+
+数据划分使用版本化 `SampleSetManifest`，不再用模糊的“数据集”描述：
+
+```text
+SampleSetManifest = {
+  sample_set_id, version, purpose,
+  sample_spec_ref, sample_refs,
+  selection_rule, distribution_summary,
+  access_policy, frozen_at, content_hash
+}
+```
+
+一个 ProjectCase 至少包含 `adaptation_set`、`validation_set`、`sealed_holdout_set` 和 `stress_and_failure_set`：adaptation 允许内循环查看输出和反馈；validation 用于候选选择和外循环更新；sealed holdout 仅供最终独立审计；stress and failure 覆盖错误输入、工具故障、权限拒绝、超时和不安全动作。相同 `content_hash` 不得跨集合出现；按事故、客户、仓库、环境、模板或时间相关的样本必须分组切分，不能把同一业务事件的近重复观察随机拆到不同集合。
+
+### 4.7 SampleEvaluation
+
+每个 Episode 必须记录样本级结果：
+
+```text
+SampleEvaluation = {
+  candidate_version, sample_version, run_index,
+  seed, environment_snapshot, budget_snapshot,
+  result_ref, trace_ref, metric_values,
+  status, failure_class, human_actions
+}
+```
+
+项目级结果只能由样本级结果按预先冻结的聚合规则产生。平均值、成功率、成本、人工接管率和失败率必须同时记录分母、缺失样本、失败样本和适用范围，禁止只汇报成功 Episode。
+
+### 4.8 TaskSemanticSpec
 
 任务语义定义“要优化什么，以及什么结果才算解决”：
 
 ```text
 TaskSemanticSpec = {
   spec_id, version, objective,
-  input_space, expected_output, examples, distribution,
-  metrics, tradeoffs, acceptance_thresholds,
+  sample_spec_ref, sample_distribution,
+  expected_output, metrics, tradeoffs,
+  acceptance_thresholds, aggregation_rules,
   budgets, risk_constraints, failure_costs,
   human_boundaries, evidence_requirements, provenance
 }
 ```
 
-候选比较期间任务契约必须冻结。目标、分布、指标、权衡或验收标准变化时，必须产生新版本、由责任人确认并重新执行比较；优化器不得为了让候选通过而降低门槛。
+候选比较期间任务契约必须冻结。目标、样本分布、指标、权衡、聚合规则或验收标准变化时，必须产生新版本、由责任人确认并重新执行比较；优化器不得为了让候选通过而降低门槛。`examples` 只能帮助理解，不能替代冻结的 Sample 契约或 SampleSetManifest。
 
-### 4.3 CapabilitySemanticRegistry
+### 4.9 CapabilitySemanticRegistry
 
 能力语义定义“可以使用什么进行安全搜索”：
 
@@ -172,7 +265,7 @@ Rule / Algorithm / MLModel / LLM / Skill / Tool / MCP / Memory / State / Communi
 
 Skill、MCP、Memory 和通信可以是私有、团队、项目或全局资源。共享资源不会自动合并 Agent，私有资源也不会自动生成 Agent。
 
-### 4.4 Agent 的严格定义
+### 4.10 Agent 的严格定义
 
 > Agent 是具有独立身份、任务所有权、决策闭环、状态边界、权限边界和责任边界的可执行子图。
 
@@ -190,7 +283,7 @@ Agent = {
 
 Skill 是可复用做事方法；MCP/Tool 是外部接口；Memory 是状态介质；Communication 是跨边界协议；Workflow 是外部顺序和门禁；Agent 是组合和支配能力子图的独立决策与责任主体。
 
-### 4.5 任务—能力对齐
+### 4.11 任务—能力对齐
 
 语义编译后必须生成 `AlignmentReport`，逐项记录：
 
@@ -265,13 +358,13 @@ Agentless、固定 Workflow、单 Agent、多 Agent、Human 混合、部分自�
 
 ### 6.1 内循环
 
-内循环在任务契约和 Agent 边界不变时优化局部节点或 SCC，例如 Prompt、模型、Embedding、特征、分解秩、阈值、规则权重、检索、工具配置、Skill 选择、上下文压缩、重试和局部预算。
+内循环在冻结的 Sample、任务契约和 Agent 边界不变时优化局部节点或 SCC，例如 Prompt、模型、Embedding、特征、分解秩、阈值、规则权重、检索、工具配置、Skill 选择、上下文压缩、重试和局部预算。Inner Epoch 是固定候选完整处理一轮 adaptation SampleSet。
 
 内循环不得自行创建或销毁 Agent、扩大权限、改变责任边界或修改验收标准。
 
 ### 6.2 外循环
 
-外循环根据 validation、成本、复杂度、风险和审计结果改变整体候选，例如增删能力节点、改变拓扑、Agentize 或取消 Agentize、拆分或合并 Agent、改变通信与共享范围，以及在 Agentless、单 Agent、多 Agent和 Human 混合之间迁移。
+外循环根据 validation SampleSet、成本、复杂度、风险和审计结果改变整体候选，例如增删能力节点、改变拓扑、Agentize 或取消 Agentize、拆分或合并 Agent、改变通信与共享范围，以及在 Agentless、单 Agent、多 Agent和 Human 混合之间迁移。Outer Generation 在 validation 上选择候选并更新架构。
 
 ```text
 内循环：在固定架构 A 下寻找局部最优参数 θ*A
@@ -285,9 +378,9 @@ Agentless、固定 Workflow、单 Agent、多 Agent、Human 混合、部分自�
 | 名称 | 定义 |
 |---|---|
 | Step | 一次推理、工具调用或环境反馈 |
-| Episode | 一个任务样例的完整执行 |
-| Inner Epoch | 固定候选对全部 adaptation 样例的一轮适配 |
-| Outer Generation | 一次候选生成、局部适配、validation 和架构更新 |
+| Episode | 一个固定候选在一个固定 TaskSample 上的一次完整执行 |
+| Inner Epoch | 固定候选完整处理一轮 adaptation SampleSet |
+| Outer Generation | 一次候选生成、局部适配、validation SampleSet 选择和架构更新 |
 | Meta Epoch | 跨多个项目更新并验证搜索先验 |
 
 局部 SCC 的一次循环只是 Step，不称为 Epoch。
@@ -305,10 +398,10 @@ LLM、Embedding、SVD、图算法或其他方法都只是更新表示、局部�
 | Agent | 核心职责 | 独立责任产物 |
 |---|---|---|
 | EngagementLead | 接收任务、控制阶段、组织审批和交付 | Project Dossier 状态、ArchitectureDecision、DeliveryDecision |
-| BusinessEngineer | 理解材料、编译任务语义和自动化边界 | TaskSemanticSpec |
+| BusinessEngineer | 从原始材料定义样本单位、Schema、边界、分布、验收，编译任务语义和自动化边界 | SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec |
 | AgentArchitect | 盘点能力、对齐、建图和 Agent 分区 | Capability Registry、AlignmentReport、CandidateGraphSet |
-| ValidationEngineer | 部署候选、执行受控试验和故障注入 | EvaluationRun、ExecutionTrace |
-| GovernanceAuditor | 独立检查 holdout、安全、复杂度和证据 | EvaluationReport、审计结论 |
+| ValidationEngineer | 在 adaptation、validation 和 failure samples 上部署候选、执行可重放试验和故障注入 | SampleEvaluation[]、EvaluationRun、ExecutionTrace |
+| GovernanceAuditor | 候选冻结后独占 sealed holdout 的解析、评价和泄漏检查 | Holdout EvaluationReport、审计结论 |
 
 五个 Agent 具有独立目标、状态、决策、权限和责任产物，不是五个角色标签。`EngagementLead` 第一阶段可映射到 AgentTeams Manager 或 Team Leader；其余四个角色使用独立 Worker，实际映射以固定版本的运行配置为准。
 
@@ -334,11 +427,13 @@ Intake → Discover → Architect → Approve → Trial → Audit → Deliver �
 通信渠道用于委派、讨论、质疑和人工介入；Project Dossier 是状态事实源；ExecutionTrace 保存决策与执行证据。
 
 ```text
-RawMaterials
+RawMaterials + SourceObservations
+  → SampleSemanticSpec + SampleSetManifest
   → TaskSemanticSpec
   → CapabilitySemanticRegistry + AlignmentReport
   → CandidateGraphSet + TrialSpec
-  → EvaluationRun[] + EvaluationReport
+  → SampleEvaluation[] + ExecutionTrace[]
+  → EvaluationReport
   → DeliveryDecision
   → AgentSolutionPackage | HumanRetained | RejectionDecision
 ```
@@ -371,23 +466,25 @@ Human 提交材料
 ```text
 ProjectDossier = {
   source_evidence, raw_materials,
+  sample_semantic_spec, samples, sample_set_manifests,
   task_semantic_spec, capability_semantic_registry,
   alignment_report, candidate_graph_set,
-  data_splits, trial_specs, budgets, safety_constraints,
-  evaluation_runs, execution_traces, audit_reports,
+  trial_specs, budgets, safety_constraints,
+  sample_evaluations, evaluation_runs, execution_traces,
+  aggregate_reports, audit_reports,
   approvals, delivery_decision, artifacts,
   provenance_and_license
 }
 ```
 
-数据应按仓库、环境、任务族、模板、时间或其他真实分布边界划分，而不是只做随机行切分。单项目至少区分 adaptation、validation 和 sealed holdout；失败与压力样例单独记录。
+数据应按仓库、环境、任务族、模板、时间或其他真实分布边界划分，而不是只做随机行切分。Project Dossier 先保存样本规格、样本、清单和样本级评价，再保存聚合报告；单项目至少区分 adaptation、validation 和 sealed holdout；失败与压力样例单独记录。
 
 ### 8.2 版本与可复现
 
 每次试验必须固定或记录：
 
-- TaskSemanticSpec、能力、候选和 TrialSpec 版本；
-- 数据集、任务 ID、来源快照和哈希；
+- SampleSemanticSpec、Sample、SampleSetManifest、TaskSemanticSpec、能力、候选和 TrialSpec 版本；
+- 样本 ID、任务 ID、来源快照和哈希；
 - 模型、Prompt、Embedding、算法和依赖版本；
 - AgentTeams、Skill、MCP、工具和外部服务版本；
 - 随机种子、预算、超时、最大步数和并发；
@@ -426,6 +523,8 @@ Human 是候选图中的能力和约束对象，必须记录触发条件、审�
 - adaptation、validation 和 holdout 差距；
 - 人工接管质量和最终责任边界。
 
+每一项指标都必须记录样本单位、分母、聚合规则、缺失样本和失败样本；聚合报告还必须标明适用范围。不得用只含成功 Episode 的均值、成功率、成本或人工接管率代替完整样本级结果。
+
 ### 9.2 ExecutionTrace
 
 ```text
@@ -443,7 +542,7 @@ Trace 必须能从结论回到输入、版本、决策、工具调用、审批�
 
 ### 9.3 独立审计
 
-AgentArchitect 不得使用 sealed holdout 定向修改候选。ValidationEngineer 执行隔离评测；GovernanceAuditor 只基于获准证据解释留出表现、安全、复杂度和可复现性；EngagementLead 只能基于审计产物作出交付决定。
+AgentArchitect 不得使用 sealed holdout 定向修改候选。ValidationEngineer 只在 adaptation、validation 和 failure samples 上执行可重放隔离评测；GovernanceAuditor 在候选冻结后独占解析并评价 sealed holdout，任何基于 holdout 的候选修改都会使该轮结果失效；EngagementLead 只能基于审计产物作出交付决定。
 
 压力与失败集至少覆盖工具超时、权限拒绝、错误输入、环境故障、数据漂移、循环失控、成本超限、审批缺失、错误写入和回滚失败。
 
