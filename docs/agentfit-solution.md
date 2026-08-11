@@ -354,7 +354,7 @@ Agentless、固定 Workflow、单 Agent、多 Agent、Human 混合、部分自�
 → 选择满足门槛的最小充分候选
 ```
 
-每增加一个 Agent、模型、工具、循环或共享范围，都必须在统一输入、预算、指标和安全门禁下证明边际价值。比赛要求的多 Agent 闭环由 AgentFit 常驻元团队承担；被设计的候选系统不为凑数量而拆分。
+每增加一个 Agent、模型、工具、循环或共享范围，都必须在同一冻结 `SampleSetManifest`、同一版本化 `TaskSample`、相同模型与工具边界、预算、指标和安全门禁下证明边际价值。比赛要求的多 Agent 闭环由 AgentFit 常驻元团队承担；被设计的候选系统不为凑数量而拆分。
 
 ## 6. 内循环、外循环与 Meta-learning 边界
 
@@ -410,15 +410,16 @@ LLM、Embedding、SVD、图算法或其他方法都只是更新表示、局部�
 ### 7.2 固定阶段骨架
 
 ```text
-Intake → Discover → Architect → Approve → Trial → Audit → Deliver → Learn
+Intake → Discover → Freeze → Architect → Approve → Trial → Audit → Deliver → Learn
 ```
 
 | 阶段 | 核心产物 | 门禁 |
 |---|---|---|
 | Intake | Project Dossier、范围和来源 | 责任人和材料来源明确 |
-| Discover | SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec、Capability Registry、AlignmentReport | 样本单位、边界、manifest、输入、输出、验收和缺口可描述并冻结 |
-| Architect | CandidateGraphSet、风险和预算 | 候选可执行且复杂度有理由 |
-| Approve | TrialSpec、权限和审批记录 | 数据、预算、回滚和试验范围获批 |
+| Discover | SampleSemanticSpec、TaskSemanticSpec、adaptation/validation/sealed_holdout/stress_and_failure 四份 SampleSetManifest | 样本单位、边界、四份 manifest、输入、输出与验收可描述 |
+| Freeze | Sample/Task 冻结版本、四份 manifest 与审批记录 | 样本/任务契约及四份互异 manifest 在候选生成前获 Human 批准并冻结 |
+| Architect | Capability Registry、AlignmentReport、CandidateGraphSet、风险和预算 | 候选可执行且复杂度有理由 |
+| Approve | TrialSpec、权限、预算和审批记录 | 候选生成后，试验范围、权限、预算与回滚单独获批 |
 | Trial | 运行结果、Trace、故障和成本 | 输入、数据划分和预算受控 |
 | Audit | EvaluationReport、选择或否决建议 | 审计输入与结论可独立追溯 |
 | Deliver | DeliveryDecision；对应的 AgentSolutionPackage、HumanRetained 或 RejectionDecision | 用户确认责任和风险 |
@@ -430,10 +431,12 @@ Intake → Discover → Architect → Approve → Trial → Audit → Deliver �
 
 ```text
 RawMaterials + SourceObservations
-  → SampleSemanticSpec + SampleSetManifest
+  → SampleSemanticSpec + four distinct SampleSetManifests(adaptation, validation, sealed_holdout, stress_and_failure)
   → TaskSemanticSpec
+  → HumanApproval(Sample/Task + four SampleSetManifests)
   → CapabilitySemanticRegistry + AlignmentReport
-  → CandidateGraphSet + TrialSpec
+  → CandidateGraphSet
+  → HumanApproval(TrialSpec + permissions + budgets)
   → SampleEvaluation[] + ExecutionTrace[]
   → EvaluationReport
   → DeliveryDecision
@@ -449,11 +452,11 @@ RawMaterials + SourceObservations
 ```text
 Human 提交 RawMaterials + SourceObservations
 → EngagementLead 建立 Project Dossier
-→ BusinessEngineer 生成并冻结 SampleSemanticSpec + SampleSetManifest
-→ BusinessEngineer 生成 TaskSemanticSpec
+→ BusinessEngineer 产出 SampleSemanticSpec、TaskSemanticSpec 与 adaptation/validation/sealed_holdout/stress_and_failure 四份互异 SampleSetManifest
+→ Human 在候选生成前批准并冻结 Sample/Task 契约与四份 SampleSetManifest
 → AgentArchitect 生成能力清单、缺口和 CandidateGraphSet
-→ Human 批准预算与 TrialSpec
-→ CandidateVersion × SampleVersion
+→ Human 在候选生成后单独批准 TrialSpec、权限和预算
+→ EvaluationUnit = CandidateVersion × SampleVersion × RunIndex
 → ValidationEngineer 生成 SampleEvaluation[] + ExecutionTrace[]
 → GovernanceAuditor 独立审计
 → EngagementLead 输出 DeliveryDecision
@@ -496,7 +499,7 @@ ProjectDossier = {
 
 ### 8.3 预算与公平比较
 
-候选必须使用可比的样例、模型与工具边界、token/API/工具调用预算、wall-clock、步数、重试、并行和 Human 规则。候选不能通过未披露地增加模型、工具、预算或人工投入获得“胜利”。
+候选必须使用同一冻结 `SampleSetManifest` 中的同一版本化 `TaskSample`，并共享相同模型与工具边界、token/API/工具调用预算、wall-clock、步数、重试、并行和 Human 规则。候选不能通过未披露地增加模型、工具、预算或人工投入获得“胜利”。
 
 ### 8.4 安全和 Human 边界
 

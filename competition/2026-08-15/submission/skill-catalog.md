@@ -56,7 +56,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 使用场景 | 方案架构师盘点能力,生成任务—能力对齐报告与缺口清单 |
 | 输入参数 | SampleSemanticSpec、SampleSetManifest 分布摘要、TaskSemanticSpec、能力清单(Skill/MCP/工具/模型/规则/记忆/Human)、权限边界 |
 | 输出结果 | 能力库(每项含类型/目的/输入输出契约/触发条件/依赖/成本/权限/副作用/失败模式/恢复)、缺口报告(完整/部分/未覆盖/冲突/不可观测/需人工确认) |
-| 调用条件 | 任务说明书冻结后触发 |
+| 调用条件 | Sample/Task 契约与四份 SampleSetManifest 获 Human 批准并冻结后触发 |
 | 依赖工具系统 | 能力注册表、Schema 校验器 |
 | 失败处理 | 缺口无法补齐时请求材料、缩小范围或停止搜索;不得虚构 Agent 名称掩盖缺口 |
 | 权限安全 | 只读能力定义;不调用能力本身 |
@@ -85,8 +85,8 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 类型 | 执行 Skill(沙箱 + 预算控制 + 计量) |
 | 使用场景 | ValidationEngineer 在 adaptation、validation 和 stress/failure samples 上执行候选，采集逐样本评价、Episode、Step Trace 与成本 |
 | 输入参数 | CandidateGraphSet + SampleSetManifest(adaptation/validation/stress_and_failure) + TrialSpec，以及预算、权限、安全门禁 |
-| 输出结果 | 每个 CandidateVersion × TaskSample × RunIndex 的 SampleEvaluation、完整 Episode 与 Step 级 ExecutionTrace；成功与失败证据同等保留 |
-| 调用条件 | Human 批准试验范围与预算后触发 |
+| 输出结果 | 每个 CandidateVersion × SampleVersion × RunIndex 的 SampleEvaluation、完整 Episode 与 Step 级 ExecutionTrace；TaskSample 只描述业务语义单位；成功与失败证据同等保留 |
+| 调用条件 | 候选生成后，Human 单独批准 TrialSpec、权限和预算后触发 |
 | 依赖工具系统 | 沙箱容器、预算计量器、Trace 采集器、故障注入器 |
 | 失败处理 | 预算耗尽即停止，不自动提高预算；工具超时、权限拒绝、环境故障或循环失控按预定义路径回滚；任何 sealed holdout 暴露均使本轮无效 |
 | 权限安全 | ValidationEngineer is adaptation/validation/failure only；不能读取或解析 sealed holdout；在沙箱内执行，密钥由基础设施持有，外部写入需 Human 审批 |
@@ -113,8 +113,8 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 |---|---|
 | 名称 | 人工门禁(human-gate) |
 | 类型 | 治理 Skill(审批路由 + 记录) |
-| 使用场景 | 样本冻结与高风险动作(外部写入、真实发布、责任转移、密钥使用、预算变更)必须由 Human 批准、可拒绝、可回滚 |
-| 输入参数 | 样本单位、分组、cutoff、split、access policy、content hash，或其他动作类型、触发条件、风险等级、审批主体、回滚路径 |
+| 使用场景 | 候选生成前的 Sample/Task 冻结，以及候选生成后的 TrialSpec/权限/预算和其他高风险动作(外部写入、真实发布、责任转移、密钥使用、预算变更)必须分别由 Human 批准、可拒绝、可回滚 |
+| 输入参数 | SampleSemanticSpec、TaskSemanticSpec、四份 SampleSetManifest 的单位/分组/cutoff/split/access policy/content hash，或 TrialSpec、权限、预算及其他动作类型、触发条件、风险等级、审批主体、回滚路径 |
 | 输出结果 | 审批记录(批准/拒绝/撤销)、回滚记录、Trace 引用 |
 | 调用条件 | 任何高风险动作执行前自动触发 |
 | 依赖工具系统 | AgentTeams Human 入口、审批记录存储 |

@@ -19,7 +19,7 @@
 | Human、风险、异常与回滚 | READY | `submission/risk-and-human-gates.md`；设计契约 |
 | 开放与合规披露 | READY | `submission/openness-and-compliance.md`；仓库私有、License 未选择 |
 | 500 字作品简介 | READY | `submission/work-introduction-draft.md`；实测 488 个非空白字符，符合不超过 500 的门禁 |
-| 17 页 HTML / PPTX / PDF | IN_PROGRESS | 已重建为 17 页；PPTX/PDF 的结构、内容与几何验证通过，4 个受 Sample 影响的关键页视觉复核通过；完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成 |
+| 17 页 HTML / PPTX / PDF | IN_PROGRESS | 已重建为 17 页；PPTX 的 17 页结构、内容与几何验证通过，PDF 的 17 页页数与逐页文本验证通过；4 个受 Sample 影响的关键页视觉复核通过；完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成 |
 | 首个正式 ProjectCase | NOT_STARTED | 尚未冻结真实任务、数据和预算 |
 | AgentFit 真实 AgentTeams 元团队 | NOT_STARTED | 历史 smoke test 只证明平台能力 |
 | 真实候选对照评测 | NOT_STARTED | 无冻结 ProjectCase |
@@ -30,7 +30,7 @@
 ```text
 完成 17 页逐页视觉复核
 → 修复事实、字号、裁切与一致性问题
-→ 运行页数 / 内容 / 几何 / 隐私 / Git 红线
+→ 运行 PPTX 页数 / 内容 / 几何与 PDF 页数 / 逐页文本 / 隐私 / Git 红线
 → 冻结简介 + PPTX + PDF
 → 上传前再次核对文件可打开与页数
 ```
@@ -44,7 +44,7 @@ ProjectCase、真实元团队和候选对照可以在初赛后继续，不得阻
 1. 简介不超过 500 个非空白字符；
 2. HTML、PPTX、PDF 均为 17 页且页序一致；
 3. PPTX 使用原生可编辑形状与文本；
-4. 严格 HTML 编译无警告，PPTX 几何检查无问题；
+4. 严格 HTML 编译无警告，PPTX 几何检查无问题，PDF 页数与逐页标题/关键文本检查通过；
 5. PPTX 与 PDF 完成逐页视觉检查；
 6. 无虚构指标、过期引用、错误完成态、敏感配置或本地截图；
 7. 场景、Agent、协同、Skill、MCP、上下文、验证、安全和开放要求均可定位；

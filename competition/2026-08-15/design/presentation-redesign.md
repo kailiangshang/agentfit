@@ -61,8 +61,8 @@
 | 3 | 平台提供砖块，但企业仍缺一位建筑师 | 重平台和轻框架都没有替用户完成方案选择与证据闭环 | AgentTeams/框架 → 缺失层 → AgentFit |
 | 4 | AgentFit 先定义样本，再编译任务和方案 | 先从原始观察编译 SampleSemanticSpec 与 SampleSetManifest，再编译 TaskSemanticSpec，最后进入能力语义和候选比较 | Sample 编译 → Task 编译 → 能力编译与候选比较 |
 | 5 | 无、单、多 Agent 是同一个搜索空间 | 用同一能力图解释 Agentless、局部 Agentize、单 Agent和多 Agent | 一张能力图的四个渐进版本 |
-| 6 | 最简单的合格者获胜 | 所有候选共享同一冻结 SampleSet、预算、指标、安全和 Human 门禁；复杂度作为成本 | 三条候选赛道处理同一冻结样本集并汇入共同验收线 |
-| 7 | 五个元 Agent 把方案选择变成责任闭环 | BusinessEngineer 负责 Sample/Task 契约，ValidationEngineer 负责每个 TaskSample 的 Episode 与 Step Trace，GovernanceAuditor 在候选冻结后独占 sealed holdout；Human 审批和交付回路贯穿其中 | 带 Sample 合同、Episode、回路和门禁的责任链，不是五张角色卡 |
+| 6 | 最简单的合格者获胜 | 所有候选共享同一冻结 SampleSetManifest、同一版本化 TaskSample、模型与工具边界、预算、指标、安全和 Human 门禁；复杂度作为成本 | 三条候选赛道处理同一冻结样本边界并汇入共同验收线 |
+| 7 | 五个元 Agent 把方案选择变成责任闭环 | BusinessEngineer 负责 Sample/Task 契约，ValidationEngineer 负责每个 TaskSample 的 Episode 与 Step Trace；候选冻结后，仅 GovernanceAuditor 消费 sealed-holdout 结果；Human 审批和交付回路贯穿其中 | 带 Sample 合同、Episode、回路和门禁的责任链，不是五张角色卡 |
 | 8 | AgentTeams 让团队运行，AgentFit 负责选对方案 | 上下层边界；共享状态、Trace、Skill/MCP 和 Human 的落点 | AgentFit 方案层 / 项目档案 / AgentTeams 底座 |
 | 9 | 不同行业，共用一种方案决策方法 | GOAI 官网四类参考方向共享“输入—判断—执行—验证—沉淀”骨架 | 四条业务泳道汇入共同骨架 |
 | 10 | 最终交付的不是 Prompt，而是可验收方案包 | 架构、理由、证据、安全边界和五种合法结果 | 方案包展开图，拒绝决定与部署方案并列 |
@@ -157,7 +157,7 @@
 5. 最小充分方案或拒绝自动化的交付价值；
 6. 真实、可核验的当前进展。
 
-正文按包含标点的非空白字符计算不得超过 500；建议目标为 420–470 字，为平台计数差异预留空间。任何“正在实施”“已运行”“已开放”声明必须与准备看板和证据状态一致。
+正文按包含标点的非空白字符计算不超过 500；当前提交候选实测 488 个非空白字符。任何“正在实施”“已运行”“已开放”声明必须与准备看板和证据状态一致。
 
 ## 9. 提交前错误处理与降级
 

@@ -23,8 +23,8 @@
 | 3 | 平台提供砖块，但企业仍缺一位建筑师 | 市场缺失的方案工程层是什么 |
 | 4 | AgentFit 先定义样本，再编译任务和方案 | Sample 编译 → Task 编译 → 能力编译与候选比较 |
 | 5 | 无、单、多 Agent 是同一个搜索空间 | 为什么 Agent 数量是变量而非目标 |
-| 6 | 最简单的合格者获胜 | 所有候选共享同一冻结 SampleSet、预算、指标、安全和 Human 门禁；复杂度作为成本 |
-| 7 | 五个元 Agent 把方案选择变成责任闭环 | BusinessEngineer 负责 Sample/Task 契约，ValidationEngineer 负责每个 TaskSample 的 Episode 与 Step Trace，GovernanceAuditor 在候选冻结后独占 sealed holdout |
+| 6 | 最简单的合格者获胜 | 所有候选共享同一冻结 SampleSetManifest、同一版本化 TaskSample、模型与工具边界、预算、指标、安全和 Human 门禁；复杂度作为成本 |
+| 7 | 五个元 Agent 把方案选择变成责任闭环 | BusinessEngineer 负责 Sample/Task 契约，ValidationEngineer 负责每个 TaskSample 的 Episode 与 Step Trace；候选冻结后，仅 GovernanceAuditor 消费 sealed-holdout 结果 |
 | 8 | AgentTeams 让团队运行，AgentFit 负责选对方案 | 产品层、项目档案和底座如何分工 |
 | 9 | 不同行业，共用一种方案决策方法 | 官网参考场景如何共享任务骨架 |
 | 10 | 最终交付的不是 Prompt，而是可验收方案包 | 企业最终拿到什么 |

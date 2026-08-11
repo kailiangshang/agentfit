@@ -42,6 +42,10 @@
     }
   ],
   "sample_semantic_spec": {
+    "status": "not_instantiated",
+    "sample_spec_id": "sample-spec:software-defect-package",
+    "version": "0.1-design-contract",
+    "task_spec_ref": "task-spec:software-defect-repair@0.1-design-contract",
     "sample_type": "software-defect-package",
     "sample_level": "task",
     "unit_description": "一个可独立定位、修复和冻结测试的软件缺陷包",
@@ -51,14 +55,55 @@
   },
   "sample_set_manifests": {
     "status": "not_instantiated",
-    "required_sets": [
-      "adaptation",
-      "validation",
-      "sealed_holdout",
-      "stress_and_failure"
-    ]
+    "descriptors": {
+      "adaptation": {
+        "status": "not_instantiated",
+        "purpose": "adaptation",
+        "sample_spec_ref": "sample-spec:software-defect-package@0.1-design-contract",
+        "version": null,
+        "content_hash": null,
+        "access_policy": "样本与任务冻结获批后，仅允许获准的局部适配主体读取输出和反馈"
+      },
+      "validation": {
+        "status": "not_instantiated",
+        "purpose": "validation",
+        "sample_spec_ref": "sample-spec:software-defect-package@0.1-design-contract",
+        "version": null,
+        "content_hash": null,
+        "access_policy": "样本与任务冻结获批后，仅用于候选选择和外循环更新"
+      },
+      "sealed_holdout": {
+        "status": "not_instantiated",
+        "purpose": "sealed_holdout",
+        "sample_spec_ref": "sample-spec:software-defect-package@0.1-design-contract",
+        "version": null,
+        "content_hash": null,
+        "access_policy": "候选冻结后，仅 GovernanceAuditor 可解析内容与结果"
+      },
+      "stress_and_failure": {
+        "status": "not_instantiated",
+        "purpose": "stress_and_failure",
+        "sample_spec_ref": "sample-spec:software-defect-package@0.1-design-contract",
+        "version": null,
+        "content_hash": null,
+        "access_policy": "样本与任务冻结获批后，仅允许获准的故障注入与验证主体使用"
+      }
+    }
   },
   "task_semantic_spec": {
+    "spec_id": "task-spec:software-defect-repair",
+    "version": "0.1-design-contract",
+    "sample_spec_ref": "sample-spec:software-defect-package@0.1-design-contract",
+    "sample_distribution": {
+      "status": "not_instantiated",
+      "manifest_purposes": [
+        "adaptation",
+        "validation",
+        "sealed_holdout",
+        "stress_and_failure"
+      ],
+      "note": "四份 manifest 仅定义必需字段与访问策略，未实例化成员、版本或 content_hash"
+    },
     "objective": "从多源缺陷线索形成可验证的修复候选，并在人工批准前停止真实发布",
     "inputs": [
       "Issue",
@@ -81,8 +126,8 @@
       "无未批准外部写入",
       "失败可回滚"
     ],
-    "budget_policy": "候选共享模型、工具、token、调用、时间、重试和人工投入口径",
-    "human_boundary": "Human 冻结任务契约、批准试验范围和真实发布，并可拒绝或撤销"
+    "budget_policy": "候选使用同一冻结 SampleSetManifest 与同一版本化 TaskSample，并共享模型、工具、token、调用、时间、重试和人工投入口径",
+    "human_boundary": "Human 在候选生成前冻结 Sample/Task 契约与四份 manifest；候选生成后另行批准 TrialSpec、权限、预算和真实发布，并可拒绝或撤销"
   },
   "capabilities": [
     "线索标准化与去重",
@@ -109,11 +154,21 @@
       "boundary": "定位影响、修复和独立验证由不同责任主体完成，Human 保留发布门禁"
     }
   ],
+  "episode_run_mapping": {
+    "status": "not_instantiated",
+    "evaluation_unit": "CandidateVersion × SampleVersion × RunIndex",
+    "candidate_version": "runtime_required_reference",
+    "sample_version": "runtime_required_reference",
+    "run_index": "runtime_required_non_negative_integer",
+    "episode_semantics": "固定 CandidateVersion 在固定 SampleVersion 上按 RunIndex 标识的一次完整执行",
+    "trace_semantics": "Trace 在设计上必须记录 EvaluationUnit、Step 决策、工具调用、审批、成本、失败与回滚；本案例未产生 Trace 实例"
+  },
   "paper_trace": [
     "EngagementLead 建立 design-simulation dossier",
-    "BusinessEngineer 生成 SampleSemanticSpec、SampleSetManifest 和 TaskSemanticSpec",
+    "BusinessEngineer 草拟 SampleSemanticSpec、四类 SampleSetManifest 与 TaskSemanticSpec 契约，不实例化任何样本成员或 SampleSetManifest",
+    "EngagementLead 标注候选生成前的 Sample/Task 冻结门禁；本设计模拟未发生真实审批",
     "AgentArchitect 生成 C0/C1/C2 和统一边界",
-    "ValidationEngineer 生成 TrialSpec、SampleEvaluation 契约和 Candidate × Sample Trace 规则，不生成虚构结果",
+    "ValidationEngineer 定义 TrialSpec、SampleEvaluation 与 CandidateVersion × SampleVersion × RunIndex Trace 契约，不生成虚构结果",
     "GovernanceAuditor 阻止把纸面模拟写成 PoC",
     "EngagementLead 输出 requires_runtime_trial"
   ],
@@ -121,6 +176,6 @@
     "status": "requires_runtime_trial",
     "selected_candidate": null,
     "reason": "没有真实仓库执行、冻结测试、成本和失败证据，当前不能选择赢家",
-    "next_gate": "在统一输入、预算和安全边界下，对一个冻结 SampleSet 中的 TaskSample 执行 C0、C1、C2"
+    "next_gate": "在同一冻结 SampleSetManifest、同一版本化 TaskSample、相同模型与工具边界、预算和安全门禁下执行 C0、C1、C2"
   }
 }

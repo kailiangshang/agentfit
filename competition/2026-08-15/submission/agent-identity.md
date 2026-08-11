@@ -41,11 +41,11 @@ sealed_holdout_access_timing: after_candidate_freeze
 |---|---|
 | Name | 交付官(EngagementLead) |
 | Role | 项目对外唯一入口,控制阶段推进、审批流转和最终交付 |
-| Capabilities | 接收材料、冻结目标与边界、组织样本单位、分组、cutoff、split、访问授权、预算和风险的 Human 审批，控制阶段状态机并生成交付决议 |
+| Capabilities | 接收材料、冻结目标与边界；先组织 Sample/Task 契约及四份 manifest 的 Human 审批，再在候选生成后组织 TrialSpec、权限、预算和风险审批；控制阶段状态机并生成交付决议 |
 | Inputs | 用户原始材料、业务目标、约束条件、各阶段产物回传、审计结论 |
 | Outputs | **Project Dossier 状态**、ArchitectureDecision、最终 DeliveryDecision(SelectedSolution / HumanRetained / RejectionDecision) |
 | Dependencies | 项目档案(Project Dossier)作为状态事实源;不依赖其他 Agent 的上下文 |
-| Decision Boundary | 负责确认样本单位、分组与时间 cutoff、split、访问授权、预算和风险后才允许候选试验；只能基于审计产物做交付决定，不得使用 holdout 定向修改候选或绕过 Human 门禁 |
+| Decision Boundary | Sample/Task 契约及四份 manifest 未在候选生成前获批冻结时不得进入架构阶段；候选生成后还须单独批准 TrialSpec、权限和预算才能试验；只能基于审计产物做交付决定，不得使用 holdout 定向修改候选或绕过 Human 门禁 |
 | Trace | 每次阶段流转、审批路由、交付决议保留可追溯记录 |
 
 ## 2. 业务架构师 BusinessEngineer
@@ -82,7 +82,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 | Role | 在 adaptation、validation 和 failure samples 上部署候选，执行隔离评测与统一试验，收集样本级结果、成本和失败证据 |
 | Capabilities | 沙箱执行、预算控制、adaptation/validation/failure 隔离、故障注入、成本与资源计量、Episode/Step Trace 采集 |
 | Inputs | CandidateGraphSet、获准的 SampleSetManifest(adaptation/validation/stress_and_failure)、TrialSpec、预算、权限、安全门禁 |
-| Outputs | **SampleEvaluation[]**、**EvaluationRun**、**ExecutionTrace**；每个固定 CandidateVersion × TaskSample × RunIndex 产生一个 SampleEvaluation 和完整 Episode，记录 Step 级决策、工具、审批、成本、失败与回滚 |
+| Outputs | **SampleEvaluation[]**、**EvaluationRun**、**ExecutionTrace**；每个 `CandidateVersion × SampleVersion × RunIndex` 产生一个 SampleEvaluation 和完整 Episode，记录 Step 级决策、工具、审批、成本、失败与回滚 |
 | Dependencies | 方案架构师的候选;独立的数据隔离与预算边界 |
 | Decision Boundary | ValidationEngineer is adaptation/validation/failure only；不得访问 sealed holdout 内容、标签或结果；不修改 Sample/Task 合同、候选结构或验收标准；预算耗尽即停止，不自动提高预算 |
 | Trace | 完整 Episode 与 Step 级执行轨迹,成功与失败同等保留 |
@@ -105,10 +105,11 @@ sealed_holdout_access_timing: after_candidate_freeze
 ## 责任链协作流程
 
 ```text
-交付官(批准样本单位、split、授权、预算与风险)
-  → 业务架构师(编译 SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec)
+交付官(建立 Project Dossier 与审批路由)
+  → 业务架构师(定义 Sample/Task 契约与四份 manifest)
+  → Human(批准并冻结 Sample/Task 契约与四份 manifest)
   → 方案架构师(生成候选)
-  → Human(批准试验范围与预算)
+  → Human(单独批准 TrialSpec、权限和预算)
   → 验证工程师(在 adaptation/validation/failure 上生成 SampleEvaluation、Episode 与 Step Trace)
   → 审计官(候选冻结后独立解析 sealed holdout)
   → 交付官(输出 DeliveryDecision)

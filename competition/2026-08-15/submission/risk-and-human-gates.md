@@ -23,15 +23,15 @@
 
 | 门禁类型 | 触发时机 | 审批主体 | 拒绝路径 | 回滚路径 |
 |---|---|---|---|---|
-| 样本冻结门禁 | SampleSemanticSpec 与四类 SampleSetManifest 产出后,任务冻结前 | 责任业务方 + 交付官 | 补充来源 / 修正样本边界 / 重新分组与切分 | 回退到上一份 clean manifest |
-| 任务冻结门禁 | 任务说明书产出后,候选生成前 | 责任业务方 | 缩小范围 / 补充材料 / 拒绝自动化 | 任务版本回退 |
+| 样本冻结门禁 | SampleSemanticSpec 与 adaptation/validation/sealed_holdout/stress_and_failure 四份互异 SampleSetManifest 产出后,任务冻结前且候选生成前 | 责任业务方 + 交付官 | 补充来源 / 修正样本边界 / 重新分组与切分 | 回退到上一组 clean manifests |
+| 任务冻结门禁 | TaskSemanticSpec 产出后,候选生成前 | 责任业务方 | 缩小范围 / 补充材料 / 拒绝自动化 | 任务版本回退 |
 | 试验批准门禁 | 候选生成后,统一试验前 | 责任业务方 + 审计官 | 拒绝试验范围 / 缩小预算 | 候选版本回退 |
 | 预算变更门禁 | 任何预算提升请求 | 责任业务方 | 维持原预算并停止扩展 | 不适用(只升不降需审批) |
 | 真实发布门禁 | 候选产生外部写入或发布动作 | 责任业务方 | 拒绝发布 / 降级为模拟 | 撤销发布 / 回滚写入 |
 | 责任转移门禁 | 候选声称可承担真实责任 | 责任业务方 + 审计官 | 保留人工 / 降级为辅助 | 责任收回人工 |
 | 交付决议门禁 | 审计结论产出后,交付前 | 责任业务方 | 拒绝交付 / 要求重试 / 保留人工 | 方案回退到上一阶段 |
 
-样本冻结门禁必须逐项批准：样本单位(unit)、相关事件的分组规则(grouping)、信息截止时间(cutoff)、adaptation/validation/sealed_holdout/stress_and_failure 的 split、各集合 access policy，以及每份不可变 `SampleSetManifest` 的 `content_hash`。任一项变化都必须产生新版本并重新审批，不能原地修改。
+样本冻结门禁必须逐项批准：样本单位(unit)、相关事件的分组规则(grouping)、信息截止时间(cutoff)、adaptation/validation/sealed_holdout/stress_and_failure 的 split、各集合 access policy，以及四份互异且不可变 `SampleSetManifest` 各自的 version 与 `content_hash`。样本冻结门禁与任务冻结门禁都必须在 AgentArchitect 生成候选前通过；候选生成后还要经过独立的 TrialSpec、权限和预算批准。任一项变化都必须产生新版本并重新审批，不能原地修改。
 
 ## 高风险动作清单
 

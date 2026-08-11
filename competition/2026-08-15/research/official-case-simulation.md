@@ -45,19 +45,23 @@
 
 AgentFit 不从“创建几个 Agent”开始，而是先把它编译为可验收任务。
 
-本案例中，一个冻结的软件缺陷包是一个 `TaskSample`：它以 Issue、日志、用户反馈等 `SourceObservation` 为来源，固定仓库快照、测试策略、模型工具边界和预算后才能重放。当前没有实例化任何 `SampleSet` 或真实样本；以下内容仅说明设计契约。
+本案例中，一个冻结的软件缺陷包是一个 `TaskSample`：它以 Issue、日志、用户反馈等 `SourceObservation` 为来源，固定仓库快照、测试策略、模型工具边界和预算后才能重放。当前只草拟 `SampleSemanticSpec`、四类 manifest 描述符与 `TaskSemanticSpec` 契约，不实例化任何样本成员或 SampleSetManifest；以下内容仅说明设计契约。
+
+`SampleSemanticSpec` 的设计身份为 `sample-spec:software-defect-package@0.1-design-contract`，并引用 `task-spec:software-defect-repair@0.1-design-contract`。adaptation、validation、sealed_holdout、stress_and_failure 是四个互异的必需 manifest 描述符；每个都要求独立 `version`、`content_hash` 和 `access_policy`，但本案例中的 version 与 content_hash 均为空，状态保持 `not_instantiated`。
 
 ## 3. TaskSemanticSpec 摘要
 
 | 字段 | 设计模拟值 |
 |---|---|
+| sample_spec_ref | `sample-spec:software-defect-package@0.1-design-contract` |
+| sample_distribution | adaptation / validation / sealed_holdout / stress_and_failure 四类 manifest 描述符；均为 `not_instantiated` |
 | objective | 从多源缺陷线索形成可验证的修复候选，并在人工批准前停止真实发布 |
 | input_space | Issue、日志片段、用户反馈、仓库快照、测试与发布策略 |
 | expected_output | 去重后的问题单、定位与影响报告、补丁候选、测试证据、发布审批记录、复盘资产 |
 | acceptance | 补丁通过冻结测试；定位和影响结论可追溯；无未批准外部写入；失败可回滚 |
 | budgets | 固定模型与工具边界；统一 token、工具调用、时间、重试和人工投入上限 |
 | risk_constraints | 密钥不进上下文；仓库写入受控；真实发布必须 Human 批准；保留失败证据 |
-| human_boundary | Human 冻结任务契约、批准试验范围和真实发布、接受或否决最终方案 |
+| human_boundary | Human 在候选生成前冻结 Sample/Task 契约与四份 manifest；候选生成后另行批准 TrialSpec、权限、预算和真实发布 |
 
 ## 4. 能力语义盘点
 
@@ -84,7 +88,7 @@ AgentFit 不从“创建几个 Agent”开始，而是先把它编译为可验�
 
 定位/影响、修复、独立验证由不同责任主体完成，Human 保留发布门禁。它有利于上下文和审计隔离，但增加通信、状态同步、预算和错误归因成本。
 
-三者必须使用相同任务快照、模型与工具边界、冻结测试、安全门禁和预算口径。多 Agent 不能通过额外模型、工具或人工投入获得隐性优势。
+三者必须使用同一冻结 `SampleSetManifest`、同一版本化 `TaskSample`、相同模型与工具边界、冻结测试、安全门禁和预算口径。多 Agent 不能通过额外模型、工具或人工投入获得隐性优势。运行身份只能写为 `CandidateVersion × SampleVersion × RunIndex`；`TaskSample` 只描述业务语义单位，不能代替 `SampleVersion`。
 
 ## 6. 纸面协作 Trace
 
@@ -93,18 +97,21 @@ T01 EngagementLead
     接收官网案例 → 建立 design-simulation dossier
 
 T02 BusinessEngineer
-    生成 SampleSemanticSpec、SampleSetManifest 和 TaskSemanticSpec → 暴露“发布责任必须由 Human 承担”
+    草拟 SampleSemanticSpec、四类 SampleSetManifest 与 TaskSemanticSpec 契约 → 不实例化任何成员或 manifest
 
-T03 AgentArchitect
+T03 EngagementLead
+    标注候选生成前的 Sample/Task 冻结门禁 → 本设计模拟不冒充真实审批
+
+T04 AgentArchitect
     盘点能力与权限 → 生成 C0 / C1 / C2 → 不预设多 Agent 胜出
 
-T04 ValidationEngineer
-    只生成统一 TrialSpec、SampleEvaluation 契约和 Candidate × Sample Trace 规则 → 不伪造补丁、测试或成本结果
+T05 ValidationEngineer
+    只定义 TrialSpec、SampleEvaluation 和 CandidateVersion × SampleVersion × RunIndex Trace 契约 → 不伪造补丁、测试或成本结果
 
-T05 GovernanceAuditor
+T06 GovernanceAuditor
     检查数据隔离、预算、公平性与发布门禁 → 阻止将纸面模拟写成 PoC
 
-T06 EngagementLead
+T07 EngagementLead
     输出 requires_runtime_trial → 下一步进入真实受控试验
 ```
 
@@ -114,7 +121,7 @@ T06 EngagementLead
 decision: requires_runtime_trial
 selected_candidate: null
 reason: 没有真实仓库执行、冻结测试、成本和失败证据，当前不能选择赢家
-next_gate: 在统一输入、预算和安全边界下，对一个冻结 SampleSet 中的 TaskSample 执行 C0 / C1 / C2
+next_gate: 在同一冻结 SampleSetManifest、同一版本化 TaskSample、相同模型与工具边界、预算和安全门禁下执行 C0 / C1 / C2
 ```
 
 该结果证明的是 AgentFit 能把官网场景转换为可运行试验设计，不证明 AgentFit 或任何候选已经完成运行验证。

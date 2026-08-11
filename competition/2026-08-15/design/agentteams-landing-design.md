@@ -45,7 +45,7 @@ AgentFit 采用“AgentTeams 原生底座 + AgentFit 能力包”的落地方式
 | AgentFit 对象 | AgentTeams 落点 | 第一阶段实现方式 |
 |---|---|---|
 | EngagementLead | Manager 或 Team Leader 入口 | 身份配置、阶段控制 Skill、项目状态文件 |
-| BusinessEngineer | 独立 Worker | Worker 配置、任务语义 Skill、`TaskSemanticSpec` |
+| BusinessEngineer | 独立 Worker | Worker 配置、Sample/Task 编译 Skill、`SampleSemanticSpec`、`SampleSetManifest`、`TaskSemanticSpec` |
 | AgentArchitect | 独立 Worker | Worker 配置、能力对齐与候选设计 Skill |
 | ValidationEngineer | 独立 Worker | Worker 配置、沙箱执行和统一评测工具 |
 | GovernanceAuditor | 独立 Worker | 独立权限与上下文、审计 Skill、只读证据输入 |
@@ -65,9 +65,10 @@ AgentFit 采用“AgentTeams 原生底座 + AgentFit 能力包”的落地方式
 
 ```text
 Human 提交材料、SourceObservations 和目标
-→ BusinessEngineer 生成 SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec
+→ BusinessEngineer 定义 SampleSemanticSpec、TaskSemanticSpec，并产出 adaptation、validation、sealed_holdout、stress_and_failure 四份互异且不可变的 SampleSetManifest
+→ Human 批准并冻结 SampleSemanticSpec、TaskSemanticSpec 与四份 SampleSetManifest
 → AgentArchitect 生成 Capability Registry、AlignmentReport 和 CandidateGraphSet
-→ Human 批准样本边界、数据划分、TrialSpec、权限和预算
+→ Human 单独批准 TrialSpec、权限和预算
 → ValidationEngineer 生成 SampleEvaluation、EvaluationRun 和 ExecutionTrace
 → GovernanceAuditor 在候选冻结后使用 sealed holdout
 → EngagementLead 交付 DeliveryDecision
@@ -87,7 +88,7 @@ sealed holdout 的内容和结果有单向访问边界：仅 GovernanceAuditor �
 2. 所有样本、manifest、任务、候选和评测工件的内容哈希、重复拒绝与不可变版本；
 3. 阶段状态、产物版本、批准主体和失败状态的确定性门禁；
 4. adaptation、validation、sealed holdout 和 stress/failure set 的隔离，以及 sealed holdout 的访问控制：仅 GovernanceAuditor 在 `CandidateVersion` 冻结后可读取结果，其他候选与执行主体不得访问，结果反馈候选即判该轮无效；
-5. Agentless、单 Agent、多 Agent候选的统一输入、预算和指标；
+5. Agentless、单 Agent、多 Agent候选使用同一冻结 `SampleSetManifest`、同一版本化 `TaskSample`，并共享相同模型与工具边界、预算、指标和安全门禁；
 6. `CandidateVersion × SampleVersion × RunIndex` 的 Trace 引用、样本级结果与预冻结聚合规则；
 7. Trace、依赖、模型、AgentTeams 版本和证据指针的自动记录；
 8. 高风险动作的拒绝、审批、回滚和超时；
@@ -110,7 +111,7 @@ sealed holdout 的内容和结果有单向访问边界：仅 GovernanceAuditor �
 只有同时满足以下条件，才可以声称“AgentFit 已在 AgentTeams 上跑通最小闭环”：
 
 1. 五个不同职能 Agent 在 AgentTeams 中具有可检查的身份和独立责任产物；
-2. 一个冻结的 ProjectCase 和一个冻结的 `SampleSetManifest` 完成从 Intake 到 Deliver 的状态流转；
+2. 一个冻结的 ProjectCase 和 adaptation、validation、sealed_holdout、stress_and_failure 四份互异且不可变的 `SampleSetManifest` 完成从 Intake 到 Deliver 的状态流转；
 3. 至少有一个真实候选在一个可重放的冻结 `TaskSample` 上被执行，并保留输入、输出、模型、工具、成本或用量和 Trace；
 4. 至少记录一个失败、降级、拒绝或人工门禁分支；
 5. GovernanceAuditor 的输入与结论可独立追溯；
