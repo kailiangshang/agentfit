@@ -178,6 +178,8 @@ SampleSemanticSpec = {
 
 `Sample` 是不可变、可寻址的具体实例：
 
+Sample 是在特定任务契约下，可以被独立冻结、重放、执行和评价的最小业务语义单元。
+
 ```text
 Sample = {
   sample_id, version, sample_spec_ref,
