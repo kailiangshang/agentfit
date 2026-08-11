@@ -57,18 +57,19 @@ AgentFit 采用“AgentTeams 原生底座 + AgentFit 能力包”的落地方式
 
 最终由实际 AgentTeams 版本支持的资源字段决定打包格式，但不得改变上述责任边界。
 
+`SampleSemanticSpec`、`SampleSetManifest`、`SampleEvaluation` 也是 Project Dossier 共享存储中的版本化工件：前者定义样本单位及重放边界，manifest 固定划分和访问策略，evaluation 记录一次候选在一个冻结样本上的结果。它们由 AgentFit 生成、校验和审计；AgentTeams 只提供 Worker、共享存储、权限与运行时底座，不替 AgentFit 重新定义样本语义或评测结论。
+
 ## 5. 最小闭环
 
 首个 ProjectCase 只验证以下链路：
 
 ```text
-Human 提交材料和目标
-→ EngagementLead 建立 Project Dossier
-→ BusinessEngineer 生成 TaskSemanticSpec
+Human 提交材料、SourceObservations 和目标
+→ BusinessEngineer 生成 SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec
 → AgentArchitect 生成 Capability Registry、AlignmentReport 和 CandidateGraphSet
-→ Human 批准 TrialSpec、权限和预算
-→ ValidationEngineer 生成 EvaluationRun 和 ExecutionTrace
-→ GovernanceAuditor 生成 EvaluationReport 和独立审计结论
+→ Human 批准样本边界、数据划分、TrialSpec、权限和预算
+→ ValidationEngineer 生成 SampleEvaluation、EvaluationRun 和 ExecutionTrace
+→ GovernanceAuditor 在候选冻结后使用 sealed holdout
 → EngagementLead 交付 DeliveryDecision
 ```
 
@@ -80,13 +81,15 @@ Human 提交材料和目标
 
 以下能力一旦仅依赖自然语言就会破坏可复现性，因此应在最小闭环验证后优先固化：
 
-1. `TaskSemanticSpec`、`CapabilitySemanticSpec`、`AlignmentReport`、`Candidate`、`CandidateGraphSet`、`TrialSpec`、`EvaluationRun`、`ExecutionTrace`、`EvaluationReport` 和 `DeliveryDecision` 的 Schema 与校验；
-2. 阶段状态、产物版本、批准主体和失败状态的确定性门禁；
-3. adaptation、validation、holdout 和 failure set 的隔离；
-4. Agentless、单 Agent、多 Agent候选的统一输入、预算和指标；
-5. Trace、依赖、模型、AgentTeams 版本和证据指针的自动记录；
-6. 高风险动作的拒绝、审批、回滚和超时；
-7. 评测汇总和比赛声明到内部证据的反向定位。
+1. `SampleSemanticSpec`、`SampleSetManifest`、`TaskSemanticSpec`、`CapabilitySemanticSpec`、`AlignmentReport`、`Candidate`、`CandidateGraphSet`、`TrialSpec`、`SampleEvaluation`、`EvaluationRun`、`ExecutionTrace`、`EvaluationReport` 和 `DeliveryDecision` 的 Schema 与校验；
+2. 所有样本、manifest、任务、候选和评测工件的内容哈希、重复拒绝与不可变版本；
+3. 阶段状态、产物版本、批准主体和失败状态的确定性门禁；
+4. adaptation、validation、sealed holdout 和 stress/failure set 的隔离，以及 sealed holdout 的访问控制；
+5. Agentless、单 Agent、多 Agent候选的统一输入、预算和指标；
+6. `CandidateVersion × SampleVersion × RunIndex` 的 Trace 引用、样本级结果与预冻结聚合规则；
+7. Trace、依赖、模型、AgentTeams 版本和证据指针的自动记录；
+8. 高风险动作的拒绝、审批、回滚和超时；
+9. 评测汇总和比赛声明到内部证据的反向定位。
 
 代码只存在 AgentFit 仓库中，通过 Worker 包、Skill、CLI、MCP 或适配层接入 AgentTeams。平台级缺口真实复现后，记录为外部依赖、上游 Issue 或扩展请求，不修改 AgentTeams 核心。
 
@@ -105,8 +108,8 @@ Human 提交材料和目标
 只有同时满足以下条件，才可以声称“AgentFit 已在 AgentTeams 上跑通最小闭环”：
 
 1. 五个不同职能 Agent 在 AgentTeams 中具有可检查的身份和独立责任产物；
-2. 一个冻结的 ProjectCase 完成从 Intake 到 Deliver 的状态流转；
-3. 至少有一个真实候选被执行，并保留输入、输出、模型、工具、成本或用量和 Trace；
+2. 一个冻结的 ProjectCase 和一个冻结的 `SampleSetManifest` 完成从 Intake 到 Deliver 的状态流转；
+3. 至少有一个真实候选在一个可重放的冻结 `TaskSample` 上被执行，并保留输入、输出、模型、工具、成本或用量和 Trace；
 4. 至少记录一个失败、降级、拒绝或人工门禁分支；
 5. GovernanceAuditor 的输入与结论可独立追溯；
 6. AgentTeams 版本、配置、已验证能力和未验证边界被记录；

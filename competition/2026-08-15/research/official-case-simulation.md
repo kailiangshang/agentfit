@@ -25,6 +25,14 @@
 
 共享骨架不意味着必须使用相同 Agent 数量。数据、权限、失败成本和验证方式不同，会改变最小充分方案。
 
+## 样本单位示例
+
+- 告警分类：一条告警是一个 `TaskSample`。
+- 事故处置：一次完整运维事故是一个 `TaskSample`，多条告警和日志是 `SourceObservation`。
+- 候选比较：C0、C1、C2 处理同一冻结 `TaskSample`，各自产生一个 `Episode`。
+
+`SourceObservation` 是原始业务观察；`TaskSample` 是在当前任务契约下可独立冻结、重放、执行和评价的最小单位；`Episode` 是固定候选在固定 `TaskSample` 上的一次完整执行。因此，原始观察不等于样本，样本也不等于候选执行轨迹。
+
 ## 2. 深挖案例：软件研发全流程协同
 
 官网原始流程包含：
@@ -36,6 +44,8 @@
 5. 上线复盘与研发知识库沉淀。
 
 AgentFit 不从“创建几个 Agent”开始，而是先把它编译为可验收任务。
+
+本案例中，一个冻结的软件缺陷包是一个 `TaskSample`：它以 Issue、日志、用户反馈等 `SourceObservation` 为来源，固定仓库快照、测试策略、模型工具边界和预算后才能重放。当前没有实例化任何 `SampleSet` 或真实样本；以下内容仅说明设计契约。
 
 ## 3. TaskSemanticSpec 摘要
 
@@ -83,13 +93,13 @@ T01 EngagementLead
     接收官网案例 → 建立 design-simulation dossier
 
 T02 BusinessEngineer
-    把五段流程编译为 TaskSemanticSpec → 暴露“发布责任必须由 Human 承担”
+    生成 SampleSemanticSpec、SampleSetManifest 和 TaskSemanticSpec → 暴露“发布责任必须由 Human 承担”
 
 T03 AgentArchitect
     盘点能力与权限 → 生成 C0 / C1 / C2 → 不预设多 Agent 胜出
 
 T04 ValidationEngineer
-    只生成统一 TrialSpec → 不伪造补丁、测试或成本结果
+    只生成统一 TrialSpec、SampleEvaluation 契约和 Candidate × Sample Trace 规则 → 不伪造补丁、测试或成本结果
 
 T05 GovernanceAuditor
     检查数据隔离、预算、公平性与发布门禁 → 阻止将纸面模拟写成 PoC
@@ -104,7 +114,7 @@ T06 EngagementLead
 decision: requires_runtime_trial
 selected_candidate: null
 reason: 没有真实仓库执行、冻结测试、成本和失败证据，当前不能选择赢家
-next_gate: 在统一输入、预算和安全边界下执行 C0 / C1 / C2
+next_gate: 在统一输入、预算和安全边界下，对一个冻结 SampleSet 中的 TaskSample 执行 C0 / C1 / C2
 ```
 
 该结果证明的是 AgentFit 能把官网场景转换为可运行试验设计，不证明 AgentFit 或任何候选已经完成运行验证。

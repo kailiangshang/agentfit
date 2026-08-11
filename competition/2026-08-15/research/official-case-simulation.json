@@ -23,6 +23,41 @@
       "上线复盘与研发知识沉淀"
     ]
   },
+  "sample_mapping_examples": [
+    {
+      "task": "告警分类",
+      "task_sample": "一条告警",
+      "source_observations": [
+        "告警字段和当时可见上下文"
+      ]
+    },
+    {
+      "task": "事故处置",
+      "task_sample": "一次完整运维事故",
+      "source_observations": [
+        "告警",
+        "日志",
+        "变更记录"
+      ]
+    }
+  ],
+  "sample_semantic_spec": {
+    "sample_type": "software-defect-package",
+    "sample_level": "task",
+    "unit_description": "一个可独立定位、修复和冻结测试的软件缺陷包",
+    "temporal_boundary": "只允许使用任务冻结时已经存在的材料",
+    "replay_contract": "固定仓库快照、测试策略、模型工具边界和预算",
+    "evidence_status": "design_only_no_frozen_samples"
+  },
+  "sample_set_manifests": {
+    "status": "not_instantiated",
+    "required_sets": [
+      "adaptation",
+      "validation",
+      "sealed_holdout",
+      "stress_and_failure"
+    ]
+  },
   "task_semantic_spec": {
     "objective": "从多源缺陷线索形成可验证的修复候选，并在人工批准前停止真实发布",
     "inputs": [
@@ -76,9 +111,9 @@
   ],
   "paper_trace": [
     "EngagementLead 建立 design-simulation dossier",
-    "BusinessEngineer 生成 TaskSemanticSpec",
+    "BusinessEngineer 生成 SampleSemanticSpec、SampleSetManifest 和 TaskSemanticSpec",
     "AgentArchitect 生成 C0/C1/C2 和统一边界",
-    "ValidationEngineer 生成 TrialSpec，不生成虚构结果",
+    "ValidationEngineer 生成 TrialSpec、SampleEvaluation 契约和 Candidate × Sample Trace 规则，不生成虚构结果",
     "GovernanceAuditor 阻止把纸面模拟写成 PoC",
     "EngagementLead 输出 requires_runtime_trial"
   ],
@@ -86,6 +121,6 @@
     "status": "requires_runtime_trial",
     "selected_candidate": null,
     "reason": "没有真实仓库执行、冻结测试、成本和失败证据，当前不能选择赢家",
-    "next_gate": "在统一输入、预算和安全边界下执行 C0、C1、C2"
+    "next_gate": "在统一输入、预算和安全边界下，对一个冻结 SampleSet 中的 TaskSample 执行 C0、C1、C2"
   }
 }
