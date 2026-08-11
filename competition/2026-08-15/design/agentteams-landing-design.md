@@ -73,6 +73,8 @@ Human 提交材料、SourceObservations 和目标
 → EngagementLead 交付 DeliveryDecision
 ```
 
+sealed holdout 的内容和结果有单向访问边界：仅 GovernanceAuditor 可解析或读取 sealed holdout 的结果，且仅在 `CandidateVersion` 冻结后。候选生成、Prompt、AgentArchitect、ValidationEngineer 和普通执行角色均不得访问 sealed holdout 的内容或结果；任何 sealed holdout 结果反馈进候选均使该轮运行无效。
+
 `DeliveryDecision` 只能是 `SelectedSolution`（全自动/部分自动化/降级）、`HumanRetained` 或 `RejectionDecision`。
 
 初次运行允许由人触发阶段和创建资源，但结构化产物、责任归属、候选输入、预算和审计结果不得靠人工口头补齐。
@@ -84,7 +86,7 @@ Human 提交材料、SourceObservations 和目标
 1. `SampleSemanticSpec`、`SampleSetManifest`、`TaskSemanticSpec`、`CapabilitySemanticSpec`、`AlignmentReport`、`Candidate`、`CandidateGraphSet`、`TrialSpec`、`SampleEvaluation`、`EvaluationRun`、`ExecutionTrace`、`EvaluationReport` 和 `DeliveryDecision` 的 Schema 与校验；
 2. 所有样本、manifest、任务、候选和评测工件的内容哈希、重复拒绝与不可变版本；
 3. 阶段状态、产物版本、批准主体和失败状态的确定性门禁；
-4. adaptation、validation、sealed holdout 和 stress/failure set 的隔离，以及 sealed holdout 的访问控制；
+4. adaptation、validation、sealed holdout 和 stress/failure set 的隔离，以及 sealed holdout 的访问控制：仅 GovernanceAuditor 在 `CandidateVersion` 冻结后可读取结果，其他候选与执行主体不得访问，结果反馈候选即判该轮无效；
 5. Agentless、单 Agent、多 Agent候选的统一输入、预算和指标；
 6. `CandidateVersion × SampleVersion × RunIndex` 的 Trace 引用、样本级结果与预冻结聚合规则；
 7. Trace、依赖、模型、AgentTeams 版本和证据指针的自动记录；
