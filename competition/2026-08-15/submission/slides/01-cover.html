@@ -1,43 +1,28 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide dark">
-  <p class="eyebrow eyebrow-dark">01 / 12 · AGENTFIT</p>
-  <h1 class="title title-dark" style="top:90px;width:780px;height:140px;font-size:50px;line-height:1.14;">Agent 架构该用什么,<br>不该靠人猜。</h1>
-  <p class="subtitle subtitle-dark" style="top:250px;width:700px;height:58px;font-size:18px;">AgentFit 把"该用什么 Agent"变成一个可学习的搜索问题——像 NAS 搜索神经网络一样搜索 Agent 架构。</p>
+  <p class="eyebrow">01 / 12 · AGENTFIT</p>
+  <h1 class="title" style="top:84px;width:720px;font-size:58px;">Agent 架构<br>不该靠猜。</h1>
+  <p class="subtitle" style="top:230px;width:690px;">给业务任务量体裁衣，寻找“刚好够用”的 Agent 方案。</p>
 
-  <div class="panel panel-dark" style="left:820px;top:90px;width:388px;height:394px;border-radius:24px;border-color:#1a8d85;"></div>
-  <p class="label" style="left:852px;top:116px;color:#74d0c7;">六层 NAS 映射</p>
+  <div class="panel panel-dark" style="left:770px;top:74px;width:438px;height:466px;border-color:#1a8d85;border-radius:26px;"></div>
+  <p class="label" style="left:804px;top:104px;color:#74d0c7;">同一任务 · 四种候选</p>
+  <div class="pill" style="left:804px;top:148px;width:150px;background:#132f47;border-color:#53697c;"><p style="color:#c6d3dd;">0 Agent</p></div>
+  <div class="pill" style="left:1024px;top:148px;width:150px;background:#132f47;border-color:#53697c;"><p style="color:#c6d3dd;">1 Agent</p></div>
+  <div class="pill" style="left:804px;top:224px;width:150px;background:#132f47;border-color:#53697c;"><p style="color:#c6d3dd;">N Agents</p></div>
+  <div class="pill" style="left:1024px;top:224px;width:150px;background:#132f47;border-color:#d6a43b;"><p style="color:#d6a43b;">Human 混合</p></div>
+  <div class="line" style="left:878px;top:188px;width:2px;height:174px;background:#28516d;"></div>
+  <div class="line" style="left:1098px;top:188px;width:2px;height:174px;background:#28516d;"></div>
+  <div class="line" style="left:878px;top:360px;width:222px;background:#28516d;"></div>
+  <p style="position:absolute;left:978px;top:344px;margin:0;font-size:30px;color:#74d0c7;">↓</p>
+  <div class="stamp" style="left:858px;top:396px;width:260px;height:92px;background:#132f47;"><p style="margin-top:25px;color:#74d0c7;">FIT</p></div>
+  <p class="small-copy" style="left:824px;top:504px;width:330px;text-align:center;color:#c6d3dd;">统一验收 · 最小复杂度 · 可审计</p>
 
-  <p style="position:absolute;left:856px;top:150px;width:316px;margin:0;color:#ffffff;font-size:14px;line-height:1.5;font-weight:700;">L1 任务语义 → 学习问题</p>
-  <p class="small-copy" style="left:856px;top:170px;width:316px;color:#8fa6b9;font-size:11px;">优化什么 · 输入空间 · 验收阈值 · 预算</p>
-  <div style="position:absolute;left:856px;top:194px;width:316px;height:1px;background:#28516d;"></div>
+  <div class="panel panel-dark" style="left:72px;top:362px;width:640px;height:178px;border-color:#28516d;"></div>
+  <p class="label" style="left:100px;top:388px;width:260px;color:#74d0c7;">AGENT 方案建筑师</p>
+  <p class="body-copy" style="left:100px;top:424px;width:584px;color:#ffffff;font-size:20px;line-height:1.45;">把业务任务与可用能力编译成可搜索的架构空间，<br>通过统一评测选择最小充分方案。</p>
+  <p class="small-copy" style="left:100px;top:500px;width:584px;color:#d6a43b;">合法答案也可以是：保留人工 / 拒绝自动化</p>
 
-  <p style="position:absolute;left:856px;top:204px;width:316px;margin:0;color:#ffffff;font-size:14px;line-height:1.5;font-weight:700;">L2 能力语义 → 假设空间</p>
-  <p class="small-copy" style="left:856px;top:224px;width:316px;color:#8fa6b9;font-size:11px;">规则/LLM/Skill/Tool/MCP/Human 算子集</p>
-  <div style="position:absolute;left:856px;top:248px;width:316px;height:1px;background:#28516d;"></div>
-
-  <p style="position:absolute;left:856px;top:258px;width:316px;margin:0;color:#ffffff;font-size:14px;line-height:1.5;font-weight:700;">L3 候选 (G,Π,θ,ρ) → 候选模型</p>
-  <p class="small-copy" style="left:856px;top:278px;width:316px;color:#8fa6b9;font-size:11px;">能力图 · Agent 分区 · 参数 · 共享范围</p>
-  <div style="position:absolute;left:856px;top:302px;width:316px;height:1px;background:#28516d;"></div>
-
-  <p style="position:absolute;left:856px;top:312px;width:316px;margin:0;color:#ffffff;font-size:14px;line-height:1.5;font-weight:700;">L4 内循环 → 参数优化</p>
-  <p class="small-copy" style="left:856px;top:332px;width:316px;color:#8fa6b9;font-size:11px;">Prompt/阈值/工具配置(固定架构)</p>
-  <div style="position:absolute;left:856px;top:356px;width:316px;height:1px;background:#28516d;"></div>
-
-  <p style="position:absolute;left:856px;top:366px;width:316px;margin:0;color:#ffffff;font-size:14px;line-height:1.5;font-weight:700;">L5 外循环 → 架构搜索</p>
-  <p class="small-copy" style="left:856px;top:386px;width:316px;color:#8fa6b9;font-size:11px;">Agentize/拆分/合并 · 无↔单↔多迁移</p>
-  <div style="position:absolute;left:856px;top:410px;width:316px;height:1px;background:#28516d;"></div>
-
-  <p style="position:absolute;left:856px;top:420px;width:316px;margin:0;color:#ffffff;font-size:14px;line-height:1.5;font-weight:700;">L6 元学习 → 跨项目先验</p>
-  <p class="small-copy" style="left:856px;top:440px;width:316px;color:#8fa6b9;font-size:11px;">ProjectAsset→MetaAsset · 越用越聪明</p>
-
-  <div class="panel panel-dark" style="left:72px;top:346px;width:736px;height:144px;border-radius:18px;border-color:#1a8d85;"></div>
-  <p class="label" style="left:92px;top:364px;color:#74d0c7;">范式转换主张</p>
-  <p class="body-copy" style="left:92px;top:388px;width:696px;color:#ffffff;font-size:14px;line-height:1.55;">深度学习用学习替代手工特征(SIFT/HOG)<br>NAS 用搜索替代手工设计网络(VGG/ResNet)<br><span style="color:#74d0c7;font-weight:700;">AgentFit 用搜索+学习替代手工设计 Agent</span></p>
-  <p class="small-copy" style="left:92px;top:460px;width:696px;color:#8fa6b9;font-size:11px;">Agent 架构,正处在"手工设计特征"的时代。该发生的范式转换,正在发生。</p>
-
-  <div class="panel panel-dark" style="left:72px;top:506px;width:1136px;height:138px;border-radius:18px;border-color:#28516d;"></div>
-  <p class="label" style="left:92px;top:524px;color:#8fa6b9;">主张三句话</p>
-  <p class="body-copy" style="left:92px;top:548px;width:1096px;color:#ffffff;font-size:13px;line-height:1.6;">① Agent 数量是搜索变量,不是先验目标——每多一个 Agent 必须证明边际价值<br>② 合法结果有五种:全自动 / 部分 / 降级 / 保留人工 / 拒绝自动化——拒绝也是合法交付<br>③ 元学习必须跨项目验证:单项目搜索 ≠ 元学习,迁移 ≠ 元学习,先验更新+未见验证才是</p>
-  <p class="footer-left">AGENTFIT · GOAI AGENT INFRA</p><p class="footer-right">内部草案 · 01</p>
+  <p class="body-copy" style="left:72px;top:586px;width:1136px;color:#ffffff;font-size:20px;font-weight:700;">AgentFit 运行在 AgentTeams 上 · 方案选择，不重造运行底座</p>
+  <p class="footer-left">GOAI · AGENT INFRA</p><p class="footer-right">方案路演 · 01</p>
 </body></html>

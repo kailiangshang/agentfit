@@ -2,90 +2,54 @@
 
 > 状态值仅使用：`READY`、`IN_PROGRESS`、`BLOCKED`、`NOT_STARTED`、`NOT_REQUIRED`。
 >
-> “READY”必须存在仓库文件或可复现运行证据，不能由聊天结论替代。
+> `READY` 必须有仓库文件或可复现证据；真实运行不是冻结初赛方案的前置条件。
 
-## 1. 当前基线
+## 1. 当前状态
 
-| 工作项 | 状态 | 证据或阻塞 |
+| 工作项 | 状态 | 证据或边界 |
 |---|---|---|
 | AgentFit 唯一总体方案 | READY | `docs/agentfit-solution.md` |
 | 初赛要求矩阵与红线 | READY | `docs/internal/competition/` |
-| 跨场景来源证据 | READY | Evidence Registry 与十二张证据卡 |
-| AgentTeams 落地边界 | IN_PROGRESS | 设计已口头认可，书面设计待用户复核 |
-| v0 六项目清单 | BLOCKED | Manifest 状态仍为 `proposed_for_user_approval` |
-| 首个正式 ProjectCase | NOT_STARTED | 尚未批准具体项目与冻结数据 |
-| AgentFit 真实 AgentTeams 元团队 | NOT_STARTED | 既有 smoke test 仅证明平台能力 |
+| 路演唯一叙事与 12+5 结构 | READY | `competition/2026-08-15/design/presentation-redesign.md` |
+| AgentTeams 落地边界 | READY | `design/agentteams-landing-design.md`；设计基点，不代表已集成 |
+| 官网参考案例与软件研发设计模拟 | READY | `research/official-case-simulation.md`；非运行证据 |
+| 五个 Agent Identity | READY | `submission/agent-identity.md`；设计契约 |
+| 七个核心 Skill | READY | `submission/skill-catalog.md`；设计契约 |
+| Human、风险、异常与回滚 | READY | `submission/risk-and-human-gates.md`；设计契约 |
+| 开放与合规披露 | READY | `submission/openness-and-compliance.md`；仓库私有、License 未选择 |
+| 500 字作品简介 | READY | `submission/work-introduction-draft.md`；468 个非空白字符 |
+| 17 页 HTML / PPTX / PDF | READY | 17 页；内容、几何、PPTX/PDF 逐页视觉与一致性复核通过 |
+| 首个正式 ProjectCase | NOT_STARTED | 尚未冻结真实任务、数据和预算 |
+| AgentFit 真实 AgentTeams 元团队 | NOT_STARTED | 历史 smoke test 只证明平台能力 |
 | 真实候选对照评测 | NOT_STARTED | 无冻结 ProjectCase |
-| 500 字简介终稿 | BLOCKED | 缺少真实闭环证据与首个场景选择 |
-| 方案 PPT/PDF 终稿 | BLOCKED | 骨架可准备，实证页尚无真实证据 |
-| 初赛可选代码包 | NOT_STARTED | 是否提交取决于最小闭环稳定性 |
+| 初赛可选代码包 | NOT_REQUIRED | 未达到干净环境可复现门禁时不提交 |
 
-## 2. 截止日前的优先级
+## 2. 8 月 15 日前唯一关键路径
 
-### P0：决定提交内容真实性
+```text
+完成 17 页逐页视觉复核
+→ 修复事实、字号、裁切与一致性问题
+→ 运行页数 / 内容 / 几何 / 隐私 / Git 红线
+→ 冻结简介 + PPTX + PDF
+→ 上传前再次核对文件可打开与页数
+```
 
-1. 批准一个首个 ProjectCase，不以一次性漂亮 Demo 代替可复现任务；
-2. 冻结任务来源、输入输出、数据划分、预算、安全和验收；
-3. 冻结五个元 Agent 的 Identity 与独立责任产物；
-4. 冻结首轮核心 Skill 清单及其输入、输出、触发、失败、权限和复用边界；
-5. 在 AgentTeams 实例化元团队并完成至少一条真实闭环；
-6. 保留成功与失败/降级/人工门禁两类 Trace；
-7. 完成 Agentless、单 Agent、多 Agent统一对照的至少一个可复现实验，或在材料中明确标注尚未完成。
+ProjectCase、真实元团队和候选对照可以在初赛后继续，不得阻塞方案冻结，也不得在初赛材料中伪装成已完成。
 
-### P1：形成必交材料
+## 3. 提交门禁
 
-1. 从证据生成 500 字以内作品简介；
-2. 完成方案 PPT/PDF 的全部页面；
-3. 逐项映射官方八步闭环、五个评分维度和附件字段；
-4. 统一项目名称、Agent 数量、Skill、工具、模型、版本、场景和当前进展；
-5. 完成数据、许可证、商业 API、闭源模型、开源基础和团队新增贡献披露；
-6. 执行红线检查并冻结提交版本。
+必交材料只有在下列条件全部满足后才可标记 `READY`：
 
-### P2：有余力才做
+1. 简介不超过 500 个非空白字符；
+2. HTML、PPTX、PDF 均为 17 页且页序一致；
+3. PPTX 使用原生可编辑形状与文本；
+4. 严格 HTML 编译无警告，PPTX 几何检查无问题；
+5. PPTX 与 PDF 完成逐页视觉检查；
+6. 无虚构指标、过期引用、错误完成态、敏感配置或本地截图；
+7. 场景、Agent、协同、Skill、MCP、上下文、验证、安全和开放要求均可定位；
+8. 仓库私有与 License 未选择的事实已披露；
+9. 第 11 页明确写出“真实运行证据仍待补”。
 
-1. 整理初赛可选 AgentTeams 代码包；
-2. 录制短视频或补充截图；
-3. 增加第二个 ProjectCase；
-4. 优化展示样式。
+## 4. 初赛后运行门禁
 
-独立产品界面、飞书、全量项目集和跨项目 Meta-learning 不属于 8 月 15 日前任务。
-
-## 3. 日期门禁
-
-| 日期 | 必须完成的门禁 | 未完成时的处理 |
-|---|---|---|
-| 8 月 10 日 | 总体方案、比赛要求和 AgentTeams 落地边界形成单一基线 | 不进入实现 |
-| 8 月 11 日 | 首个 ProjectCase、任务契约、数据与验收获批 | 缩小场景，不并行启动其他项目 |
-| 8 月 12 日 | 五个 Agent、核心 Skill、AgentTeams 资源和 Trace 契约冻结 | 删除非必要角色与能力 |
-| 8 月 13 日 | 最小闭环完成第一次真实运行，保留失败与修正记录 | 简介和 PPT 不使用“已运行”声明 |
-| 8 月 14 日 | 候选对照、审计和材料初稿完成 | 将未完成项明确降级为计划 |
-| 8 月 15 日 | 简介与 PPT/PDF 冻结，红线、链接和可复现性复核完成 | 不再增加功能，只修事实和格式问题 |
-| 8 月 16 日 | 官方提交与上传校验 | 使用冻结版本，不临时改架构 |
-
-## 4. 首个 ProjectCase 的批准标准
-
-首个项目必须同时满足：
-
-- 能在剩余时间内本地复现；
-- 有真实、可说明来源的任务输入；
-- Agentless、单 Agent和多 Agent均有合理候选；
-- 成功、成本、时延和安全至少有一个可计算指标；
-- 能展示 Skill 复用、上下文传递、验证和经验沉淀；
-- 不依赖尚未完成的飞书、独立前端或高风险生产写入；
-- License、数据和模型使用可以如实披露；
-- 失败时仍能形成有价值的拒绝、降级或保留人工结论。
-
-首个 ProjectCase 获批前，不实现五个元 Agent 的场景 Prompt，以免角色被未冻结场景反向塑形。
-
-## 5. 可选代码包决策门
-
-只有在 8 月 14 日前同时满足以下条件，初赛才提交可选代码包：
-
-1. 有一条清晰的安装或运行入口；
-2. 不包含密钥、原始敏感数据或本地路径；
-3. 在干净环境中至少完成一次复现；
-4. 样例输入输出与 PPT 声明一致；
-5. AgentTeams 版本和依赖被固定；
-6. 失败不会影响必交简介和 PPT 的质量。
-
-否则初赛只提交必交材料，并把可执行包作为复赛承诺，避免用不稳定代码制造严重扣分风险。
+只有首个 ProjectCase、五元团队、至少一个真实候选、一个失败/降级分支、独立审计 Trace、固定 AgentTeams 版本和干净环境复现全部完成，才可把第 11 页替换为真实运行证据。

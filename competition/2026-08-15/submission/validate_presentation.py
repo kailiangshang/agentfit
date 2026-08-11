@@ -11,7 +11,7 @@ from pptx import Presentation
 from pypdf import PdfReader
 
 
-EXPECTED_SLIDES = 12
+EXPECTED_SLIDES = 17
 REQUIRED_TERMS = (
     "AgentFit",
     "AgentTeams",
@@ -21,6 +21,15 @@ REQUIRED_TERMS = (
     "ValidationEngineer",
     "GovernanceAuditor",
     "Agentless",
+    "Agent Architecture Search",
+    "Human",
+    "Skill",
+    "MCP",
+    "上下文",
+    "验证",
+    "安全",
+    "开放",
+    "未实现",
     "证据待补",
     "用户反馈定位",
     "官网参考案例",
@@ -33,7 +42,16 @@ REQUIRED_TERMS = (
     "requires_runtime_trial",
     "https://goaihz.com/tracks?track=infra",
 )
-FORBIDDEN_TERMS = ("TODO", "TBD", "已验证 Meta-learning")
+FORBIDDEN_TERMS = (
+    "TODO",
+    "TBD",
+    "已验证 Meta-learning",
+    "ImageNet 75%",
+    "90%+",
+    "超越人工设计 1.2%",
+    "methodology §13",
+    "首个真实项目案例与五元 Agent 在 AgentTeams 上的闭环正在实施",
+)
 
 
 def _shape_text(shape: object) -> list[str]:

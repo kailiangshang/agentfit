@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
+<body class="slide appendix dark">
+  <p class="eyebrow">A4 / 05 · HUMAN / RISK / ROLLBACK</p>
+  <h1 class="title">高风险动作先审批；异常必须能停止、降级和回滚</h1>
+  <p class="subtitle">Human 是候选图中的正式能力与责任边界，不是兜底文案。</p><div class="top-rule"></div>
+
+  <div class="panel panel-dark" style="left:72px;top:204px;width:1136px;height:94px;border-color:#d6a43b;"></div>
+  <p class="label" style="left:98px;top:226px;color:#d6a43b;">HUMAN GATE</p>
+  <p class="body-copy" style="left:98px;top:258px;width:1084px;color:#ffffff;">动作请求 → 风险分类 → 审批：批准→执行｜拒绝/超时→拒绝执行或安全降级 → Trace 与回滚验证</p>
+
+  <div class="panel panel-dark" style="left:72px;top:326px;width:542px;height:284px;border-color:#f26b4b;"></div>
+  <p class="label" style="left:98px;top:350px;color:#f6aa92;">必须人工批准</p>
+  <p class="body-copy" style="left:98px;top:392px;width:220px;color:#ffffff;">外部系统写入<br>真实发布与部署<br>责任转移<br>预算提升</p>
+  <p class="body-copy" style="left:348px;top:392px;width:238px;color:#ffffff;">密钥与凭证调用<br>敏感数据访问<br>不可逆操作<br>交付决议</p>
+  <div class="pill" style="left:98px;top:536px;width:488px;background:#132f47;border-color:#f26b4b;"><p style="color:#f6aa92;">无批准 = 拒绝执行 + 保留证据</p></div>
+
+  <div class="panel panel-dark" style="left:646px;top:326px;width:562px;height:284px;border-color:#1a8d85;"></div>
+  <p class="label" style="left:672px;top:350px;color:#74d0c7;">异常与恢复</p>
+  <p class="body-copy" style="left:672px;top:392px;width:240px;color:#ffffff;">Agent 不可用 → 阶段暂停<br>Schema 非法 → 拒绝推进<br>预算耗尽 → 硬停止<br>通信异常 → 幂等重发</p>
+  <p class="body-copy" style="left:942px;top:392px;width:238px;color:#ffffff;">holdout 泄漏 → 本轮无效<br>循环失控 → 达上限停止<br>权限缺失 → 缩小范围<br>不可回滚 → 默认拒绝</p>
+  <div class="pill" style="left:672px;top:536px;width:508px;background:#132f47;border-color:#1a8d85;"><p style="color:#74d0c7;">成功与失败使用同一 Trace 语义</p></div>
+
+  <p class="footer-left">完整清单：submission/risk-and-human-gates.md</p><p class="footer-right">安全设计 · A4</p>
+</body></html>

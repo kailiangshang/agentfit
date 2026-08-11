@@ -13,7 +13,7 @@
 
 ## 1. 开放范围
 
-### 1.1 初赛计划开放
+### 1.1 计划开放（当前尚未发布）
 
 | 资产 | 开放形式 | 状态 |
 |---|---|---|
@@ -21,10 +21,10 @@
 | 能力语义 Schema(CapabilitySemanticSpec) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
 | 执行轨迹 Schema(ExecutionTrace) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
 | 候选方案描述 Schema(Candidate) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
-| 元 Agent Identity 与责任契约 | 本仓库 [agent-identity.md](agent-identity.md) | 已开放(设计契约) |
-| 核心 Skill 契约 | 本仓库 [skill-catalog.md](skill-catalog.md) | 已开放(设计契约) |
-| 路演 PPT/PDF | 本仓库 [submission/](.) | 已开放(内部草案) |
-| 设计模拟案例 | [research/official-case-simulation.md](../research/official-case-simulation.md) | 已开放(设计模拟,非运行证据) |
+| 元 Agent Identity 与责任契约 | 本仓库 [agent-identity.md](agent-identity.md) | 私有仓库内完成，尚未发布 |
+| 核心 Skill 契约 | 本仓库 [skill-catalog.md](skill-catalog.md) | 私有仓库内完成，尚未发布 |
+| 路演 PPT/PDF | 本仓库 [submission/](.) | 私有仓库内提交候选，尚未发布 |
+| 设计模拟案例 | [research/official-case-simulation.md](../research/official-case-simulation.md) | 私有仓库内完成，非运行证据 |
 
 ### 1.2 复赛计划开放
 
@@ -40,6 +40,13 @@
 - 原始客户数据、密钥、凭证、内部业务系统访问权;
 - 被显式标注为内部材料的 docs/internal/ 下证据研究卡(含第三方 benchmark 的事实摘要,遵循各自 license);
 - 未脱敏的 ProjectAsset。
+
+### 1.4 当前仓库与许可事实
+
+- 仓库当前为私有，不得使用“已开源”或“已开放”描述；
+- 仓库根目录当前没有 AgentFit 项目许可证；
+- 对外发布前必须选择项目 License，并完成 AgentTeams、官方 Skills、第三方库、字体、案例材料和数据许可清点；
+- 本节是开放计划，不是开放完成证明。
 
 ## 2. 依赖清单
 
@@ -67,7 +74,7 @@ AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、�
 
 | 数据 | 来源 | License / 授权 | 用途 |
 |---|---|---|---|
-| 官网四类参考案例 | [GOAI Agent Infra 官网](https://goaihz.com/tracks?track=infra) | 官网公开,场景启发,非运行证据 | 路演第 5 页 |
+| 官网四类参考案例 | [GOAI Agent Infra 官网](https://goaihz.com/tracks?track=infra) | 官网公开,场景启发,非运行证据 | 路演第 9 页 |
 | 参赛手册 | 新智基座 Agent Infra 参赛手册 | 官方文件 | 要求矩阵与红线 |
 | 跨场景证据卡(SWE-bench/GAIA/CyBench/τ-bench/CUAD 等) | 各 benchmark 官方 | 各自 license,内部研究用,不二次分发 | v0 项目集选择依据 |
 

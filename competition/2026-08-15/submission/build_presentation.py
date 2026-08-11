@@ -17,6 +17,7 @@ from pptx.util import Inches
 ROOT = Path(__file__).resolve().parent
 SLIDES_DIR = ROOT / "slides"
 OUTPUT_PATH = ROOT / "agentfit-preliminary-draft.pptx"
+EXPECTED_SLIDES = 17
 DEFAULT_DECK_SKILL = Path.home() / "workspace/.codex-home/skills/hands-on-deck"
 DECK_SKILL = Path(os.environ.get("HANDS_ON_DECK_DIR", DEFAULT_DECK_SKILL))
 HTML2PATCH = DECK_SKILL / "scripts/html2patch.py"
@@ -36,8 +37,10 @@ def _make_base(path: Path) -> None:
 
 def build_deck(output_path: Path = OUTPUT_PATH) -> None:
     slide_files = sorted(SLIDES_DIR.glob("[0-9][0-9]-*.html"))
-    if len(slide_files) != 12:
-        raise RuntimeError(f"expected 12 HTML slides, found {len(slide_files)}")
+    if len(slide_files) != EXPECTED_SLIDES:
+        raise RuntimeError(
+            f"expected {EXPECTED_SLIDES} HTML slides, found {len(slide_files)}"
+        )
     for tool in (HTML2PATCH, DECK):
         if not tool.is_file():
             raise FileNotFoundError(
@@ -71,7 +74,7 @@ def build_deck(output_path: Path = OUTPUT_PATH) -> None:
                 "subject": "AgentTeams 上的 Agent 解决方案元团队",
                 "author": "AgentFit Team",
                 "keywords": "AgentFit, AgentTeams, Agent Infra, HTML-first",
-                "comments": "Internal draft. Official cases are design simulations, not runtime evidence.",
+                "comments": "Preliminary submission candidate. Official cases and the software scenario are references or design simulations, not runtime evidence.",
             }
         )
         patch.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

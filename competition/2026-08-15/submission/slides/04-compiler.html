@@ -1,114 +1,32 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
-<body class="slide">
-  <p class="eyebrow">04 / 12 · 六层映射 + 候选图结构</p>
-  <h1 class="title">AgentFit = Agent 架构搜索。</h1>
-  <p class="subtitle">六层流水线(对应 NAS) · L3 候选图 G 含 DAG 主干 + 局部 SCC + Agent 分区 Π</p><div class="top-rule"></div>
+<body class="slide dark">
+  <p class="eyebrow">04 / 12 · 方法</p>
+  <h1 class="title">AgentFit 先量体，再裁衣，最后试穿</h1>
+  <p class="subtitle">每一步都有可检查的输入、产物与停止条件。</p><div class="top-rule"></div>
 
-  <div class="panel panel-dark" style="left:72px;top:226px;width:520px;height:404px;border-radius:18px;border-color:#0b2236;"></div>
-  <p class="label" style="left:92px;top:244px;color:#74d0c7;">六层流水线</p>
+  <div class="panel panel-dark" style="left:72px;top:240px;width:336px;height:328px;border-color:#426b86;"></div>
+  <p class="big-number" style="left:100px;top:270px;color:#74a8c6;">01</p>
+  <p class="section-title" style="left:100px;top:342px;color:#ffffff;font-size:30px;">量体</p>
+  <p class="body-copy" style="left:100px;top:390px;width:280px;color:#c6d3dd;">把材料变成任务语义：<br>输入、输出、指标、预算、风险与 Human 边界。</p>
+  <div class="pill" style="left:100px;top:500px;width:280px;background:#132f47;border-color:#426b86;"><p style="color:#a9c3d5;">产物：任务说明书</p></div>
 
-  <div class="node" style="left:92px;top:270px;width:30px;height:30px;border-radius:15px;background:#1a8d85;border-color:#1a8d85;"><p style="color:#ffffff;margin-top:6px;font-size:10px;">L1</p></div>
-  <p class="small-copy" style="left:132px;top:276px;width:160px;color:#ffffff;font-size:11px;font-weight:700;">任务语义</p>
-  <p class="small-copy" style="left:300px;top:276px;width:280px;color:#c6d3dd;font-size:10px;">→ 学习问题 + 评测协议</p>
+  <p style="position:absolute;left:420px;top:364px;margin:0;font-size:34px;color:#74d0c7;">→</p>
 
-  <p style="position:absolute;left:104px;top:304px;margin:0;font-size:14px;color:#53697c;">↓</p>
+  <div class="panel panel-dark" style="left:472px;top:240px;width:336px;height:328px;border-color:#1a8d85;"></div>
+  <p class="big-number" style="left:500px;top:270px;color:#74d0c7;">02</p>
+  <p class="section-title" style="left:500px;top:342px;color:#ffffff;font-size:30px;">裁衣</p>
+  <p class="body-copy" style="left:500px;top:390px;width:280px;color:#c6d3dd;">把能力编译成可组合算子：<br>模型、规则、Skill、MCP、工具、记忆与 Human。</p>
+  <div class="pill" style="left:500px;top:500px;width:280px;background:#132f47;border-color:#1a8d85;"><p style="color:#74d0c7;">产物：能力清单 + 缺口</p></div>
 
-  <div class="node" style="left:92px;top:322px;width:30px;height:30px;border-radius:15px;border-color:#53697c;"><p style="color:#53697c;margin-top:6px;font-size:10px;">L2</p></div>
-  <p class="small-copy" style="left:132px;top:328px;width:160px;color:#ffffff;font-size:11px;font-weight:700;">能力语义</p>
-  <p class="small-copy" style="left:300px;top:328px;width:280px;color:#c6d3dd;font-size:10px;">→ 算子集 + 假设空间</p>
+  <p style="position:absolute;left:820px;top:364px;margin:0;font-size:34px;color:#d6a43b;">→</p>
 
-  <p style="position:absolute;left:104px;top:356px;margin:0;font-size:14px;color:#f26b4b;">↓</p>
+  <div class="panel panel-dark" style="left:872px;top:240px;width:336px;height:328px;border-color:#d6a43b;"></div>
+  <p class="big-number" style="left:900px;top:270px;color:#d6a43b;">03</p>
+  <p class="section-title" style="left:900px;top:342px;color:#ffffff;font-size:30px;">试穿</p>
+  <p class="body-copy" style="left:900px;top:390px;width:280px;color:#c6d3dd;">让不同候选在同一输入、预算、指标、安全线下公平赛跑。</p>
+  <div class="pill" style="left:900px;top:500px;width:280px;background:#132f47;border-color:#d6a43b;"><p style="color:#d6a43b;">产物：选择 + 证据</p></div>
 
-  <div class="node" style="left:92px;top:374px;width:30px;height:30px;border-radius:15px;background:#f26b4b;border-color:#f26b4b;"><p style="color:#ffffff;margin-top:6px;font-size:10px;">L3</p></div>
-  <p class="small-copy" style="left:132px;top:380px;width:160px;color:#ffffff;font-size:11px;font-weight:700;">候选 (G, Π, θ, ρ)</p>
-  <p class="small-copy" style="left:300px;top:380px;width:280px;color:#f6aa92;font-size:10px;">→ 完整候选模型 →</p>
-
-  <p style="position:absolute;left:104px;top:408px;margin:0;font-size:14px;color:#53697c;">↓</p>
-
-  <div class="node" style="left:92px;top:426px;width:30px;height:30px;border-radius:15px;background:#d6a43b;border-color:#d6a43b;"><p style="color:#ffffff;margin-top:6px;font-size:9px;">L4</p></div>
-  <p class="small-copy" style="left:132px;top:432px;width:160px;color:#ffffff;font-size:11px;font-weight:700;">内循环 ↻</p>
-  <p class="small-copy" style="left:300px;top:432px;width:280px;color:#c6d3dd;font-size:10px;">→ 参数优化(固定 A)</p>
-
-  <div class="node" style="left:92px;top:464px;width:30px;height:30px;border-radius:15px;background:#d6a43b;border-color:#d6a43b;"><p style="color:#ffffff;margin-top:6px;font-size:9px;">L5</p></div>
-  <p class="small-copy" style="left:132px;top:470px;width:160px;color:#ffffff;font-size:11px;font-weight:700;">外循环 ↻</p>
-  <p class="small-copy" style="left:300px;top:470px;width:280px;color:#c6d3dd;font-size:10px;">→ 架构搜索</p>
-
-  <p style="position:absolute;left:104px;top:498px;margin:0;font-size:14px;color:#53697c;">↓</p>
-
-  <div class="node" style="left:92px;top:516px;width:30px;height:30px;border-radius:15px;background:#426b86;border-color:#426b86;"><p style="color:#ffffff;margin-top:6px;font-size:9px;">L6</p></div>
-  <p class="small-copy" style="left:132px;top:522px;width:160px;color:#ffffff;font-size:11px;font-weight:700;">元学习</p>
-  <p class="small-copy" style="left:300px;top:522px;width:280px;color:#c6d3dd;font-size:10px;">→ 跨项目先验更新</p>
-
-  <p class="small-copy" style="left:92px;top:566px;width:480px;color:#8fa6b9;font-size:10px;">L4/L5 = NAS 双层优化 · L6 = Meta-learning</p>
-  <p class="small-copy" style="left:92px;top:586px;width:480px;color:#d6a43b;font-size:10px;font-weight:700;">Agentize(Π)= NAS 没有的特有架构算子</p>
-  <p class="small-copy" style="left:92px;top:606px;width:480px;color:#8fa6b9;font-size:10px;">LLM 只是 L2 中一种算子(技术中立)</p>
-
-  <div class="panel soft-coral" style="left:616px;top:226px;width:592px;height:404px;border-radius:18px;"></div>
-  <p class="label" style="left:636px;top:244px;color:#c64c32;">L3 候选图结构(示例:软件研发任务)</p>
-
-  <p class="small-copy" style="left:636px;top:268px;width:180px;font-size:10px;font-weight:700;color:#c64c32;">DAG 主干(横向推进)</p>
-  <p class="small-copy" style="left:950px;top:268px;width:240px;font-size:10px;font-weight:700;color:#a5781c;">Π · Agent 分区(虚线框)</p>
-
-  <div style="position:absolute;left:650px;top:300px;width:60px;height:24px;border-radius:12px;background:#ffffff;border:2px solid #426b86;"><p style="margin:2px 0 0;text-align:center;font-size:9px;color:#426b86;font-weight:700;">线索去重</p></div>
-  <p style="position:absolute;left:714px;top:302px;margin:0;font-size:14px;color:#53697c;">→</p>
-  <div style="position:absolute;left:736px;top:300px;width:60px;height:24px;border-radius:12px;background:#ffffff;border:2px solid #1a8d85;"><p style="margin:2px 0 0;text-align:center;font-size:9px;color:#1a8d85;font-weight:700;">仓库检索</p></div>
-  <p style="position:absolute;left:800px;top:302px;margin:0;font-size:14px;color:#53697c;">→</p>
-  <div style="position:absolute;left:822px;top:300px;width:60px;height:24px;border-radius:12px;background:#ffffff;border:2px solid #f26b4b;"><p style="margin:2px 0 0;text-align:center;font-size:9px;color:#f26b4b;font-weight:700;">补丁生成</p></div>
-  <p style="position:absolute;left:886px;top:302px;margin:0;font-size:14px;color:#53697c;">→</p>
-  <div style="position:absolute;left:908px;top:300px;width:60px;height:24px;border-radius:12px;background:#ffffff;border:2px solid #1a8d85;"><p style="margin:2px 0 0;text-align:center;font-size:9px;color:#1a8d85;font-weight:700;">测试执行</p></div>
-  <p style="position:absolute;left:972px;top:302px;margin:0;font-size:14px;color:#53697c;">→</p>
-  <div style="position:absolute;left:994px;top:300px;width:70px;height:24px;border-radius:12px;background:#ffffff;border:2px solid #d6a43b;"><p style="margin:2px 0 0;text-align:center;font-size:9px;color:#a5781c;font-weight:700;">人工发布</p></div>
-
-  <div style="position:absolute;left:636px;top:344px;width:280px;height:130px;border:2px dashed #f26b4b;border-radius:14px;background:rgba(242,107,75,0.05);"></div>
-  <p class="small-copy" style="left:648px;top:350px;width:260px;font-size:10px;font-weight:700;color:#c64c32;">Π · "修复" Agent 分区</p>
-  <p class="small-copy" style="left:648px;top:366px;width:260px;font-size:9px;color:#c64c32;">独立决策 + 状态 + 权限 + 责任</p>
-
-  <div style="position:absolute;left:656px;top:392px;width:70px;height:70px;border:2px solid #f26b4b;border-radius:35px;background:#fff5f2;"></div>
-  <p style="position:absolute;left:656px;top:410px;width:70px;margin:0;text-align:center;font-size:9px;color:#f26b4b;font-weight:700;">定位</p>
-  <p style="position:absolute;left:656px;top:424px;width:70px;margin:0;text-align:center;font-size:8px;color:#f26b4b;">LLM</p>
-
-  <p style="position:absolute;left:730px;top:408px;margin:0;font-size:14px;color:#f26b4b;">→</p>
-
-  <div style="position:absolute;left:752px;top:392px;width:70px;height:70px;border:2px solid #f26b4b;border-radius:35px;background:#fff5f2;"></div>
-  <p style="position:absolute;left:752px;top:410px;width:70px;margin:0;text-align:center;font-size:9px;color:#f26b4b;font-weight:700;">生成</p>
-  <p style="position:absolute;left:752px;top:424px;width:70px;margin:0;text-align:center;font-size:8px;color:#f26b4b;">LLM</p>
-
-  <p style="position:absolute;left:826px;top:408px;margin:0;font-size:14px;color:#1a8d85;font-weight:800;">↺</p>
-  <p class="small-copy" style="left:656px;top:472px;width:260px;font-size:9px;color:#c64c32;font-weight:700;">↺ 局部 SCC:生成-验证-重试反思循环(有界)</p>
-
-  <div style="position:absolute;left:936px;top:344px;width:252px;height:130px;border:2px dashed #1a8d85;border-radius:14px;background:rgba(26,141,133,0.05);"></div>
-  <p class="small-copy" style="left:948px;top:350px;width:230px;font-size:10px;font-weight:700;color:#1a8d85;">Π · "验证" Agent 分区</p>
-  <p class="small-copy" style="left:948px;top:366px;width:230px;font-size:9px;color:#1a8d85;">独立权限 · 与生成上下文隔离</p>
-
-  <div style="position:absolute;left:956px;top:392px;width:70px;height:70px;border:2px solid #1a8d85;border-radius:35px;background:#effaf8;"></div>
-  <p style="position:absolute;left:956px;top:410px;width:70px;margin:0;text-align:center;font-size:9px;color:#1a8d85;font-weight:700;">测试</p>
-  <p style="position:absolute;left:956px;top:424px;width:70px;margin:0;text-align:center;font-size:8px;color:#1a8d85;">Tool</p>
-
-  <p style="position:absolute;left:1030px;top:408px;margin:0;font-size:14px;color:#1a8d85;">→</p>
-
-  <div style="position:absolute;left:1052px;top:392px;width:70px;height:70px;border:2px solid #1a8d85;border-radius:35px;background:#effaf8;"></div>
-  <p style="position:absolute;left:1052px;top:410px;width:70px;margin:0;text-align:center;font-size:9px;color:#1a8d85;font-weight:700;">复核</p>
-  <p style="position:absolute;left:1052px;top:424px;width:70px;margin:0;text-align:center;font-size:8px;color:#1a8d85;">Rule</p>
-
-  <div class="line" style="left:636px;top:492px;width:552px;background:#f8ddd4;"></div>
-
-  <p class="small-copy" style="left:636px;top:506px;width:552px;font-size:10px;font-weight:700;color:#c64c32;">图元素对照</p>
-
-  <div style="position:absolute;left:636px;top:526px;width:14px;height:14px;border-radius:7px;background:#426b86;"></div>
-  <p class="small-copy" style="left:656px;top:528px;width:120px;font-size:9px;">规则节点</p>
-
-  <div style="position:absolute;left:756px;top:526px;width:14px;height:14px;border-radius:7px;background:#1a8d85;"></div>
-  <p class="small-copy" style="left:776px;top:528px;width:120px;font-size:9px;">工具/LLM 节点</p>
-
-  <div style="position:absolute;left:900px;top:526px;width:14px;height:14px;border-radius:7px;background:#f26b4b;"></div>
-  <p class="small-copy" style="left:920px;top:528px;width:120px;font-size:9px;">反思 SCC</p>
-
-  <div style="position:absolute;left:1020px;top:526px;width:14px;height:14px;border-radius:7px;background:#d6a43b;"></div>
-  <p class="small-copy" style="left:1040px;top:528px;width:140px;font-size:9px;">人工节点</p>
-
-  <p class="small-copy" style="left:636px;top:556px;width:552px;font-size:9px;line-height:1.4;"><span style="color:#f26b4b;font-weight:700;">DAG 主干</span>:保证阶段推进 + 终止路径 &nbsp; <span style="color:#c64c32;font-weight:700;">SCC</span>:有界反思/验证/工具反馈循环(类似 RNN)</p>
-  <p class="small-copy" style="left:636px;top:580px;width:552px;font-size:9px;line-height:1.4;"><span style="color:#c64c32;font-weight:700;">Π 分区</span>:虚线框圈出 Agentize 的子图,赋予独立身份/决策/状态/权限/责任</p>
-  <p class="small-copy" style="left:636px;top:604px;width:552px;font-size:9px;line-height:1.4;color:#53697c;">θ = 节点内参数(Prompt/阈值) · ρ = 跨分区共享范围(仓库/记忆/通信)</p>
-  <p class="footer-left">AGENTFIT · NAS 映射</p><p class="footer-right">方法论 · 已收敛 · 04</p>
+  <p class="body-copy" style="left:72px;top:608px;width:1136px;text-align:center;color:#ffffff;font-size:20px;font-weight:700;">缺口无法补齐，或所有候选不合格，就停止并给出拒绝决定。</p>
+  <p class="footer-left">AGENTFIT · 量体裁衣</p><p class="footer-right">单向责任链 · 04</p>
 </body></html>
