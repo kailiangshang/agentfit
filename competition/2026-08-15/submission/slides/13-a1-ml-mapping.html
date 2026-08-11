@@ -2,18 +2,19 @@
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide appendix">
   <p class="eyebrow">A1 / 05 · 技术映射</p>
-  <h1 class="title">六层 ML 映射把“方案设计”变成可优化对象</h1>
+  <h1 class="title">七层 ML 映射把“方案设计”变成可优化对象</h1>
   <p class="subtitle">大模型是实现手段之一；编码、检索、分解、SVD 或规则都可以参与更新。</p><div class="top-rule"></div>
 
   <div class="panel panel-dark" style="left:72px;top:204px;width:560px;height:404px;border-color:#0b2236;"></div>
-  <p class="label" style="left:98px;top:226px;color:#74d0c7;">SIX-LAYER MAPPING</p>
-  <p class="body-copy" style="left:98px;top:264px;width:506px;color:#ffffff;"><b>L1 任务语义</b> → 学习问题、输入输出、指标与权衡</p>
-  <p class="body-copy" style="left:98px;top:314px;width:506px;color:#ffffff;"><b>L2 能力语义</b> → 算子集、契约、权限与适用域</p>
-  <p class="body-copy" style="left:98px;top:364px;width:506px;color:#ffffff;"><b>L3 候选表示</b> → 结构、分区、参数与共享范围</p>
-  <p class="body-copy" style="left:98px;top:414px;width:506px;color:#ffffff;"><b>L4 内循环</b> → 固定结构内优化 Prompt / 阈值 / 配置</p>
-  <p class="body-copy" style="left:98px;top:464px;width:506px;color:#ffffff;"><b>L5 外循环</b> → Agentize、拆分、合并与连边搜索</p>
-  <p class="body-copy" style="left:98px;top:514px;width:506px;color:#ffffff;"><b>L6 跨项目学习</b> → 经未见项目验证后更新搜索先验</p>
-  <p class="small-copy" style="left:98px;top:566px;width:506px;color:#d6a43b;">L6 是未来方向：单项目沉淀不能证明跨项目学习。</p>
+  <p class="label" style="left:98px;top:226px;color:#74d0c7;">SEVEN-LAYER MAPPING</p>
+  <p class="body-copy" style="left:98px;top:254px;width:506px;color:#ffffff;font-size:17px;">L1 样本语义 → 样本单位、边界、重放与标注契约</p>
+  <p class="body-copy" style="left:98px;top:296px;width:506px;color:#ffffff;font-size:17px;">L2 任务语义 → 分布、输出、指标、损失与权衡</p>
+  <p class="body-copy" style="left:98px;top:338px;width:506px;color:#ffffff;font-size:17px;">L3 能力语义 → 算子集、契约、权限与适用域</p>
+  <p class="body-copy" style="left:98px;top:380px;width:506px;color:#ffffff;font-size:17px;">L4 候选表示 → 结构、分区、参数与共享范围</p>
+  <p class="body-copy" style="left:98px;top:422px;width:506px;color:#ffffff;font-size:17px;">L5 内循环 → adaptation samples 上优化局部参数</p>
+  <p class="body-copy" style="left:98px;top:464px;width:506px;color:#ffffff;font-size:17px;">L6 外循环 → validation samples 上比较候选架构</p>
+  <p class="body-copy" style="left:98px;top:506px;width:506px;color:#ffffff;font-size:17px;">L7 跨项目学习 → 未见项目验证后更新搜索先验</p>
+  <p class="small-copy" style="left:98px;top:556px;width:506px;color:#d6a43b;">L7 是未来方向：单项目样本优化不能证明跨项目学习。</p>
 
   <div class="panel" style="left:672px;top:204px;width:536px;height:188px;border-color:#1a8d85;"></div>
   <p class="label" style="left:700px;top:228px;color:#1a8d85;">候选四元组</p>
@@ -23,12 +24,12 @@
   <div class="panel soft-teal" style="left:672px;top:420px;width:250px;height:188px;"></div>
   <p class="label" style="left:698px;top:444px;width:220px;color:#1a8d85;">INNER LOOP · 一个 epoch 内</p>
   <p class="section-title" style="left:698px;top:486px;width:198px;font-size:20px;">让局部 Agent 变好</p>
-  <p class="body-copy" style="left:698px;top:530px;width:198px;">固定 G / Π<br>更新 θ / ρ<br>看验证集表现</p>
+  <p class="body-copy" style="left:698px;top:530px;width:198px;">固定 G / Π；更新 θ / ρ；遍历 adaptation samples</p>
 
   <div class="panel soft-coral" style="left:950px;top:420px;width:258px;height:188px;"></div>
   <p class="label" style="left:976px;top:444px;color:#c64c32;">OUTER LOOP · 架构 epoch</p>
   <p class="section-title" style="left:976px;top:486px;width:206px;font-size:20px;">让整体任务结果变好</p>
-  <p class="body-copy" style="left:976px;top:530px;width:206px;">更新 G / Π<br>比较复杂度与收益<br>保留 Pareto 候选</p>
+  <p class="body-copy" style="left:976px;top:530px;width:206px;">更新 G / Π；比较 validation samples；保留 Pareto 候选</p>
 
-  <p class="footer-left">AGENTFIT · 任务语义 × 能力语义 × 架构搜索</p><p class="footer-right">技术附录 · A1</p>
+  <p class="footer-left">AGENTFIT · SAMPLE × TASK × CAPABILITY × SEARCH</p><p class="footer-right">技术附录 · A1</p>
 </body></html>
