@@ -275,6 +275,11 @@ class SubmissionContractTest(unittest.TestCase):
                 with self.subTest(path=path.name, stale=stale):
                     self.assertNotIn(stale, text)
 
+        execution_trace = _section(
+            SOLUTION.read_text(encoding="utf-8"), "### 9.2 ExecutionTrace"
+        )
+        self.assertIn("sample_version, run_index, episode_and_step", execution_trace)
+
     def test_sample_semantics_propagates_to_active_sources(self) -> None:
         required_by_file = {
             SOLUTION: ("SampleSemanticSpec", "SampleSetManifest", "TaskSample", "Episode"),
@@ -557,6 +562,19 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertNotIn("PPTX/PDF 的结构、内容与几何", text)
                 self.assertNotIn("PPTX/PDF 的结构、内容与几何验证", text)
                 self.assertIn("完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成", text)
+
+        solution_text = SOLUTION.read_text(encoding="utf-8")
+        self.assertIn(
+            "| 初赛材料 | `IN_PROGRESS` |",
+            solution_text,
+        )
+        self.assertIn(
+            "完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成",
+            solution_text,
+        )
+        self.assertNotIn("| 初赛材料 | `READY` |", solution_text)
+        self.assertIn("488 个非空白字符", solution_text)
+        self.assertNotIn("468 个非空白字符", solution_text)
 
     def test_introduction_guidance_uses_approved_limit_and_measured_count(self) -> None:
         design_text = PRESENTATION_DESIGN.read_text(encoding="utf-8")

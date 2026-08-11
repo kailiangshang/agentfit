@@ -4,7 +4,7 @@
 >
 > 最近收敛：2026-08-11
 >
-> 当前阶段：初赛材料已就绪；下一阶段是在 AgentTeams 上验证一个可复现的 walking skeleton
+> 当前阶段：初赛材料仍为 `IN_PROGRESS`；完整 17 页 PPTX/PDF 的逐页视觉复核待完成，之后在 AgentTeams 上验证一个可复现的 walking skeleton
 
 ## 1. 文档地位与当前状态
 
@@ -15,7 +15,7 @@
 | 层级 | 当前状态 | 可以对外表述 | 不可以对外表述 |
 |---|---|---|---|
 | 整体方案与设计契约 | `READY` | 产品定义、方法、五元团队、Skill、Human 与风险边界已收敛 | 已经自动生成或优化了真实 Agent 方案 |
-| 初赛材料 | `READY` | 500 字以内简介、12 页主路演、5 页附录和同版 PPTX/PDF 已完成并验证 | PPT 中的设计图等于运行证据 |
+| 初赛材料 | `IN_PROGRESS` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX 结构/内容/几何和 PDF 页数/逐页文本验证已完成；完整视觉复核仍待完成 | PPT 中的设计图等于运行证据，或材料已经通过完整逐页视觉门禁 |
 | AgentTeams 平台试用 | 已有独立 smoke test | Worker、Team、Human、文件同步、定时任务等底座能力曾被单独试用 | 历史平台测试等于 AgentFit 已集成 |
 | AgentFit 真实运行 | `NOT_STARTED` | 正在准备首个 walking skeleton | 已跑通 ProjectCase、候选评测或跨项目学习 |
 
@@ -537,7 +537,8 @@ Human 是候选图中的能力和约束对象，必须记录触发条件、审�
 ```text
 ExecutionTrace = {
   task_spec_version, candidate_version,
-  episode_and_step, agent_identity,
+  sample_version, run_index, episode_and_step,
+  agent_identity,
   input_and_state_refs, decision_and_reason_code,
   tool_or_skill_call, permission_and_approval,
   output_and_artifact_refs, cost_latency_and_errors,
@@ -640,9 +641,9 @@ AgentFit 的差异不是“又一个多 Agent 框架”，而是：
 
 ### 12.2 初赛材料状态
 
-当前已完成并验证：
+当前已完成结构、内容与自动验证，完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成：
 
-- 468 个非空白字符的作品简介；
+- 488 个非空白字符的作品简介；
 - 12 页主路演 + 5 页附录；
 - 17 页 HTML-first、可编辑 PPTX 和同版 PDF；
 - 五个 Agent Identity、七个核心 Skill、Human/风险门禁、开放与合规披露；
