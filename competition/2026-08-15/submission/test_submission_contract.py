@@ -151,14 +151,27 @@ class SubmissionContractTest(unittest.TestCase):
             "sealed_holdout",
             "stress_and_failure",
         ):
-            with self.subTest(manifest_purpose=purpose):
-                self.assertIn(purpose, manifest_text)
-        for manifest_field in ("content_hash", "access_policy"):
-            with self.subTest(manifest_field=manifest_field):
-                self.assertIn(manifest_field, manifest_text)
+            contract_line = (
+                f"{purpose}: SampleSetManifest(version, content_hash, access_policy)"
+            )
+            with self.subTest(manifest_contract=contract_line):
+                self.assertIn(contract_line, manifest_text)
 
         identity_and_skill_text = "\n".join(
             path.read_text(encoding="utf-8") for path in (IDENTITIES, SKILLS)
+        )
+        identity_text = IDENTITIES.read_text(encoding="utf-8")
+        outcome_consumers = re.findall(
+            r"^sealed_holdout_outcome_consumer:\s*(.+)$",
+            identity_text,
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(["GovernanceAuditor only"], outcome_consumers)
+        self.assertIn(
+            "sealed_holdout_outcome_consumer: GovernanceAuditor only", identity_text
+        )
+        self.assertIn(
+            "sealed_holdout_access_timing: after_candidate_freeze", identity_text
         )
         self.assertRegex(
             identity_and_skill_text,
