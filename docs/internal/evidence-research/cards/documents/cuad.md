@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: A contract-stratified training subset and limited review categories.
 - `possible_holdout_data`: Contracts, templates, or clause categories excluded by document family.
 - `possible_failure_injection`: OCR corruption, missing clause, conflicting provisions, negated exception, long-context truncation, and unsupported legal conclusion.
-- `transfer_pair_candidates`: `contract-nli` as a same-family transfer target for contract representations, evidence spans, and abstention behavior.
+- `future_transfer_conditions`: After a real document ProjectCase is complete, compare only targets with compatible clause taxonomies, evidence spans, abstention rules, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

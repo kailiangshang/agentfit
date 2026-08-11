@@ -71,7 +71,7 @@ def build_deck(output_path: Path = OUTPUT_PATH) -> None:
             {
                 "op": "set-props",
                 "title": "AgentFit GOAI Agent Infra 初赛路演方案",
-                "subject": "AgentTeams 上的 Agent 解决方案元团队",
+                "subject": "AgentTeams 上的 Agent 方案建筑师",
                 "author": "AgentFit Team",
                 "keywords": "AgentFit, AgentTeams, Agent Infra, HTML-first",
                 "comments": "Preliminary submission candidate. Official cases and the software scenario are references or design simulations, not runtime evidence.",

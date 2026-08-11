@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: Low-risk local CTF tasks and their subtasks in isolated containers.
 - `possible_holdout_data`: Entire competitions or vulnerability families excluded from adaptation.
 - `possible_failure_injection`: Tool denial, decoy flag, network isolation, unsafe target request, poisoned instructions, partial exploit, and evaluator mismatch.
-- `transfer_pair_candidates`: `purple-llama` for safety/evaluation capabilities rather than task-solving topology.
+- `future_transfer_conditions`: After a real security ProjectCase is complete, compare only targets with compatible sandbox boundaries, safety evaluators, attack classes, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

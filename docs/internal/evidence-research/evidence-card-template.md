@@ -35,7 +35,9 @@ If a source does not report a field, the evidence card records `not_reported_by_
 - `possible_adaptation_data`
 - `possible_holdout_data`
 - `possible_failure_injection`
-- `transfer_pair_candidates`
+- `future_transfer_conditions`
+
+`future_transfer_conditions` records source-specific compatibility criteria only. It must not nominate a project pair before the first real ProjectCase has produced runtime evidence.
 
 This section contains design interpretations only. It must not be cited as a source fact.
 
@@ -50,4 +52,3 @@ This section contains design interpretations only. It must not be cited as a sou
 - `checked_by`
 - `checked_at`
 - `source_sections`
-

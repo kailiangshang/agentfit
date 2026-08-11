@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: A small research-only task subset and schema slice with synthetic or non-sensitive records.
 - `possible_holdout_data`: New CRM task families, organization types, or interactive user behaviors.
 - `possible_failure_injection`: Stale records, insufficient permission, conflicting policy, duplicate write, wrong customer, GUI unavailability, and model-provider failure.
-- `transfer_pair_candidates`: `tau-bench` as an adjacent policy-governed business interaction task.
+- `future_transfer_conditions`: After a real business-interaction ProjectCase is complete, compare only targets with compatible policy constraints, action-state semantics, user-simulation assumptions, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

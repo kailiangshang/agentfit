@@ -518,7 +518,7 @@ ProjectAsset 只有经过以下流程才能晋升为 MetaAsset：
 
 ### 11.3 当前边界
 
-跨场景项目集和 `AIOpsLab → ITBench` 等迁移假设是后续研究输入，不是近期并行实施清单。当前不同时启动六个 ProjectCase，也不把一组迁移结果写成 Meta-learning。
+仓库当前不预设跨场景项目集或迁移对。首个真实 ProjectCase 完成后，才能依据任务语义、能力边界和运行证据选择迁移对象；单组迁移结果仍不能写成 Meta-learning。
 
 ## 12. 比赛映射与事实红线
 
@@ -623,7 +623,7 @@ AgentFit 不开发独立 UI、不修改 AgentTeams 核心，也不自建通用�
 - [GOAI Agent Infra 初赛要求矩阵](internal/competition/preliminary-requirements-matrix.md)
 - [GOAI Agent Infra 初赛红线与声明检查表](internal/competition/preliminary-red-line-checklist.md)
 - [Evidence Registry](internal/evidence-research/evidence-registry.json)
-- [ProjectCase Contract](internal/cross-scenario-project-suite/project-case-template.md)
+- [ProjectCase Contract](internal/contracts/project-case-template.md)
 - [《新智基座》Agent Infra 参赛手册](reference/新智基座-参赛手册.pdf)
 
 历史版本只通过 Git 提交记录追溯，不能覆盖本文件的当前定义、完成状态和证据边界。

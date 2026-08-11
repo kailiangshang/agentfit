@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: Contracts stratified by source and label, with a subset of hypotheses.
 - `possible_holdout_data`: Document templates, SEC filing sources, or hypotheses excluded from adaptation.
 - `possible_failure_injection`: Removed evidence span, exception clause, contradictory amendment, long-context truncation, label imbalance, and forced answer where abstention is safer.
-- `transfer_pair_candidates`: `cuad` as a same-family source of contract encoders, clause spans, and review categories.
+- `future_transfer_conditions`: After a real document ProjectCase is complete, compare only targets with compatible contract representations, clause spans, label semantics, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

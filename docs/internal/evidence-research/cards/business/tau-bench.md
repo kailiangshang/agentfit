@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: Historical trajectories from one domain and low-risk task classes.
 - `possible_holdout_data`: Tasks from another domain, new policy clauses, or unseen user behavior; a future implementation should use a current τ³-bench snapshot rather than silently mixing versions.
 - `possible_failure_injection`: Ambiguous user intent, policy conflict, wrong tool arguments, partial goal completion, environment fault, repeated-call instability, and missing approval.
-- `transfer_pair_candidates`: `crm-arena` as an adjacent business-action environment; policy and approval priors may also transfer to operational remediation.
+- `future_transfer_conditions`: After a real business-action ProjectCase is complete, compare only targets with compatible policy, approval, state-transition, rollback, license, and runtime-evidence boundaries; this card does not nominate a pair.
 
 ## Open Questions
 

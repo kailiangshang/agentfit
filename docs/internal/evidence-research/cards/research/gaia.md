@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: Public-answer development questions grouped by level and tool type.
 - `possible_holdout_data`: Sealed leaderboard questions or an internally frozen, non-overlapping question set.
 - `possible_failure_injection`: Stale webpages, conflicting sources, unavailable files, OCR errors, tool-routing failure, and correct answer with unsupported reasoning.
-- `transfer_pair_candidates`: `anthropic-multi-agent-research` as architecture evidence for the subset of breadth-first questions.
+- `future_transfer_conditions`: After a real research ProjectCase is complete, compare only targets with compatible question breadth, tool requirements, evidence expectations, evaluation rules, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

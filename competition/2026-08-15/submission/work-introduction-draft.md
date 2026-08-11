@@ -21,5 +21,5 @@ AgentFit 是运行在 AgentTeams 上的 Agent 方案建筑师。它先把材料�
 - 计数口径：仅统计上一节正文，移除所有空白后计数；目标不超过 470，为平台差异预留空间。
 - 官网四类案例是参考场景，非 AgentFit 运行证据。
 - 软件研发场景是设计模拟，结论为 `requires_runtime_trial`。
-- 本地 `demo/` 与历史 AgentTeams smoke test 不构成 AgentFit 运行证据。
+- 设计模拟与历史 AgentTeams smoke test 不构成 AgentFit 运行证据。
 - ProjectCase、真实五元团队、统一候选对照与 Meta-learning 仍未完成。

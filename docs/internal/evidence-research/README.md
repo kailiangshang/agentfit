@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This directory contains source-level evidence used to select and model AgentFit cross-scenario projects.
+This directory contains source-level evidence used to model task semantics, capability boundaries, evaluation methods, and future ProjectCases. Evidence cards do not select or approve a ProjectCase by themselves.
 
 ## Evidence Levels
 
@@ -20,4 +20,3 @@ This directory contains source-level evidence used to select and model AgentFit 
 ## Acceptance Rule
 
 No external claim enters the normative methodology or competition submission until its source and wording are manually verified.
-

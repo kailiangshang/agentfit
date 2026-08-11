@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: Known applications, fault types, telemetry traces, and low-risk detection/localization tasks.
 - `possible_holdout_data`: Unseen applications, fault mechanisms, or task compositions.
 - `possible_failure_injection`: Telemetry loss, delayed signals, wrong topology, tool timeout, partial remediation, unsafe mitigation proposal, and cluster setup failure.
-- `transfer_pair_candidates`: `itbench` as the strongest same-family transfer target for operational priors and trace schemas.
+- `future_transfer_conditions`: After a real operations ProjectCase is complete, compare only targets with compatible task decomposition, observability, trace schemas, failure injection, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

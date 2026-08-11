@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: A fixed subset of training or Lite instances, stratified by repository and issue type.
 - `possible_holdout_data`: Unseen repositories or a sealed portion of Verified, preventing same-repository leakage.
 - `possible_failure_injection`: Missing dependencies, non-reproducing tests, incorrect localization, patches that only satisfy visible tests, excessive tool use, and Docker setup failure.
-- `transfer_pair_candidates`: `masai` as same-task architecture evidence; operational diagnosis tasks as an adjacent diagnose-act-verify family.
+- `future_transfer_conditions`: After a real software ProjectCase is complete, compare only targets with compatible repository tasks, patch/test evaluation, diagnosis-action loops, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

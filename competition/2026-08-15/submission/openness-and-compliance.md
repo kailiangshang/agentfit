@@ -76,7 +76,7 @@ AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、�
 |---|---|---|---|
 | 官网四类参考案例 | [GOAI Agent Infra 官网](https://goaihz.com/tracks?track=infra) | 官网公开,场景启发,非运行证据 | 路演第 9 页 |
 | 参赛手册 | 新智基座 Agent Infra 参赛手册 | 官方文件 | 要求矩阵与红线 |
-| 跨场景证据卡(SWE-bench/GAIA/CyBench/τ-bench/CUAD 等) | 各 benchmark 官方 | 各自 license,内部研究用,不二次分发 | v0 项目集选择依据 |
+| 跨场景证据卡(SWE-bench/GAIA/CyBench/τ-bench/CUAD 等) | 各 benchmark 官方 | 各自 license,内部研究用,不二次分发 | 未来 ProjectCase 的任务、能力与评测建模证据;不代表已经选择项目 |
 
 ### 2.5 商业 API 与闭源模型披露
 

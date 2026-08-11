@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: A subset of mechanisms from known applications and non-destructive tasks.
 - `possible_holdout_data`: New applications, unseen mechanisms, or cross-use-case tasks.
 - `possible_failure_injection`: Alert ambiguity, hidden dependencies, stale telemetry, permission denial, rollback failure, and conflicting SRE/CISO/FinOps objectives.
-- `transfer_pair_candidates`: `aiopslab` as a same-family source for task decomposition, traces, evaluators, and failure-injection priors.
+- `future_transfer_conditions`: After a real operations ProjectCase is complete, compare only targets with compatible incident semantics, action boundaries, evaluators, trace schemas, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

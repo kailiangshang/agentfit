@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: A repository-stratified subset of SWE-bench Lite used to tune role boundaries and budgets.
 - `possible_holdout_data`: Repositories excluded from architecture and prompt selection.
 - `possible_failure_injection`: Broken test templates, false reproductions, wrong-file localization, invalid patches, ranker disagreement with tests, and budget exhaustion.
-- `transfer_pair_candidates`: `swe-bench` as the task/evaluation substrate; modular diagnosis patterns may transfer to `aiopslab` only after validation.
+- `future_transfer_conditions`: After a real software ProjectCase is complete, compare only targets with compatible diagnosis patterns, repository/task schemas, evaluation harnesses, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

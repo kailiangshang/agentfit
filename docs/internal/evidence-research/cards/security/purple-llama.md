@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: Permissively licensed evaluation examples that match the chosen AgentFit threat model.
 - `possible_holdout_data`: New attack families, unseen prompt injections, and held-out insecure-code patterns.
 - `possible_failure_injection`: Evasion, false positive, model refusal, license-incompatible component request, bypassed safety node, and unsafe fallback.
-- `transfer_pair_candidates`: `cybench` as a controlled task environment for testing whether safety capabilities constrain an Agent execution graph.
+- `future_transfer_conditions`: After a real security ProjectCase is complete, compare only targets with compatible threat models, safety-control hooks, evaluation protocols, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

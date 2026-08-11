@@ -35,7 +35,7 @@ All statements in this section are `agentfit_inference`, not source claims.
 - `possible_adaptation_data`: A small set of decomposable queries with known source coverage and branch labels.
 - `possible_holdout_data`: New topics whose sources and entities do not overlap adaptation queries.
 - `possible_failure_injection`: Duplicate branches, missing citations, conflicting sources, stalled subagent, budget overrun, aggregator omission, and synchronized-dependency tasks.
-- `transfer_pair_candidates`: `gaia` for open-tool research questions, while preserving that GAIA itself specifies one assistant rather than a team.
+- `future_transfer_conditions`: After a real research ProjectCase is complete, compare only targets with compatible breadth-first search needs, tool access, citation rules, budget constraints, licenses, and runtime evidence; this card does not nominate a pair.
 
 ## Open Questions
 

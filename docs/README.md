@@ -25,14 +25,11 @@ Git 历史中的旧讨论、旧方法论或执行计划均不具备当前规范�
 - [Evidence Registry](internal/evidence-research/evidence-registry.json)
 - `internal/evidence-research/cards/`：十二张已核验来源卡
 
-### 跨场景研究输入
+### 下一阶段执行契约
 
-- [ProjectCase 契约](internal/cross-scenario-project-suite/project-case-template.md)
-- [v0 选择矩阵](internal/cross-scenario-project-suite/v0-selection-matrix.md)
-- [v0 选择理由](internal/cross-scenario-project-suite/v0-selection-rationale.md)
-- [v0 Manifest](internal/cross-scenario-project-suite/v0-manifest.json)
+- [ProjectCase 契约](internal/contracts/project-case-template.md)
 
-上述项目集用于后续迁移与跨项目研究，不是近期并行实施清单。
+仓库不预设六项目集或跨项目迁移对。首个真实 ProjectCase 完成后，再基于运行证据选择后续迁移与跨项目研究对象。
 
 ## 原始参考材料
 
