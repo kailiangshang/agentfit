@@ -414,7 +414,7 @@ Intake → Discover → Architect → Approve → Trial → Audit → Deliver �
 | 阶段 | 核心产物 | 门禁 |
 |---|---|---|
 | Intake | Project Dossier、范围和来源 | 责任人和材料来源明确 |
-| Discover | TaskSemanticSpec、Capability Registry、AlignmentReport | 输入、输出、验收和缺口可描述 |
+| Discover | SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec、Capability Registry、AlignmentReport | 样本单位、边界、manifest、输入、输出、验收和缺口可描述并冻结 |
 | Architect | CandidateGraphSet、风险和预算 | 候选可执行且复杂度有理由 |
 | Approve | TrialSpec、权限和审批记录 | 数据、预算、回滚和试验范围获批 |
 | Trial | 运行结果、Trace、故障和成本 | 输入、数据划分和预算受控 |
@@ -445,12 +445,14 @@ RawMaterials + SourceObservations
 最近几天只验证一条链路：
 
 ```text
-Human 提交材料
+Human 提交 RawMaterials + SourceObservations
 → EngagementLead 建立 Project Dossier
+→ BusinessEngineer 生成并冻结 SampleSemanticSpec + SampleSetManifest
 → BusinessEngineer 生成 TaskSemanticSpec
-→ AgentArchitect 生成能力清单、缺口和候选
-→ Human 批准预算与试验
-→ ValidationEngineer 执行至少一个真实候选
+→ AgentArchitect 生成能力清单、缺口和 CandidateGraphSet
+→ Human 批准预算与 TrialSpec
+→ CandidateVersion × SampleVersion
+→ ValidationEngineer 生成 SampleEvaluation[] + ExecutionTrace[]
 → GovernanceAuditor 独立审计
 → EngagementLead 输出 DeliveryDecision
 ```
