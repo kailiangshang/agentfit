@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import unittest
 from pathlib import Path
@@ -13,6 +14,15 @@ ROOT = Path(__file__).resolve().parent
 SLIDES_DIR = ROOT / "slides"
 INTRODUCTION = ROOT / "work-introduction-draft.md"
 VALIDATOR = ROOT / "validate_presentation.py"
+REPO_ROOT = ROOT.parents[2]
+SOLUTION = REPO_ROOT / "docs" / "agentfit-solution.md"
+PROJECT_CASE = REPO_ROOT / "docs" / "internal" / "contracts" / "project-case-template.md"
+LANDING = ROOT.parent / "design" / "agentteams-landing-design.md"
+OFFICIAL_CASE_MD = ROOT.parent / "research" / "official-case-simulation.md"
+OFFICIAL_CASE_JSON = ROOT.parent / "research" / "official-case-simulation.json"
+IDENTITIES = ROOT / "agent-identity.md"
+SKILLS = ROOT / "skill-catalog.md"
+RISKS = ROOT / "risk-and-human-gates.md"
 
 
 def _load_validator():
@@ -90,6 +100,40 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(term=term):
                 self.assertIn(term, required)
+
+    def test_sample_semantics_propagates_to_active_sources(self) -> None:
+        required_by_file = {
+            SOLUTION: ("SampleSemanticSpec", "SampleSetManifest", "TaskSample", "Episode"),
+            PROJECT_CASE: ("sample_semantic_spec", "sample_set_manifests", "sealed_holdout"),
+            LANDING: ("SampleSemanticSpec", "SampleSetManifest", "SampleEvaluation"),
+            OFFICIAL_CASE_MD: ("SourceObservation", "TaskSample", "Episode"),
+            IDENTITIES: ("SampleSemanticSpec", "SampleSetManifest"),
+            SKILLS: ("SampleSemanticSpec", "SampleSetManifest"),
+            RISKS: ("SampleSetManifest", "content_hash"),
+        }
+        for path, terms in required_by_file.items():
+            text = path.read_text(encoding="utf-8")
+            for term in terms:
+                with self.subTest(path=path.name, term=term):
+                    self.assertIn(term, text)
+
+    def test_sample_case_json_uses_machine_readable_contracts(self) -> None:
+        payload = json.loads(OFFICIAL_CASE_JSON.read_text(encoding="utf-8"))
+        self.assertIn("sample_semantic_spec", payload)
+        self.assertIn("sample_mapping_examples", payload)
+        self.assertEqual(
+            "design_simulation_not_runtime_evidence", payload["evidence_status"]
+        )
+
+    def test_slides_make_sample_unit_and_episode_explicit(self) -> None:
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(SLIDES_DIR.glob("*.html"))
+        )
+        for term in ("七层 ML 映射", "同一冻结样本集", "TaskSample", "Episode"):
+            with self.subTest(term=term):
+                self.assertIn(term, source)
+        self.assertNotIn("六层 ML 映射", source)
 
 
 if __name__ == "__main__":

@@ -41,6 +41,11 @@ REQUIRED_TERMS = (
     "非运行证据",
     "requires_runtime_trial",
     "https://goaihz.com/tracks?track=infra",
+    "Sample",
+    "TaskSample",
+    "Episode",
+    "七层 ML 映射",
+    "同一冻结样本集",
 )
 FORBIDDEN_TERMS = (
     "TODO",
@@ -51,6 +56,7 @@ FORBIDDEN_TERMS = (
     "超越人工设计 1.2%",
     "methodology §13",
     "首个真实项目案例与五元 Agent 在 AgentTeams 上的闭环正在实施",
+    "六层 ML 映射",
 )
 
 
