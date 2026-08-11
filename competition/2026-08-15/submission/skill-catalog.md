@@ -1,6 +1,6 @@
 # AgentFit 核心 Skill 清单
 
-> 状态:设计中。满足官方硬约束"Skill 必选"。
+> 状态:设计契约 `READY`,真实绑定 `NOT_STARTED`。当前定义 7 个核心 Skill。
 >
 > 真实 AgentTeams Skill 绑定待完成。在 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁满足前,本清单描述的是设计契约,不是已运行的 Skill 实例。
 
@@ -151,18 +151,18 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 人工门禁 | AgentTeams Human 入口、审批 | 直接使用 AgentTeams 原生能力 |
 | 经验沉淀 | AgentTeams 共享存储 | 复用存储;AgentFit 增加脱敏、参数化、晋升门禁 |
 
-## 上下文能力 4 选 2 声明
+## 上下文能力 4 选 2 设计声明
 
-官方要求从"Agent 记忆 / 知识库 RAG / 共享状态 / 轨迹可观测"4 项中至少实现 2 项。AgentFit 声明实现以下 2 项:
+官方要求从"Agent 记忆 / 知识库 RAG / 共享状态 / 轨迹可观测"4 项中至少实现 2 项。AgentFit 的设计选择以下 2 项,真实实现状态仍为 `NOT_STARTED`:
 
-1. **共享状态**:项目档案(Project Dossier)作为版本化状态事实源,承载阶段产物、执行轨迹、决策账本;
-2. **轨迹可观测**:执行轨迹(ExecutionTrace)记录 Step/Episode 级决策、工具调用、权限审批、成本、重试、回滚。
+1. **共享状态**:计划以项目档案(Project Dossier)作为版本化状态事实源,承载阶段产物、执行轨迹和交付决定;
+2. **轨迹可观测**:计划由执行轨迹(ExecutionTrace)记录 Step/Episode 级决策、工具调用、权限审批、成本、重试和回滚。
 
 不采用知识库 RAG。理由:AgentFit 的核心上下文是结构化的任务说明书与能力库,而非非结构化文档检索;任务语义 + 能力语义 + 执行轨迹构成可审计的结构化上下文,比向量检索更可复现、可审计。Agent 记忆作为局部状态介质存在于候选执行中,但不作为主上下文机制单独声明。
 
 ## 当前状态与门禁
 
-本清单描述的是 Skill 的设计契约。真实实现状态以 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁为准。在门禁满足前,只能表述为"Skill 设计完成"或"Skill 实现进行中"。
+本清单的设计契约状态为 `READY`,真实 AgentTeams 绑定状态为 `NOT_STARTED`。当前只能表述为"Skill 设计完成";实际绑定工作启动并更新状态后,才能表述为"Skill 实现进行中"。最终完成态以 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁为准。
 
 ## 与官方要求的映射
 

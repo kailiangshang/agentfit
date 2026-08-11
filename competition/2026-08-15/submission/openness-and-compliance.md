@@ -1,6 +1,6 @@
 # AgentFit 开放与合规披露
 
-> 状态:初赛披露草案。满足官方硬约束"必须披露开放范围、协议、依赖、商业 API、闭源模型、数据授权、脱敏、可复现方式、部署依赖和后续维护计划"。
+> 状态:初赛披露 `READY`;真实开放、开源和 AgentFit 运行仍未发生。本文件覆盖开放范围、协议、依赖、商业 API、闭源模型、数据授权、脱敏、可复现方式、部署依赖和后续维护计划。
 
 ## 事实源
 
@@ -145,8 +145,8 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 - ✓ 不把概念图或本地模拟写成真实运行;
 - ✓ 不把 AgentTeams 名称当作集成证据;
 - ✓ 不隐瞒既有仓库、第三方贡献、商业 API 或闭源模型(本文件 §2.5 明确披露);
-- ✓ 不未披露数据授权、许可证、密钥、权限和依赖;
-- ✓ 高风险动作有审批、拒绝、回滚和审计(见 [risk-and-human-gates.md](risk-and-human-gates.md));
+- ✓ 明确披露数据授权、许可证、密钥、权限和依赖的当前状态;
+- ✓ 设计契约要求高风险动作具备审批、拒绝、回滚和审计;真实链路为 `NOT_STARTED`(见 [risk-and-human-gates.md](risk-and-human-gates.md));
 - ✓ 不只展示成功,失败、降级、否决证据同等保留;
 - ✓ 比赛材料与内部证据状态一致。
 
@@ -154,7 +154,7 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 
 明确披露以下尚未完成:
 
-- TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、TrialSpec、ExecutionTrace 的正式机器可执行 Schema;
+- TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema;
 - 自动候选生成、内外循环搜索、Pareto 选择;
 - ProjectAsset/MetaAsset 的正式存储、晋升、回归系统;
 - 任一完整 ProjectCase;
@@ -162,4 +162,4 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 - 统一预算下的无 Agent/单 Agent/多 Agent 真实对照;
 - 真实业务或生产效果。
 
-下一门禁不是扩展总体概念,而是:审批首个 ProjectCase → 冻结数据与预算 → 实现 Schema → 在 AgentTeams 跑通最小闭环 → 完成统一对照 → 形成真实证据后才派生路演声明。
+下一门禁不是扩展总体概念,而是:选择并冻结首个 ProjectCase → 在 AgentTeams 跑通最小闭环 → 保留失败或 Human 分支 → 独立审计并复现。真实证据形成后更新路演中的运行状态与证据页,不改变已经冻结的产品定义。

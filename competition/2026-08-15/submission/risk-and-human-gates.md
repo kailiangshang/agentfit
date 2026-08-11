@@ -1,6 +1,6 @@
 # AgentFit 高风险动作与人工门禁清单
 
-> 状态:设计中。满足官方硬约束"高风险动作必须保留人工确认、审批、回滚和审计边界"。
+> 状态:设计契约 `READY`,真实运行 `NOT_STARTED`。高风险动作必须保留人工确认、审批、回滚和审计边界。
 
 ## 事实源
 
@@ -124,7 +124,7 @@
 
 ## 当前状态
 
-本清单描述的是风险与门禁的设计契约。真实运行状态以 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁为准。
+本清单的设计契约状态为 `READY`,真实运行状态为 `NOT_STARTED`。后续完成态以 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁为准。
 
 **红线**:任何路演材料、简介或 PPT 不得声称高风险动作已具备完整审批/回滚/审计链路,除非上述门禁已在真实 AgentTeams 运行中得到验证并保留 Trace。
 

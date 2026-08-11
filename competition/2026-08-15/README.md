@@ -32,7 +32,7 @@
 | [`submission/agent-identity.md`](submission/agent-identity.md) | 五个 Agent 的 8 字段契约 | 设计契约，未实例化 |
 | [`submission/skill-catalog.md`](submission/skill-catalog.md) | 七个 Skill 的 10 字段契约 | 设计契约，未绑定 |
 | [`submission/risk-and-human-gates.md`](submission/risk-and-human-gates.md) | Human 门禁、风险、异常、回滚 | 设计契约 |
-| [`submission/openness-and-compliance.md`](submission/openness-and-compliance.md) | 开放、依赖、许可与未实现披露 | 提交候选披露 |
+| [`submission/openness-and-compliance.md`](submission/openness-and-compliance.md) | 开放、依赖、许可与未实现披露 | 初赛披露 `READY`;真实开放未发生 |
 | [`research/official-case-simulation.md`](research/official-case-simulation.md) | 官网四案例与软件研发设计模拟 | 非运行证据 |
 | [`planning/readiness-board.md`](planning/readiness-board.md) | 当前证据状态与提交门禁 | 唯一状态看板 |
 
@@ -42,7 +42,7 @@
 
 ## 当前非目标
 
-- 不为初赛开发独立 UI 或飞书集成；
+- 不开发独立 AgentFit UI；第一阶段不接入飞书；
 - 不修改 AgentTeams 核心；
-- 不在材料完成前实现自动 NAS 或跨项目 Meta-learning；
+- 首个 walking skeleton 阶段不实现自动 NAS、全量候选搜索或跨项目 Meta-learning；
 - 不虚构 ProjectCase、运行 Trace、量化效果或开源状态。

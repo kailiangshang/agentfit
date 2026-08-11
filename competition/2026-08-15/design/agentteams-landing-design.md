@@ -1,8 +1,8 @@
 # AgentFit 基于 AgentTeams 的落地设计
 
-> 决策日期：2026-08-10
+> 最近同步：2026-08-11
 >
-> 决策状态：设计边界已认可，真实 AgentFit 集成尚未开始
+> 决策状态：设计边界已认可；真实 AgentFit 集成尚未开始，下一步是首个 walking skeleton
 >
 > 适用阶段：GOAI Agent Infra 初赛准备及首个真实 ProjectCase
 
@@ -24,11 +24,11 @@ AgentFit 采用“AgentTeams 原生底座 + AgentFit 能力包”的落地方式
 
 ### 2.2 修改 AgentTeams 核心
 
-把 AgentFit 逻辑直接加入 Dashboard、Controller 或 Manager 会造成上游耦合，并重复承担运行平台的维护责任。除非真实试验证明某项必要能力无法通过公开资源、Agent 包、Skill、MCP 或 API 实现，否则不进入该路径。
+把 AgentFit 逻辑直接加入 Dashboard、Controller 或 Manager 会造成上游耦合，并重复承担运行平台的维护责任，因此不进入该路径。真实试验发现的平台缺口记录为外部依赖、上游 Issue 或扩展请求，并选择适配、降级或阻塞，不通过修改 AgentTeams 核心吸收为 AgentFit 功能。
 
 ### 2.3 自建 Agent 平台和独立前端
 
-该方式重复实现身份、通信、资源编排、凭证、文件和运行环境，与 AgentFit 的方案工程定位冲突。初赛不需要独立前端，展示与人工介入使用 AgentTeams 原有入口。
+该方式重复实现身份、通信、资源编排、凭证、文件和运行环境，与 AgentFit 的方案工程定位冲突。AgentFit 不开发独立前端，展示与人工介入使用 AgentTeams 原有入口。
 
 ## 3. 系统边界
 
@@ -65,12 +65,14 @@ AgentFit 采用“AgentTeams 原生底座 + AgentFit 能力包”的落地方式
 Human 提交材料和目标
 → EngagementLead 建立 Project Dossier
 → BusinessEngineer 生成 TaskSemanticSpec
-→ AgentArchitect 生成 Capability Registry、AlignmentReport 和候选集
+→ AgentArchitect 生成 Capability Registry、AlignmentReport 和 CandidateGraphSet
 → Human 批准 TrialSpec、权限和预算
-→ ValidationEngineer 运行受控候选试验
-→ GovernanceAuditor 独立检查证据、安全和复杂度
-→ EngagementLead 交付 SelectedSolution 或 RejectionDecision
+→ ValidationEngineer 生成 EvaluationRun 和 ExecutionTrace
+→ GovernanceAuditor 生成 EvaluationReport 和独立审计结论
+→ EngagementLead 交付 DeliveryDecision
 ```
+
+`DeliveryDecision` 只能是 `SelectedSolution`（全自动/部分自动化/降级）、`HumanRetained` 或 `RejectionDecision`。
 
 初次运行允许由人触发阶段和创建资源，但结构化产物、责任归属、候选输入、预算和审计结果不得靠人工口头补齐。
 
@@ -78,7 +80,7 @@ Human 提交材料和目标
 
 以下能力一旦仅依赖自然语言就会破坏可复现性，因此应在最小闭环验证后优先固化：
 
-1. `TaskSemanticSpec`、`CapabilitySemanticSpec`、`AlignmentReport`、`Candidate`、`TrialSpec`、`ExecutionTrace` 和审计结果的 Schema 与校验；
+1. `TaskSemanticSpec`、`CapabilitySemanticSpec`、`AlignmentReport`、`Candidate`、`CandidateGraphSet`、`TrialSpec`、`EvaluationRun`、`ExecutionTrace`、`EvaluationReport` 和 `DeliveryDecision` 的 Schema 与校验；
 2. 阶段状态、产物版本、批准主体和失败状态的确定性门禁；
 3. adaptation、validation、holdout 和 failure set 的隔离；
 4. Agentless、单 Agent、多 Agent候选的统一输入、预算和指标；
@@ -86,7 +88,7 @@ Human 提交材料和目标
 6. 高风险动作的拒绝、审批、回滚和超时；
 7. 评测汇总和比赛声明到内部证据的反向定位。
 
-代码优先存在 AgentFit 仓库中，通过 Worker 包、Skill、CLI 或 MCP 接入 AgentTeams。只有平台级缺口得到真实复现后，才讨论修改 AgentTeams fork。
+代码只存在 AgentFit 仓库中，通过 Worker 包、Skill、CLI、MCP 或适配层接入 AgentTeams。平台级缺口真实复现后，记录为外部依赖、上游 Issue 或扩展请求，不修改 AgentTeams 核心。
 
 ## 7. 错误与降级
 
@@ -110,7 +112,7 @@ Human 提交材料和目标
 6. AgentTeams 版本、配置、已验证能力和未验证边界被记录；
 7. 运行结果可由仓库中的说明和非敏感配置重复执行。
 
-在这些条件满足前，只能表述为“设计完成”“AgentTeams 平台能力已单独试用”或“AgentFit 集成进行中”。
+当前 `NOT_STARTED` 状态只能表述为“设计完成”或“AgentTeams 平台能力已单独试用”。实际创建首个 ProjectCase 或五元团队并把状态更新为 `IN_PROGRESS` 后，才能表述为“AgentFit 集成进行中”；全部门禁满足后才能表述为“已跑通最小闭环”。
 
 ## 9. 第一阶段非目标
 
