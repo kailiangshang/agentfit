@@ -17,6 +17,10 @@
 
 | 资产 | 开放形式 | 状态 |
 |---|---|---|
+| 样本语义 Schema(SampleSemanticSpec) | 结构化 Schema 文档 + JSON/YAML 样例 | 计划中,尚未实现或发布 |
+| 冻结样本集合 Schema(SampleSetManifest) | 结构化 Schema 文档 + JSON/YAML 样例 | 计划中,尚未实现或发布 |
+| 样本级评价 Schema(SampleEvaluation) | 结构化 Schema 文档 + JSON/YAML 样例 | 计划中,尚未实现或发布 |
+| split-leakage schemas(SplitLeakagePolicy / SplitLeakageReport) | 分组泄漏、重复 content_hash、cutoff 与隔离审计的结构化 Schema 文档 + 样例 | 计划中,尚未实现或发布 |
 | 任务说明书 Schema(TaskSemanticSpec) | 结构化 Schema 文档 + JSON/YAML 样例 | 设计中,初赛后开放 |
 | 能力语义 Schema(CapabilitySemanticSpec) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
 | 执行轨迹 Schema(ExecutionTrace) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
@@ -96,7 +100,7 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 
 ### 3.2 团队新增贡献(AgentFit 独有)
 
-- 任务编译与任务说明书 Schema;
+- Sample/Task 编译方法，以及 SampleSemanticSpec、SampleSetManifest、SampleEvaluation 与 split-leakage schemas 的设计契约;
 - 能力语义对齐方法与缺口报告;
 - 候选图与 Agent 分区(Agentize)必要性判定;
 - 无 Agent/单 Agent/多 Agent/人工混合统一对照试验设计;
@@ -115,7 +119,7 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 
 - 元团队 AgentTeams 配置 + 运行入口;
 - 首个 ProjectCase 的样例输入输出;
-- 统一对照实验的冻结数据划分、预算、模型版本、Trace;
+- 统一对照实验的冻结 SampleSetManifest、样本级评价、预算、模型版本、Trace;
 - 干净环境复现脚本。
 
 ## 5. 部署依赖
@@ -154,7 +158,7 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 
 明确披露以下尚未完成:
 
-- TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema;
+- SampleSemanticSpec、SampleSetManifest、SampleEvaluation、SplitLeakagePolicy、SplitLeakageReport、TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema;
 - 自动候选生成、内外循环搜索、Pareto 选择;
 - ProjectAsset/MetaAsset 的正式存储、晋升、回归系统;
 - 任一完整 ProjectCase;
