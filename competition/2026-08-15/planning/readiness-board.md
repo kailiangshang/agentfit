@@ -13,12 +13,13 @@
 | 路演唯一叙事与 12+5 结构 | READY | `competition/2026-08-15/design/presentation-redesign.md` |
 | AgentTeams 落地边界 | READY | `design/agentteams-landing-design.md`；设计基点，不代表已集成 |
 | 官网参考案例与软件研发设计模拟 | READY | `research/official-case-simulation.md`；非运行证据 |
+| Sample 一等设计对象 | READY | `docs/agentfit-solution.md`；Sample 语义、冻结集合与样本级评价均为设计契约，非运行实例 |
 | 五个 Agent Identity | READY | `submission/agent-identity.md`；设计契约 |
 | 七个核心 Skill | READY | `submission/skill-catalog.md`；设计契约 |
 | Human、风险、异常与回滚 | READY | `submission/risk-and-human-gates.md`；设计契约 |
 | 开放与合规披露 | READY | `submission/openness-and-compliance.md`；仓库私有、License 未选择 |
-| 500 字作品简介 | READY | `submission/work-introduction-draft.md`；468 个非空白字符 |
-| 17 页 HTML / PPTX / PDF | READY | 17 页；内容、几何、PPTX/PDF 逐页视觉与一致性复核通过 |
+| 500 字作品简介 | READY | `submission/work-introduction-draft.md`；实测 488 个非空白字符，符合不超过 500 的门禁 |
+| 17 页 HTML / PPTX / PDF | READY | 已重建为 17 页；内容、几何、PPTX/PDF 逐页视觉与一致性复核通过 |
 | 首个正式 ProjectCase | NOT_STARTED | 尚未冻结真实任务、数据和预算 |
 | AgentFit 真实 AgentTeams 元团队 | NOT_STARTED | 历史 smoke test 只证明平台能力 |
 | 真实候选对照评测 | NOT_STARTED | 无冻结 ProjectCase |

@@ -24,7 +24,7 @@
 
 | 文件 | 作用 | 当前事实 |
 |---|---|---|
-| [`submission/work-introduction-draft.md`](submission/work-introduction-draft.md) | 500 字以内作品简介 | 468 个非空白字符 |
+| [`submission/work-introduction-draft.md`](submission/work-introduction-draft.md) | 500 字以内作品简介 | 实测 488 个非空白字符，符合不超过 500 的门禁 |
 | [`submission/ppt-outline.md`](submission/ppt-outline.md) | 17 页内容地图与生成入口 | 与冻结设计一致 |
 | [`submission/slides/`](submission/slides/) | 1280×720 HTML/CSS 布局事实源 | 12 页主路演 + 5 页附录 |
 | [`submission/agentfit-preliminary-draft.pptx`](submission/agentfit-preliminary-draft.pptx) | 原生可编辑演示稿 | 17 页提交候选 |
