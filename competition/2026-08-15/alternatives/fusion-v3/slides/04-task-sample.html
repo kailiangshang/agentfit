@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
+<body class="slide">
+  <p class="eyebrow">04 / 12 · 一个样本长什么样</p>
+  <h1 class="title" style="font-size:36px;line-height:1.1;">两个事故变成 TaskSample：输入、输出与验收。</h1>
+  <p class="subtitle" style="top:166px;">用 OpsPilot baseline 的两个事故，说明什么能被冻结、重放和评价。</p><div class="top-rule" style="top:208px;"></div>
+
+  <div class="panel soft-coral" style="left:72px;top:226px;width:556px;height:340px;"></div>
+  <p class="label" style="left:96px;top:248px;color:#f26b4b;">TaskSample · 01</p>
+  <p class="section-title" style="left:96px;top:278px;width:510px;font-size:21px;color:#f26b4b;">db_pool_exhausted</p>
+  <p class="small-copy" style="left:96px;top:312px;width:510px;">订单 5xx 升高 · 数据库连接池耗尽</p>
+  <p class="small-copy" style="left:96px;top:346px;width:510px;color:#102a43;font-weight:700;">输入</p>
+  <p class="small-copy" style="left:96px;top:368px;width:510px;">告警、/api/order/create 5xx、Trace、变更 db.pool.maxSize 50→8</p>
+  <p class="small-copy" style="left:96px;top:412px;width:510px;color:#102a43;font-weight:700;">输出</p>
+  <p class="small-copy" style="left:96px;top:434px;width:510px;">根因（变更导致池容量不足）、回滚计划、恢复验证</p>
+  <p class="small-copy" style="left:96px;top:478px;width:510px;color:#102a43;font-weight:700;">验收</p>
+  <p class="small-copy" style="left:96px;top:500px;width:510px;">定位可追溯 · 回滚可验证 · 无未批准写入</p>
+
+  <div class="panel soft-amber" style="left:652px;top:226px;width:556px;height:340px;"></div>
+  <p class="label" style="left:676px;top:248px;color:#d6a43b;">TaskSample · 02</p>
+  <p class="section-title" style="left:676px;top:278px;width:510px;font-size:21px;color:#d6a43b;">slow_sql_degradation</p>
+  <p class="small-copy" style="left:676px;top:312px;width:510px;">P99 延迟爬升 · 慢 SQL 逐步劣化</p>
+  <p class="small-copy" style="left:676px;top:346px;width:510px;color:#102a43;font-weight:700;">输入</p>
+  <p class="small-copy" style="left:676px;top:368px;width:510px;">延迟指标、慢日志、采样 Trace、近 24h 变更</p>
+  <p class="small-copy" style="left:676px;top:412px;width:510px;color:#102a43;font-weight:700;">输出</p>
+  <p class="small-copy" style="left:676px;top:434px;width:510px;">慢 SQL 候选、索引/限流建议、影响面评估</p>
+  <p class="small-copy" style="left:676px;top:478px;width:510px;color:#102a43;font-weight:700;">验收</p>
+  <p class="small-copy" style="left:676px;top:500px;width:510px;">建议可复核 · 范围受限 · 采集缺口被标出</p>
+
+  <div class="panel" style="left:72px;top:586px;width:1136px;height:64px;background:#ffffff;border-color:#1a8d85;"></div>
+  <p class="body-copy" style="left:96px;top:600px;width:1090px;font-size:16px;line-height:1.4;color:#102a43;">TaskSample = 当前任务契约下可独立冻结、重放、执行和评价的最小单位；告警只是 SourceObservation，还不等于样本。</p>
+  <p class="footer-left">AGENTFIT · TaskSample</p><p class="footer-right">设计契约，非运行证据 · 04</p>
+</body></html>

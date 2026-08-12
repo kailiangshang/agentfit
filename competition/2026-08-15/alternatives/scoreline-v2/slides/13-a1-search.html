@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
+<body class="slide appendix">
+  <p class="eyebrow">A1 / 05 · 技术映射</p>
+  <h1 class="title">候选表示与搜索规则：不让 ML/NAS 抢主线。</h1>
+  <p class="subtitle">主线是方案选择；公式与七层映射只是后台手段，全部压在附录。</p><div class="top-rule"></div>
+
+  <div class="panel soft-teal" style="left:72px;top:206px;width:556px;height:340px;"></div>
+  <p class="label" style="left:96px;top:222px;color:#1a8d85;">极简候选表示</p>
+  <p class="section-title" style="left:96px;top:250px;width:510px;">Candidate = (G, Π, θ, ρ)</p>
+  <p class="small-copy" style="left:96px;top:286px;width:510px;line-height:1.5;"><b style="color:#1a8d85;">G</b> 能力图：能力节点、数据/控制边、DAG 主干、局部 SCC</p>
+  <p class="small-copy" style="left:96px;top:330px;width:510px;line-height:1.5;"><b style="color:#1a8d85;">Π</b> Agent 分区：哪些子图拥有独立身份与责任</p>
+  <p class="small-copy" style="left:96px;top:374px;width:510px;line-height:1.5;"><b style="color:#1a8d85;">θ</b> 参数：模型、Prompt、阈值、重试、预算</p>
+  <p class="small-copy" style="left:96px;top:418px;width:510px;line-height:1.5;"><b style="color:#1a8d85;">ρ</b> 共享范围：Skill/MCP/Memory/状态/通信的私有与共享</p>
+  <p class="small-copy" style="left:96px;top:476px;width:510px;color:#53697c;">Agent 数量是搜索变量，不是项目目标。</p>
+
+  <div class="panel" style="left:648px;top:206px;width:560px;height:340px;background:#ffffff;border-color:#d6ddd9;"></div>
+  <p class="label" style="left:672px;top:222px;color:#53697c;">搜索规则（受约束）</p>
+  <p class="small-copy" style="left:672px;top:254px;width:514px;line-height:1.55;">从覆盖核心契约的最简候选开始，只有局部不足才加反馈循环，只有出现独立决策/边界需求才 Agentize。</p>
+  <p class="small-copy" style="left:672px;top:362px;width:514px;line-height:1.55;">同一冻结样本集、同一 TaskSample、相同预算与安全门禁下比较；选满足门槛的最小充分候选。</p>
+  <p class="small-copy" style="left:672px;top:454px;width:514px;color:#f26b4b;">不预设多 Agent 胜出；搜索为方案选择服务。</p>
+
+  <div class="panel soft-blue" style="left:72px;top:562px;width:1136px;height:118px;"></div>
+  <p class="label" style="left:96px;top:576px;color:#426b86;">七层 ML 映射（仅技术附录，非路演主线）</p>
+  <p class="small-copy" style="left:96px;top:604px;width:1090px;line-height:1.45;">L1 样本语义 → L2 任务语义 → L3 能力语义 → L4 候选表示 → L5 内循环 → L6 外循环 → L7 跨项目学习</p>
+  <p class="tiny-copy" style="left:96px;top:650px;width:1090px;">L7 是未来方向：单项目样本优化不能证明跨项目学习；真实候选搜索当前未实现。</p>
+  <p class="footer-left">AGENTFIT · SAMPLE × TASK × CAPABILITY × SEARCH</p><p class="footer-right">技术附录 · A1</p>
+</body></html>
