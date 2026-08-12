@@ -30,7 +30,7 @@
 | 3 | AgentFit 把 baseline 材料编译成首个 ProjectCase。 | 材料如何变成可验收档案 |
 | 4 | 两个事故变成 TaskSample：输入、输出与验收。 | 一个样本长什么样 |
 | 5 | Agentless、单 Agent、多 Agent 与 Human 混合是同一搜索空间。 | Agent 数量为何是变量 |
-| 6 | 同一冻结样本、预算与门禁下，最简合格候选胜出。 | 公平比较与选择规则 |
+| 6 | 同一冻结样本、预算与门禁下，最简合格候选胜出。 | 公平比较规则 + 候选复杂度对照示意（C0–C3，非真实数据） |
 | 7 | 五个元 Agent 完成方案闭环，区别于候选业务执行 Agent。 | 元团队与业务执行的两层区分 |
 | 8 | AgentTeams 提供 Worker、Team、Room、Human、Dossier 与 Trace。 | 平台底座如何落地 |
 | 9 | Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。 | 工程如何支撑 |
@@ -42,7 +42,7 @@
 
 | 页 | 内容 | 覆盖要求 |
 |---:|---|---|
-| A1 | 七层 ML 映射、候选四元组 `(G, Π, θ, ρ)`、inner / outer loop、Meta-learning 未来边界 | 完整恢复 ML 语义 + 明确未来边界 |
+| A1 | 七层 ML 映射、候选四元组 `(G, Π, θ, ρ)`、G 结构图（DAG 主干 + 局部 SCC + Π 分区）、inner / outer loop、Meta-learning 未来边界 | 完整恢复 ML 语义 + 候选图可视化 + 明确未来边界 |
 | A2 | 五个 Agent Identity 与 8 字段契约 | 元 Agent 身份与 Trace |
 | A3 | 七个 Skill、HTTP/MCP 等价工具、上下文 4 选 2 | Skill 必选、工具、上下文 |
 | A4 | Human 门禁、风险、异常与回滚 | 安全、审批、降级与审计 |
