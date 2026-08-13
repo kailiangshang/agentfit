@@ -33,6 +33,7 @@ SKILL_CATALOG = ROOT / "skill-catalog.md"
 RISK_GATES = ROOT / "risk-and-human-gates.md"
 OPENNESS = ROOT / "openness-and-compliance.md"
 SOLUTION = REPO_ROOT / "docs/agentfit-solution.md"
+HOME_DEMO_RUNBOOK = REPO_ROOT / "docs/guides/home-demo-runbook.md"
 EVIDENCE_REGISTRY = REPO_ROOT / "docs/internal/evidence-research/evidence-registry.json"
 OPSPILOT_EVIDENCE_CARD = (
     REPO_ROOT
@@ -277,6 +278,84 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertIn("后续阶段", text)
                 self.assertIn("晋级结果", text)
 
+    def test_home_demo_runbook_is_executable_and_evidence_safe(self) -> None:
+        self.assertTrue(HOME_DEMO_RUNBOOK.is_file())
+        runbook = HOME_DEMO_RUNBOOK.read_text(encoding="utf-8")
+        docs_index = (REPO_ROOT / "docs/README.md").read_text(encoding="utf-8")
+
+        for term in (
+            "https://github.com/sierra-research/tau2-bench",
+            "v1.0.1",
+            "retail",
+            "114",
+            "--task-ids 0",
+            "--task-ids 0 1 2",
+            "data/simulations/",
+            "EngagementLead",
+            "BusinessEngineer",
+            "AgentArchitect",
+            "ValidationEngineer",
+            "GovernanceAuditor",
+            "ProjectCase != Sample",
+            "AgentFit adaptation/synthetic",
+            "M0",
+            "M1",
+            "IN_PROGRESS",
+            "GovernanceAuditor only",
+            "Agentless、单 Agent 和多 Agent",
+            ".env",
+            "不得提交",
+            'importlib.metadata as m; print(m.version("tau2"))',
+            "preflight-only",
+            "不是 AgentFit Candidate",
+            "m0-authorization.md",
+            "agentteams-version.txt",
+            "agentteams-status.json",
+            "m0-baseline.md",
+            "known_boundaries",
+            "source/task-0.json",
+            "2>&1 | tee",
+            "agentfit-retail-preflight-12/results.json",
+            "agentfit-retail-preflight-20/results.json",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, runbook)
+
+        self.assertNotIn("tau2 --version", runbook)
+        self.assertNotIn("已执行候选证据", runbook)
+        self.assertIn('AGENTFIT_ROOT="$(git rev-parse --show-toplevel)"', runbook)
+        self.assertIn('AGENTFIT_TAU3_ROOT="$AGENTFIT_ROOT/../agentfit-labs/tau2-bench"', runbook)
+        self.assertNotIn("cd ../agentfit-labs/tau2-bench", runbook)
+        self.assertIn("export AGENTFIT_AGENT_MODEL", runbook)
+        self.assertIn('test -n "$AGENTFIT_AGENT_MODEL"', runbook)
+        self.assertIn(
+            'jq \'map(select(.id == "0")) | .[0]\' "${AGENTFIT_TAU3_ROOT}/data/tau2/domains/retail/tasks.json" > "${AGENTFIT_RUN_ROOT}/source/task-0.json"',
+            runbook,
+        )
+        self.assertIn(
+            'git -C "$AGENTFIT_TAU3_ROOT" check-ignore -q .env',
+            runbook,
+        )
+        self.assertIn("公开 `test` split 不是 sealed holdout", runbook)
+        self.assertIn("OpsPilot 与 retail 保持两个独立来源", runbook)
+        self.assertIn("M2/M3/M4 均未启动", runbook)
+        for size in (12, 20):
+            result_dir = f"agentfit-retail-preflight-{size}"
+            self.assertIn(
+                f'test -f "$AGENTFIT_TAU3_ROOT/data/simulations/{result_dir}/results.json"',
+                runbook,
+            )
+            self.assertIn(
+                f'cp -a "$AGENTFIT_TAU3_ROOT/data/simulations/{result_dir}" "$AGENTFIT_RUN_ROOT/native-runs/"',
+                runbook,
+            )
+
+        self.assertIn("[回家 Demo 执行手册](guides/home-demo-runbook.md)", docs_index)
+
+    def test_home_demo_runtime_outputs_are_local_only(self) -> None:
+        gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn(".local-demo/", gitignore.splitlines())
+
     def test_canonical_solution_guides_later_implementation_without_contract_drift(self) -> None:
         solution = SOLUTION.read_text(encoding="utf-8")
         identity = AGENT_IDENTITY.read_text(encoding="utf-8")
@@ -420,6 +499,7 @@ class SubmissionContractTest(unittest.TestCase):
                 COMPETITION_ROOT / "README.md",
                 REPO_ROOT / "docs/README.md",
                 REPO_ROOT / "docs/agentfit-solution.md",
+                HOME_DEMO_RUNBOOK,
             ]
         )
         link_pattern = re.compile(r"\[[^\]]+\]\((?!https?://|#)([^)#]+)(?:#[^)]+)?\)")

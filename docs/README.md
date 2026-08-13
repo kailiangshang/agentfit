@@ -14,6 +14,8 @@
 
 初赛提交后暂停扩展性开发。是否启动 AgentTeams walking skeleton、复赛工程或跨项目试验，由晋级结果、评审反馈和后续赛程共同决定；在获得新的赛事条件与明确授权前，只保留整体方案中的启动门禁。获准后按[整体方案 §13.3](agentfit-solution.md#133-后续最小实施顺序与阶段完成定义)的 M0–M4 顺序实施，不另建并行路线图。
 
+- [回家 Demo 执行手册](guides/home-demo-runbook.md)：在已获授权的前提下，用 τ³-bench retail 样本和 AgentTeams 五元团队冻结 M0、取得 preflight 与治理门禁证据，并保持 M1 `IN_PROGRESS`；它是操作 Runbook，不是第二套方案。
+
 ## 内部依据
 
 ### 比赛约束

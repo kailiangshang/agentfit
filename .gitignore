@@ -4,6 +4,7 @@ __pycache__/
 dist/
 build/
 .env
+.local-demo/
 
 # macOS / editor artifacts
 .DS_Store
