@@ -19,52 +19,47 @@
   <div class="panel" style="left:648px;top:206px;width:560px;height:282px;background:#ffffff;border-color:#1a8d85;"></div>
   <p class="label" style="left:672px;top:220px;color:#1a8d85;">候选四元组</p>
   <p class="section-title mono" style="left:672px;top:248px;width:510px;font-size:22px;color:#102a43;">Candidate = (G, Π, θ, ρ)</p>
-  <p class="small-copy" style="left:672px;top:280px;width:510px;font-size:12px;line-height:1.4;">G 能力图 · Π Agent 分区 · θ 模型/Prompt/阈值 · ρ 状态与记忆共享范围</p>
+  <p class="small-copy" style="left:672px;top:280px;width:510px;font-size:14px;line-height:1.3;">G 能力图 · Π Agent 分区 · θ 局部参数 · ρ 跨分区共享范围</p>
 
-  <p class="small-copy" style="left:672px;top:312px;width:510px;font-size:11px;font-weight:700;color:#1a8d85;">G 结构图示(以软件研发为例)</p>
+  <p class="small-copy" style="left:672px;top:308px;width:510px;font-size:14px;font-weight:700;color:#1a8d85;">G · DAG 主干 + Π 分区中的有界 SCC</p>
 
-  <div style="position:absolute;left:672px;top:336px;width:50px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #426b86;"><p style="margin:1px 0 0;text-align:center;font-size:9px;color:#426b86;">去重</p></div>
-  <p style="position:absolute;left:726px;top:338px;margin:0;font-size:11px;color:#53697c;">→</p>
-  <div style="position:absolute;left:744px;top:336px;width:50px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:1px 0 0;text-align:center;font-size:9px;color:#1a8d85;">检索</p></div>
-  <p style="position:absolute;left:798px;top:338px;margin:0;font-size:11px;color:#53697c;">→</p>
+  <div style="position:absolute;left:672px;top:350px;width:62px;height:28px;border-radius:14px;background:#ffffff;border:1.5px solid #426b86;"><p style="margin:3px 0 0;text-align:center;font-size:16px;color:#426b86;">去重</p></div>
+  <p style="position:absolute;left:738px;top:352px;margin:0;font-size:16px;color:#53697c;">→</p>
+  <div style="position:absolute;left:758px;top:350px;width:62px;height:28px;border-radius:14px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:3px 0 0;text-align:center;font-size:16px;color:#1a8d85;">检索</p></div>
+  <p style="position:absolute;left:824px;top:352px;margin:0;font-size:16px;color:#53697c;">→</p>
 
-  <div style="position:absolute;left:816px;top:318px;width:170px;height:118px;border:2px dashed #f26b4b;border-radius:12px;background:rgba(242,107,75,0.06);"></div>
-  <p class="small-copy" style="left:824px;top:324px;width:156px;font-size:9px;font-weight:700;color:#c64c32;">Π · Agent A₁ 分区</p>
+  <div style="position:absolute;left:844px;top:326px;width:176px;height:110px;border:2px dashed #f26b4b;border-radius:12px;background:#fef6f4;"></div>
+  <p class="small-copy" style="left:854px;top:332px;width:156px;font-size:14px;font-weight:700;color:#c64c32;">Π · Agent A₁ 分区</p>
+  <div style="position:absolute;left:854px;top:358px;width:62px;height:28px;border-radius:14px;background:#ffffff;border:1.5px solid #f26b4b;"><p style="margin:3px 0 0;text-align:center;font-size:16px;color:#f26b4b;">定位</p></div>
+  <p style="position:absolute;left:920px;top:360px;margin:0;font-size:16px;color:#53697c;">→</p>
+  <div style="position:absolute;left:940px;top:358px;width:62px;height:28px;border-radius:14px;background:#ffffff;border:1.5px solid #f26b4b;"><p style="margin:3px 0 0;text-align:center;font-size:16px;color:#f26b4b;">生成</p></div>
+  <div style="position:absolute;left:876px;top:397px;width:112px;height:2px;background:#1a8d85;"></div>
+  <p style="position:absolute;left:858px;top:384px;margin:0;font-size:16px;line-height:1;color:#1a8d85;font-weight:800;">←</p>
+  <p class="small-copy" style="left:854px;top:408px;width:156px;font-size:13px;color:#1a8d85;font-weight:700;">生成 → 定位 · 最多 3 次 · 未通过退出</p>
 
-  <div style="position:absolute;left:828px;top:344px;width:48px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #f26b4b;"><p style="margin:1px 0 0;text-align:center;font-size:9px;color:#f26b4b;">定位</p></div>
-  <p style="position:absolute;left:880px;top:346px;margin:0;font-size:11px;color:#53697c;">→</p>
-  <div style="position:absolute;left:900px;top:344px;width:48px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #f26b4b;"><p style="margin:1px 0 0;text-align:center;font-size:9px;color:#f26b4b;">生成</p></div>
+  <p style="position:absolute;left:1024px;top:360px;margin:0;font-size:16px;color:#53697c;">→</p>
+  <div style="position:absolute;left:1044px;top:358px;width:62px;height:28px;border-radius:14px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:3px 0 0;text-align:center;font-size:16px;color:#1a8d85;">测试</p></div>
+  <p style="position:absolute;left:1110px;top:360px;margin:0;font-size:16px;color:#53697c;">→</p>
+  <div style="position:absolute;left:1130px;top:358px;width:62px;height:28px;border-radius:14px;background:#ffffff;border:1.5px solid #d6a43b;"><p style="margin:3px 0 0;text-align:center;font-size:16px;color:#a5781c;">人工</p></div>
 
-  <p style="position:absolute;left:838px;top:372px;margin:0;font-size:11px;color:#1a8d85;font-weight:800;">↺</p>
-  <p class="small-copy" style="left:856px;top:372px;width:96px;font-size:9px;color:#1a8d85;font-weight:700;">SCC 反思循环</p>
-
-  <div style="position:absolute;left:828px;top:394px;width:120px;height:32px;border:1px dashed #53697c;border-radius:8px;background:rgba(83,105,124,0.05);"></div>
-  <p class="small-copy" style="left:832px;top:398px;width:112px;font-size:8px;color:#53697c;">SCC = strongly connected</p>
-  <p class="small-copy" style="left:832px;top:412px;width:112px;font-size:8px;color:#53697c;">component, 强连通分量</p>
-
-  <p style="position:absolute;left:990px;top:346px;margin:0;font-size:11px;color:#53697c;">→</p>
-  <div style="position:absolute;left:1008px;top:344px;width:48px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #1a8d85;"><p style="margin:1px 0 0;text-align:center;font-size:9px;color:#1a8d85;">测试</p></div>
-  <p style="position:absolute;left:1062px;top:346px;margin:0;font-size:11px;color:#53697c;">→</p>
-  <div style="position:absolute;left:1080px;top:344px;width:56px;height:20px;border-radius:10px;background:#ffffff;border:1.5px solid #d6a43b;"><p style="margin:1px 0 0;text-align:center;font-size:9px;color:#a5781c;">人工</p></div>
-
-  <p class="small-copy" style="left:672px;top:446px;width:510px;font-size:10px;line-height:1.4;">DAG 主干(去重→检索→…→测试→人工)保证阶段推进与终止;局部 SCC 承载有界反思、验证或工具反馈。</p>
-  <p class="small-copy" style="left:672px;top:470px;width:510px;font-size:10px;line-height:1.4;color:#53697c;">θ = 各节点参数(Prompt/阈值/重试) · ρ = 跨 Π 分区的共享范围(仓库/记忆/通信)</p>
+  <p class="small-copy" style="left:672px;top:446px;width:510px;font-size:14px;line-height:1.3;">主干顺序推进；局部返回边形成 SCC，并由重试上限终止。</p>
+  <p class="small-copy" style="left:672px;top:468px;width:510px;font-size:13px;line-height:1.3;color:#53697c;">θ = Prompt / 阈值 / 重试 · ρ = 仓库 / 记忆 / 通信的共享边界</p>
 
   <div class="panel soft-teal" style="left:648px;top:502px;width:270px;height:178px;"></div>
   <p class="label" style="left:672px;top:516px;width:226px;color:#1a8d85;font-size:11px;">INNER LOOP · 一个 epoch 内</p>
   <p class="section-title" style="left:672px;top:540px;width:226px;font-size:15px;">让局部 Agent 变好</p>
-  <p class="small-copy" style="left:672px;top:566px;width:226px;font-size:11px;line-height:1.4;">固定 G / Π；更新 θ / ρ；遍历 adaptation samples。</p>
-  <p class="small-copy" style="left:672px;top:630px;width:226px;color:#1a8d85;font-size:11px;font-weight:700;">inner loop 服务于方案选择</p>
+  <p class="small-copy" style="left:672px;top:566px;width:226px;font-size:14px;line-height:1.35;">固定 G / Π / ρ；只更新 θ 与分区内状态；遍历 adaptation samples。</p>
+  <p class="small-copy" style="left:672px;top:638px;width:226px;color:#1a8d85;font-size:13px;font-weight:700;">inner loop 服务于方案选择</p>
 
   <div class="panel soft-coral" style="left:938px;top:502px;width:270px;height:178px;"></div>
   <p class="label" style="left:962px;top:516px;width:226px;color:#c64c32;font-size:11px;">OUTER LOOP · 架构 epoch</p>
   <p class="section-title" style="left:962px;top:540px;width:226px;font-size:15px;">让整体任务结果变好</p>
-  <p class="small-copy" style="left:962px;top:566px;width:226px;font-size:11px;line-height:1.4;">更新 G / Π；比较 validation samples；保留合格候选。</p>
-  <p class="small-copy" style="left:962px;top:630px;width:226px;color:#c64c32;font-size:11px;font-weight:700;">不预设多 Agent 胜出</p>
+  <p class="small-copy" style="left:962px;top:566px;width:226px;font-size:14px;line-height:1.35;">更新 G / Π / ρ；比较 validation samples；保留合格候选。</p>
+  <p class="small-copy" style="left:962px;top:638px;width:226px;color:#c64c32;font-size:13px;font-weight:700;">不预设多 Agent 胜出</p>
 
   <div class="panel" style="left:72px;top:562px;width:560px;height:118px;background:#eef1f5;border-color:#d6ddd9;"></div>
   <p class="label" style="left:96px;top:576px;width:520px;color:#53697c;">META-LEARNING 未来边界</p>
-  <p class="small-copy" style="left:96px;top:602px;width:520px;font-size:12px;line-height:1.4;">项目内参数优化与架构搜索不等于 Meta-learning；只有多个项目轨迹更新先验、并在未见项目上稳定改善，才构成 Meta-learning 证据。</p>
-  <p class="tiny-copy" style="left:96px;top:650px;width:520px;">机器可执行 Schema、自动候选搜索与跨项目 Meta-learning 当前均未实现；设计契约，非运行证据。</p>
+  <p class="small-copy" style="left:96px;top:602px;width:520px;font-size:14px;line-height:1.35;">多项目轨迹更新先验，并在未见项目上稳定改善，才构成 Meta-learning 证据。</p>
+  <p class="tiny-copy" style="left:96px;top:640px;width:520px;font-size:13px;line-height:1.3;">Schema、自动候选搜索、跨项目 Meta-learning 均未实现；此处为设计契约，非运行证据。</p>
   <p class="footer-left">AGENTFIT · SAMPLE × TASK × CAPABILITY × SEARCH</p><p class="footer-right">技术附录 · A1</p>
 </body></html>

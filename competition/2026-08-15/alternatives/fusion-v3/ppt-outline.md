@@ -30,7 +30,7 @@
 | 3 | AgentFit 把 baseline 材料编译成首个 ProjectCase。 | 材料如何变成可验收档案 |
 | 4 | 两个事故变成 TaskSample：输入、输出与验收。 | 一个样本长什么样 |
 | 5 | Agentless、单 Agent、多 Agent 与 Human 混合是同一搜索空间。 | Agent 数量为何是变量 |
-| 6 | 同一冻结样本、预算与门禁下，最简合格候选胜出。 | 公平比较规则 + 候选复杂度对照示意（C0–C3，非真实数据） |
+| 6 | 同一冻结样本、预算与门禁下，最简合格候选胜出。 | 公平比较规则 + C0–C3 由简入繁的搜索顺序（设计契约，非运行结果） |
 | 7 | 五个元 Agent 完成方案闭环，区别于候选业务执行 Agent。 | 元团队与业务执行的两层区分 |
 | 8 | AgentTeams 提供 Worker、Team、Room、Human、Dossier 与 Trace。 | 平台底座如何落地 |
 | 9 | Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。 | 工程如何支撑 |
@@ -62,6 +62,7 @@
 ```bash
 PY=/home/shangkailiang/workspace/.codex-home/venvs/document-skills/bin/python
 DECK=/home/shangkailiang/workspace/.codex-home/skills/hands-on-deck/scripts/deck.py
+THUMB=/home/shangkailiang/workspace/.codex-home/skills/hands-on-deck/scripts/thumbnail.py
 
 "$PY" competition/2026-08-15/alternatives/fusion-v3/build_presentation.py
 "$PY" "$DECK" competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pptx inspect --issues
@@ -71,6 +72,8 @@ soffice --headless --convert-to pdf \
 "$PY" competition/2026-08-15/alternatives/fusion-v3/validate_presentation.py \
   competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pptx \
   competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pdf
+"$PY" "$THUMB" competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pptx \
+  competition/2026-08-15/alternatives/fusion-v3/contact-sheet --cols 4
 "$PY" -m unittest competition/2026-08-15/alternatives/fusion-v3/test_fusion_contract.py
 ```
 

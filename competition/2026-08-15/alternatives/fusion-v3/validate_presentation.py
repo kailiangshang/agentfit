@@ -294,12 +294,14 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
                     errors.append(
                         f"PDF must contain exactly {EXPECTED_SLIDES} pages; found {pdf_pages}"
                     )
+                pdf_texts: list[str] = []
                 for index, page in enumerate(pdf_reader.pages, start=1):
                     try:
                         page_text = page.extract_text() or ""
                     except Exception as exc:  # pragma: no cover
                         errors.append(f"Unable to extract PDF page {index} text: {exc}")
                         continue
+                    pdf_texts.append(page_text)
                     normalized_page = _normalized(page_text)
                     if index <= len(EXPECTED_PAGE_TITLES):
                         title = EXPECTED_PAGE_TITLES[index - 1]
@@ -318,6 +320,17 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
                                 errors.append(
                                     f"PDF page {index} uses an ML/NAS term forbidden in the first four pages: {term}"
                                 )
+                    if index <= len(slide_texts):
+                        pptx_text = _normalized(slide_texts[index - 1])
+                        if pptx_text and pptx_text not in normalized_page:
+                            errors.append(
+                                f"PDF page {index} is missing PPTX text: {slide_texts[index - 1][:80]}"
+                            )
+
+                pdf_text = "\n".join(pdf_texts)
+                for term in FORBIDDEN_TERMS:
+                    if term in pdf_text:
+                        errors.append(f"PDF contains forbidden term: {term}")
 
     return errors
 

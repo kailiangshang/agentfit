@@ -50,7 +50,7 @@ PY=/home/shangkailiang/workspace/.codex-home/venvs/document-skills/bin/python
 "$PY" -m unittest -v competition/2026-08-15/alternatives/fusion-v3/test_fusion_contract.py
 ```
 
-Final result:
+First stable result:
 
 ```text
 Ran 17 tests in 1.047s
@@ -58,6 +58,43 @@ OK
 ```
 
 The seventeenth regression test was added after independent PDF inspection exposed compact CJK labels that existed in the source but wrapped orphan characters after PowerPoint/PDF conversion. The test reads the final PDF with layout preservation and requires the five page-7 role labels plus the two page-9 compact labels to remain on one line. It produced seven expected failing sub-tests before the width fixes, then passed after the PPTX/PDF rebuild.
+
+### 2026-08-13 final convergence
+
+The previous-night revision added the evidence the judges can read directly instead of more explanatory prose:
+
+- page 1 narrowed C2 to candidate-side business agents;
+- page 6 added a C0–C3 comparison visual;
+- appendix A1 rendered `(G, Π, θ, ρ)` as a DAG backbone, an Agent partition and a local reflection loop;
+- appendix A4 compressed exception, recovery and rollback copy for projection.
+
+The first strict rebuild exposed two unsupported `rgba(...)` fills on A1. A new solid-color source guard failed once, then the fills were replaced with visually equivalent opaque colors and the deck rebuilt successfully.
+
+Independent projection review then identified three substantive final-material risks. They were converted to failing regression gates before source changes:
+
+- page 6's unequal bars, pass symbols and threshold line resembled fabricated runtime evidence even with a disclaimer;
+- page 13's loop glyph was not a true SCC, and its inner loop incorrectly updated cross-partition sharing `ρ`;
+- pages 1, 6 and 16 contained ambiguous role wording or PDF line/orphan wraps.
+
+The final source therefore uses four equal-size `待真实试验` candidate blocks, a real `生成 → 定位` return edge with a three-attempt exit bound, inner-loop updates limited to `θ` and partition-local state, outer-loop updates to `G / Π / ρ`, and explicit two-line exception/recovery copy. A geometry regression also caught and removed a 0.01-inch collision between the SCC return arrow and its exit-condition label.
+
+RED evidence:
+
+```text
+20 tests: 10 expected failures in the new convergence source/PDF gates; the previous 18 tests remained green.
+1 focused geometry test: 1 expected failure for the 0.01-inch SCC label collision.
+```
+
+Final GREEN evidence:
+
+```text
+Ran 23 tests
+OK
+```
+
+Fresh independent visual review returned `PASS` for page 6, page 13, and the page 1/page 16 pair. These checks used the rebuilt PPTX/PDF, not the HTML browser preview.
+
+The final whole-diff review then found that two documented guarantees were stronger than their tests. Two additional RED gates were added: one rejected a divergent PDF containing a forbidden runtime-evidence term, and one required equal candidate-block geometry plus the complete forward/return candidate-graph path. The validator now checks every PDF page against its PPTX semantic text and applies the forbidden-term list to the PDF as well. Both gates are included in the 23-test GREEN result above.
 
 ## Build and validation
 
@@ -72,6 +109,7 @@ Build commands:
 ```bash
 PY=/home/shangkailiang/workspace/.codex-home/venvs/document-skills/bin/python
 DECK=/home/shangkailiang/workspace/.codex-home/skills/hands-on-deck/scripts/deck.py
+THUMB=/home/shangkailiang/workspace/.codex-home/skills/hands-on-deck/scripts/thumbnail.py
 "$PY" competition/2026-08-15/alternatives/fusion-v3/build_presentation.py
 "$PY" "$DECK" competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pptx inspect --issues
 soffice --headless --convert-to pdf --outdir competition/2026-08-15/alternatives/fusion-v3 \
@@ -79,6 +117,8 @@ soffice --headless --convert-to pdf --outdir competition/2026-08-15/alternatives
 "$PY" competition/2026-08-15/alternatives/fusion-v3/validate_presentation.py \
   competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pptx \
   competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pdf
+"$PY" "$THUMB" competition/2026-08-15/alternatives/fusion-v3/agentfit-fusion-v3.pptx \
+  competition/2026-08-15/alternatives/fusion-v3/contact-sheet --cols 4
 ```
 
 Validator result:
@@ -98,7 +138,7 @@ The validator enforces:
 - no ML / NAS terminology on the first four pages;
 - no fabricated winner, ROI or completed-integration claims;
 - no pictures, embedded media or transitions;
-- no blank or text-divergent PDF pages.
+- no blank or text-divergent PDF pages, and the PDF independently rejects fabricated-evidence terms.
 
 ## Geometry and visual review
 
@@ -107,6 +147,8 @@ The validator enforces:
 - overlaps: **0**;
 - off-slide / overflow / clipping: **0**;
 - advisory grid-alignment near-misses: 21, all in the 0.04"–0.14" band.
+
+The final convergence rebuild preserves those results: the only real 0.01-inch A1 overlap was eliminated at the HTML source and is protected by a regression test.
 
 A single bounding-box overlap (0.09") appeared on the cover during the first build, caused by the title text box declared width extending behind the "同一任务·四类候选" label. The cover title width was narrowed from 760px to 700px, the PPTX/PDF were rebuilt, and the recheck reported 0 overlaps.
 

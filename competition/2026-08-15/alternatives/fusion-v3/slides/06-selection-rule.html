@@ -16,7 +16,7 @@
   <p class="small-copy" style="left:96px;top:478px;width:510px;font-size:12px;color:#f26b4b;font-weight:700;">sealed holdout 仅 GovernanceAuditor 在候选冻结后读取。</p>
 
   <div class="panel soft-teal" style="left:652px;top:234px;width:556px;height:284px;"></div>
-  <p class="label" style="left:676px;top:248px;color:#1a8d85;">最简合格者（JUST ENOUGH）</p>
+  <p class="label" style="left:676px;top:248px;width:510px;color:#1a8d85;">最简合格者（JUST ENOUGH）</p>
   <p class="section-title" style="left:676px;top:276px;width:510px;font-size:18px;">从最简候选开始</p>
   <p class="small-copy" style="left:676px;top:302px;width:510px;font-size:13px;line-height:1.4;">先让 Agentless / 单 Agent 覆盖核心契约。</p>
   <p class="section-title" style="left:676px;top:340px;width:510px;font-size:18px;">局部不足才加反馈循环</p>
@@ -25,28 +25,14 @@
   <p class="small-copy" style="left:676px;top:430px;width:510px;font-size:13px;line-height:1.4;">满足验收、成本、安全与责任边界的最小充分候选胜出。</p>
   <p class="small-copy" style="left:676px;top:478px;width:510px;font-size:12px;color:#d6a43b;font-weight:700;">诚实拒绝 / 保留人工也是合法结论。</p>
 
-  <div class="panel" style="left:72px;top:536px;width:1136px;height:84px;background:#ffffff;border-color:#d6ddd9;"></div>
-  <p class="label" style="left:96px;top:548px;color:#53697c;">候选复杂度对照 · 设计示意(非真实数据)</p>
+  <div class="panel" style="left:72px;top:530px;width:1136px;height:98px;background:#ffffff;border-color:#d6ddd9;"></div>
+  <p class="label" style="left:96px;top:542px;width:520px;color:#53697c;">候选搜索顺序 · 设计契约（非运行结果）</p>
 
-  <p class="small-copy" style="left:96px;top:572px;width:80px;color:#426b86;font-weight:700;font-size:12px;">C0</p>
-  <div style="position:absolute;left:148px;top:576px;width:120px;height:14px;border-radius:7px;background:#426b86;"></div>
-  <p class="small-copy" style="left:280px;top:572px;width:60px;color:#1a8d85;font-weight:700;font-size:11px;">✓ 最简</p>
+  <div class="chip" style="left:96px;top:570px;width:252px;height:36px;border-color:#426b86;background:#dfeaf2;"><p style="margin-top:7px;color:#426b86;font-size:13px;">C0 · Agentless · 待真实试验</p></div>
+  <div class="chip" style="left:360px;top:570px;width:252px;height:36px;border-color:#1a8d85;background:#dceeea;"><p style="margin-top:7px;color:#1a8d85;font-size:13px;">C1 · 单 Agent · 待真实试验</p></div>
+  <div class="chip" style="left:624px;top:570px;width:252px;height:36px;border-color:#f26b4b;background:#f8ddd4;"><p style="margin-top:7px;color:#c64c32;font-size:13px;">C2 · 多 Agent · 待真实试验</p></div>
+  <div class="chip" style="left:888px;top:570px;width:252px;height:36px;border-color:#d6a43b;background:#f3e5b8;"><p style="margin-top:7px;color:#a5781c;font-size:13px;">C3 · Human 混合 · 待真实试验</p></div>
 
-  <p class="small-copy" style="left:360px;top:572px;width:80px;color:#426b86;font-weight:700;font-size:12px;">C1</p>
-  <div style="position:absolute;left:412px;top:576px;width:170px;height:14px;border-radius:7px;background:#1a8d85;"></div>
-  <p class="small-copy" style="left:594px;top:572px;width:60px;color:#1a8d85;font-weight:700;font-size:11px;">✓ 通过</p>
-
-  <p class="small-copy" style="left:660px;top:572px;width:80px;color:#c64c32;font-weight:700;font-size:12px;">C2</p>
-  <div style="position:absolute;left:712px;top:576px;width:230px;height:14px;border-radius:7px;background:#f26b4b;"></div>
-  <p class="small-copy" style="left:954px;top:572px;width:120px;color:#c64c32;font-weight:700;font-size:11px;">⚠ 过但更重</p>
-
-  <p class="small-copy" style="left:96px;top:598px;width:80px;color:#a5781c;font-weight:700;font-size:12px;">C3</p>
-  <div style="position:absolute;left:148px;top:602px;width:50px;height:14px;border-radius:7px;background:#d6a43b;"></div>
-  <p class="small-copy" style="left:208px;top:598px;width:200px;color:#a5781c;font-size:11px;">人工保留 · 不参与复杂度竞争</p>
-
-  <div style="position:absolute;left:148px;top:566px;width:794px;height:2px;background:#c64c32;"></div>
-  <p class="small-copy" style="left:950px;top:598px;width:120px;color:#c64c32;font-size:10px;">— 验收阈值</p>
-
-  <p class="body-copy" style="left:72px;top:636px;width:1136px;text-align:center;font-size:16px;font-weight:700;color:#102a43;">规则写在候选生成之前；当前候选对照仍待真实运行，本轮结论 requires_runtime_trial（需进入真实受控试验）。</p>
+  <p class="body-copy" style="left:72px;top:640px;width:1136px;text-align:center;font-size:16px;font-weight:700;color:#102a43;">规则写在候选生成之前；当前候选对照仍待真实运行，本轮结论 requires_runtime_trial（需进入真实受控试验）。</p>
   <p class="footer-left">AGENTFIT · 选择规则</p><p class="footer-right">最简合格者 · 06</p>
 </body></html>
