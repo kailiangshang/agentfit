@@ -1,0 +1,80 @@
+{
+  "schema_name": "TrialRecord",
+  "schema_version": "0.1.0",
+
+  "trial_id": {
+    "project_case_id": "retail-task0-exchange",
+    "generation": 0,
+    "inner_index": 1,
+    "timestamp": "2026-08-13T21:30:00Z"
+  },
+
+  "candidate_ref": {
+    "candidate_version": "c1-single-react-v0.1",
+    "theta_version": "prompt=retail_policy_full+model=deepseek-chat",
+    "rho_version": "private-v0"
+  },
+
+  "sample_ref": {
+    "sample_set": "preflight",
+    "sample_version": "tau2-bench-v1.0.1-task0"
+  },
+
+  "run_index": 1,
+
+  "theta_snapshot": {
+    "system_prompt": "retail_policy_full",
+    "model": "deepseek/deepseek-chat",
+    "max_steps": null,
+    "temperature": null,
+    "prompt_source": "source/policy.md"
+  },
+
+  "metrics": {
+    "reward": 1.0,
+    "reward_source": "mock_evaluator",
+    "action_match_rate": 1.0,
+    "expected_actions": 5,
+    "matched_actions": 5,
+    "item_id_match": {
+      "keyboard": true,
+      "thermostat": true
+    },
+    "policy_compliance": {
+      "authentication": true,
+      "confirmation": true,
+      "single_exchange": true,
+      "one_tool_at_a_time": true,
+      "no_fabrication": true,
+      "violations": 0
+    }
+  },
+
+  "cost": {
+    "input_tokens": 33900,
+    "output_tokens": 980,
+    "tool_calls": 5,
+    "llm_calls": 7,
+    "wall_clock_seconds": 240,
+    "human_minutes": 0,
+    "estimated_cost_usd": 0.034
+  },
+
+  "trace_ref": "dossier/10-execution-trace.json",
+
+  "status": "COMPLETED",
+
+  "strategy_name": "manual_single_run",
+  "strategy_reason": "first real model run on task 0, no search strategy applied yet",
+  "parent_trial_id": null,
+
+  "runtime_meta": {
+    "agent_runtime": "opencode-cli-1.4.1",
+    "model_provider": "deepseek",
+    "tool_execution": "bash→retail_mock_tool.py",
+    "environment": "macOS-local"
+  },
+
+  "evidence_role": "design-smoke-evidence",
+  "_note": "真实模型运行。非 τ³-bench 原生 eval，非 AgentFit 正式 Candidate。验证 C1+DeepSeek 能否完成 task 0 的逻辑流程。"
+}

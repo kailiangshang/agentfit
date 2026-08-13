@@ -1,0 +1,123 @@
+{
+  "schema_name": "CandidateDesignSet",
+  "schema_version": "0.1.0-design-mockup",
+  "set_id": "retail-task0-candidates-v0.1",
+  "task_spec_ref": "retail-customer-service-tool-use-v0.1",
+  "alignment_ref": "retail-task0-alignment-v0.1",
+  "compiled_by": "human AgentArchitect (design mockup)",
+  "compiled_at": "2026-08-13",
+  "status": "design_mockup",
+  "evidence_role": "design-mockup",
+
+  "baseline_first_principle": "从最简候选 C0 开始；只有证据显示局部不足时才往 C1/C2 走。不预设多 Agent 更好。",
+
+  "candidates": {
+    "C0": {
+      "name": "Agentless 固定流程",
+      "pi_partition": "∅（无 Agent 分区）",
+      "graph_G": {
+        "dag_trunk": [
+          "用户输入 → [规则: 意图分类] → [规则: 身份验证流程] → [工具: get_order_details] → [工具: get_product_details ×N] → [规则: 变体匹配] → [工具: exchange] → 用户确认"
+        ],
+        "scc": "无反思循环。流程严格前馈。",
+        "nodes": [
+          {"id": "N1", "type": "Rule", "name": "intent_classifier", "desc": "关键词匹配 → exchange/return/cancel/info"},
+          {"id": "N2", "type": "Tool", "name": "find_user_id_by_name_zip"},
+          {"id": "N3", "type": "Tool", "name": "get_order_details"},
+          {"id": "N4", "type": "Tool", "name": "get_product_details"},
+          {"id": "N5", "type": "Rule", "name": "variant_matcher", "desc": "硬编码匹配规则"},
+          {"id": "N6", "type": "Tool", "name": "exchange_delivered_order_items"},
+          {"id": "N7", "type": "Human", "name": "user_confirmation"}
+        ],
+        "edges": "N1→N2→N3→N4→N5→N6→N7"
+      },
+      "theta_params": "匹配规则权重 / 确认话术模板",
+      "rho_sharing": "全部私有（单一流程，无 Agent 间共享）",
+      "expected_strength": "输入模式固定的简单任务（如纯查订单状态）",
+      "expected_weakness": "task 0 的变体约束匹配（clicky+RGB fallback 逻辑）超出规则能力；用户意图解析（自然语言）超出关键词匹配",
+      "agentize_rationale": "不需要 Agentize。没有独立决策需求。",
+      "complexity_cost": "最低：无 LLM 调用、无通信、无状态同步",
+      "predicted_failure_on_task0": "高概率失败。CAP-06（变体约束匹配）和 CAP-05（意图解析）无法用规则实现。"
+    },
+
+    "C1": {
+      "name": "单 Agent 端到端",
+      "pi_partition": "{A1}（一个 Agent 分区）",
+      "graph_G": {
+        "dag_trunk": [
+          "用户输入 → [A1: 意图解析+身份验证] → [A1: 查询订单/产品] → [A1: 变体匹配+协调] → [A1: 用户确认] → [A1: 执行换货] → 完成"
+        ],
+        "scc": "A1 内部 observe-think-act 反思循环（ReAct 式）",
+        "scc_description": "A1 调用工具 → 观察结果 → 决定下一步（重试/继续/确认）。这是一个有界 SCC：最大循环次数由预算限制。",
+        "nodes": [
+          {"id": "A1", "type": "LLM Agent", "partition": "Π₁", "capabilities": ["CAP-01~09 全部"], "decision_policy": "LLM ReAct"}
+        ],
+        "edges": "A1 内部：感知→决策→工具→观察→决策（SCC）"
+      },
+      "theta_params": "system prompt / 模型选择 / ReAct 最大步数 / 确认话术",
+      "rho_sharing": "N/A（单一 Agent，无跨 Agent 共享）",
+      "expected_strength": "能处理自然语言意图解析 + 变体约束匹配 + 灵活对话。覆盖 task 0 全部能力需求。",
+      "expected_weakness": "长上下文风险（5+ 轮 + 多产品信息）；自验证偏差（Agent 自己确认自己选的变体对不对）；权限集中（一个 Agent 拥有读取+写入全部权限）",
+      "agentize_rationale": "一个 Agent 承担端到端责任。上下文连续有利于多轮推理。只有出现上下文/权限/并行问题时才拆分。",
+      "complexity_cost": "中：1 个 LLM Agent + 多轮对话。无 Agent 间通信。",
+      "predicted_failure_on_task0": "中低概率失败。主要风险是变体匹配的约束推理出错（选错 item_id）或遗漏用户 fallback 条件（clicky 不可用→无背光）。"
+    },
+
+    "C2": {
+      "name": "多 Agent 分责+独立验证",
+      "pi_partition": "{A1, A2} 或 {A1, A2, A3}（2-3 个 Agent 分区）",
+      "graph_G": {
+        "dag_trunk": [
+          "用户输入 → [A1: 前台 Agent] → [A2: 产品专家] → [A3: 独立验证(可选)] → [A1: 用户确认] → [A1/A2: 执行换货]"
+        ],
+        "scc": "A1↔A2 协调循环（A1 传需求，A2 返回匹配结果，A1 可能要求重匹配）",
+        "scc_description": "A1 把用户约束传给 A2 → A2 匹配变体 → A2 返回候选 → A1 判断是否满足 → 不满足则 A1 补充约束再传 A2。有界循环。",
+        "nodes": [
+          {"id": "A1", "type": "LLM Agent", "partition": "Π₁", "capabilities": ["CAP-01 身份验证", "CAP-02 订单查询", "CAP-05 意图解析", "CAP-08 策略遵守", "CAP-09 用户沟通"], "decision_policy": "LLM"},
+          {"id": "A2", "type": "LLM Agent", "partition": "Π₂", "capabilities": ["CAP-03 产品查询", "CAP-06 变体匹配", "CAP-07 多物品协调"], "decision_policy": "LLM"},
+          {"id": "A3", "type": "LLM Agent (optional)", "partition": "Π₃", "capabilities": ["CAP-08 策略遵守（验证）"], "decision_policy": "规则+LLM", "purpose": "独立检查 A2 的匹配结果是否正确，是否有遗漏"}
+        ],
+        "edges": "A1→A2 (传约束) → A2 返回匹配 → A1 确认 → exchange；可选 A2→A3 验证 → A3 返回 check"
+      },
+      "theta_params": "各 Agent 的 system prompt / A1-A2 通信协议 / A3 验证规则",
+      "rho_sharing": "订单数据：A1 私有；产品数据：A2 私有；exchange 结果：A1 和 A2 共享",
+      "expected_strength": "上下文隔离（A1 管对话，A2 管产品细节）；独立验证（A3 可检查 A2 的错误）；权限分离（A1 有写入权，A2 只读产品）",
+      "expected_weakness": "A1↔A2 通信开销（每次传约束+返回结果）；协调复杂性（A1 可能误解 A2 的返回）；对话延迟增加",
+      "agentize_rationale": "A2 被 Agentize 是因为：产品变体匹配需要独立上下文（大量产品信息），与用户对话上下文隔离有利于推理。A3 被 Agentize 是因为：独立验证需要与 A2 不同的权限和上下文（审计隔离）。",
+      "complexity_cost": "高：2-3 个 LLM Agent + 通信 + 状态同步 + 协调逻辑",
+      "predicted_failure_on_task0": "中概率失败。主要风险是 A1↔A2 通信误解（约束传递丢失）+ 协调延迟。但 A3 独立验证可能捕获 A2 的匹配错误。"
+    },
+
+    "C3": {
+      "name": "Human 混合",
+      "pi_partition": "{A1 or C1/C2 候选} + {Human}",
+      "graph_G": {
+        "dag_trunk": "C0/C1/C2 候选运行 → [Human Gate: 审批 exchange 动作] → 执行 或 人工接管",
+        "scc": "无（Human 是终态节点，不回环）",
+        "nodes": [
+          {"id": "H1", "type": "Human", "name": "exchange_approver", "trigger": "exchange_delivered_order_items 调用前", "decision": "批准/拒绝/人工执行"}
+        ]
+      },
+      "expected_strength": "最高安全性；人类能处理 edge case 和复杂约束推理",
+      "expected_weakness": "最高延迟和成本；不可扩展",
+      "note": "τ³-bench mock 环境下无真实 Human Gate。C3 在 preflight 中体现为 transfer_to_human_agents 工具调用（但不触发真实审批）。"
+    }
+  },
+
+  "pareto_hypothesis_for_task0": {
+    "accuracy_prediction": "C1 > C2 > C0（C1 上下文连续，C2 有通信损耗）",
+    "cost_prediction": "C0 < C1 < C2（C0 无 LLM，C2 有多个 LLM + 通信）",
+    "safety_prediction": "C2 > C1 > C0（C2 有独立验证 A3）",
+    "baseline_first_prediction": "C1 可能是 task 0 的最简合格者。C0 在变体约束匹配上预计失败；C2 的边际价值（独立验证）需要证据证明值得通信开销。",
+    "critical_caveat": "以上全部是预测，不是结论。必须在统一冻结样本、预算和门禁下真实运行后才能判断。本轮结论 requires_runtime_trial。"
+  },
+
+  "_agentfit_note": "本文件是 Skill S3（候选建图）的设计演练产物。不是冻结的 CandidateGraphSet。候选设计基于对 task 0 的分析，不是运行结果。最简合格者的判断需要 M3 统一候选对照证据。",
+
+  "_design_findings": {
+    "key_insight_1": "task 0 的核心复杂度不在工具调用（5步是固定的），而在 CAP-06（变体约束匹配）。这正好是 AgentFit '为什么要搜索'的最好例证：C0 在简单任务上够用，但在变体匹配上预计失败；C1 可能是最简合格者；C2 的独立验证是否值得通信开销需要证据。",
+    "key_insight_2": "C2 的 Agentize 判据（A2 产品专家）是合理的——产品变体匹配确实需要独立上下文（大量产品信息会污染对话上下文）。但这是假设，不是结论。",
+    "key_insight_3": "policy 的 'exchange 只能调一次' 约束是一个独特的搜索约束——它意味着候选必须一次性收集所有换货需求。这对 C0（固定流程）是致命的（无法处理动态需求收集），对 C1/C2 是自然的（LLM 能做多轮收集）。",
+    "s3_skill_validation": "候选四元组 (G, Π, θ, ρ) 能表达全部四类候选。SCC 用于描述 ReAct 循环和 A1↔A2 协调循环。Π 分区用于区分 C1（单一分区）和 C2（多分区）。Agentize 判据可以用 CAP 的上下文/权限/并行需求来论证。"
+  }
+}

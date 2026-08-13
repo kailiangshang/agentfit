@@ -1,0 +1,195 @@
+{
+  "batch_name": "batch2",
+  "task_ids": [
+    "6",
+    "7",
+    "8",
+    "2"
+  ],
+  "candidate": "C1+skills+v2tools",
+  "avg_match_rate": 0.95,
+  "full_match_count": 3,
+  "has_structural_limitation": true,
+  "breakpoint_distribution": {
+    "execution_perceive": 3,
+    "structural:context_overload": 1
+  },
+  "results": [
+    {
+      "task_id": "6",
+      "expected_actions": 6,
+      "unique_expected_tools": 5,
+      "found_tools": 5,
+      "match_rate": 1.0,
+      "matched": [
+        "get_user_details",
+        "exchange_delivered_order_items",
+        "get_product_details",
+        "get_order_details",
+        "find_user_id_by_name_zip"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "find_user",
+        "find_user",
+        "get_user_details",
+        "get_order_details",
+        "get_order_details",
+        "get_order_details",
+        "get_order_details",
+        "get_product_details",
+        "get_product_details",
+        "exchange_delivered_order_items",
+        "exchange_delivered_order_items"
+      ],
+      "exec_result": "exchange #W6390527 delivered：desk_lamp 8384507844→7453605304(low,battery,银)，water_bottle 8538875209→7661609223(1000ml)，价格差+13.45支付；订单状态→exchange_requested，将发换货邮件。",
+      "elapsed": 47.8,
+      "status": "COMPLETED",
+      "linkage_diagnosis": {
+        "execution_perceive": 0.3,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [
+          "用户查找失败"
+        ],
+        "primary_breakpoint": "execution_perceive",
+        "structural_limitation": false
+      }
+    },
+    {
+      "task_id": "7",
+      "expected_actions": 6,
+      "unique_expected_tools": 5,
+      "found_tools": 5,
+      "match_rate": 1.0,
+      "matched": [
+        "get_user_details",
+        "exchange_delivered_order_items",
+        "get_product_details",
+        "get_order_details",
+        "find_user_id_by_name_zip"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "run_batch",
+        "find_user",
+        "find_user",
+        "find_user",
+        "get_user_details",
+        "get_order_details",
+        "get_product_details",
+        "get_product_details",
+        "exchange_delivered_order_items",
+        "find_user",
+        "exchange_delivered_order_items",
+        "205"
+      ],
+      "exec_result": "exchange_delivered_order_items on order #W6390527: desk lamp item 8384507844 → 1569765161 (silver, low brightness, AC adapter), payment paypal_7644869, +$5.08 diff; water bottle exchange skipped per user's confirmation instruction (told to exchange desk lamp only).",
+      "elapsed": 41.3,
+      "status": "COMPLETED",
+      "linkage_diagnosis": {
+        "execution_perceive": 0.3,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [
+          "用户查找失败",
+          "工具调用次数过多(>12)——可能上下文过载"
+        ],
+        "primary_breakpoint": "structural:context_overload",
+        "structural_limitation": true
+      }
+    },
+    {
+      "task_id": "8",
+      "expected_actions": 6,
+      "unique_expected_tools": 5,
+      "found_tools": 5,
+      "match_rate": 1.0,
+      "matched": [
+        "get_user_details",
+        "exchange_delivered_order_items",
+        "get_product_details",
+        "find_user_id_by_name_zip",
+        "get_order_details"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "find_user",
+        "get_user_details",
+        "get_order_details",
+        "get_product_details",
+        "get_product_details",
+        "exchange_delivered_order_items",
+        "find_user",
+        "exchange_delivered_order_items",
+        "find_user",
+        "exchange_delivered_order_items"
+      ],
+      "exec_result": "exchanged desk lamp item 8384507844 → 9083642334 (white/high-brightness/USB) in delivered order #W6390527 for user mei_kovacs_8020; per user fallback (only desk lamp since confirmation required), water bottle was NOT exchanged and price difference charged via PayPal.",
+      "elapsed": 47.2,
+      "status": "COMPLETED",
+      "linkage_diagnosis": {
+        "execution_perceive": 0.3,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [
+          "用户查找失败"
+        ],
+        "primary_breakpoint": "execution_perceive",
+        "structural_limitation": false
+      }
+    },
+    {
+      "task_id": "2",
+      "expected_actions": 11,
+      "unique_expected_tools": 5,
+      "found_tools": 4,
+      "match_rate": 0.8,
+      "matched": [
+        "get_user_details",
+        "get_product_details",
+        "find_user_id_by_name_zip",
+        "get_order_details"
+      ],
+      "missing": [
+        "return_delivered_order_items"
+      ],
+      "actual_tool_calls": [
+        "find_user",
+        "get_product_details",
+        "get_user_details",
+        "get_order_details",
+        "get_order_details",
+        "get_order_details",
+        "get_order_details",
+        "get_order_details",
+        "get_product_details",
+        "return_delivered_order",
+        "find_user",
+        "return_delivered_order"
+      ],
+      "exec_result": "返回订单 #W2378156 的 items [cleaner 4602305039, headphone 4202497723, smart watch 9408160950]，退款至 credit_card_9513926；T-shirt 在线可用选项共 10 个。",
+      "elapsed": 34.7,
+      "status": "COMPLETED",
+      "linkage_diagnosis": {
+        "execution_perceive": 0.3,
+        "knowledge_guide": 0.6,
+        "reasoning_understand": 0.4,
+        "execution_act": 0.5,
+        "issues": [
+          "用户查找失败",
+          "使用了策略知识但仍未完全解决",
+          "缺少1个期望工具调用"
+        ],
+        "primary_breakpoint": "execution_perceive",
+        "structural_limitation": false
+      }
+    }
+  ]
+}

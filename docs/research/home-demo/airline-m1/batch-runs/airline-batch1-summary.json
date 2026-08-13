@@ -1,0 +1,148 @@
+{
+  "batch_name": "airline-batch1",
+  "domain": "airline",
+  "task_ids": [
+    "5",
+    "9",
+    "2",
+    "4"
+  ],
+  "skill_injected": [
+    "SK-GEN-001",
+    "SK-GEN-002"
+  ],
+  "avg_acc": 1.0,
+  "full_match": 4,
+  "has_structural_limitation": false,
+  "breakpoint_distribution": {},
+  "results": [
+    {
+      "task_id": "5",
+      "expected_actions": 1,
+      "unique_expected": 1,
+      "found": 1,
+      "match_rate": 1.0,
+      "matched": [
+        "get_user_details"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "get_user_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "search_direct_flight"
+      ],
+      "exec_result": "Denied delayed-flight compensation (3JA7XV, HAT045 PHX→SEA, 4 pax, business) because user refused required change/cancel and refused transfer; no DB action performed.",
+      "elapsed": 39.5,
+      "status": "COMPLETED",
+      "linkage": {
+        "execution_perceive": 1.0,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [],
+        "primary_breakpoint": null,
+        "structural_limitation": false
+      }
+    },
+    {
+      "task_id": "9",
+      "expected_actions": 1,
+      "unique_expected": 1,
+      "found": 1,
+      "match_rate": 1.0,
+      "matched": [
+        "search_direct_flight"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "get_user_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "search_direct_flight",
+        "search_direct_flight",
+        "search_direct_flight",
+        "transfer_to_human_agents"
+      ],
+      "exec_result": "transfer_to_human_agents(NQNU5R, flights already flown — cannot cancel by agent); IFOYYZ denial (basic_economy, no insurance, >24h — ineligible); M20IZO no change (no nonstop JFK→MCO exists)",
+      "elapsed": 58.6,
+      "status": "COMPLETED",
+      "linkage": {
+        "execution_perceive": 1.0,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [],
+        "primary_breakpoint": null,
+        "structural_limitation": false
+      }
+    },
+    {
+      "task_id": "2",
+      "expected_actions": 3,
+      "unique_expected": 2,
+      "found": 2,
+      "match_rate": 1.0,
+      "matched": [
+        "get_reservation_details",
+        "get_user_details"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "get_user_details",
+        "search_direct_flight",
+        "get_reservation_details"
+      ],
+      "exec_result": "** 处理了用户 Noah Muller (noah_muller_9847, gold) 的 SF→NY 订票请求与延迟航班投诉。搜索确认无可用 SF→NY 直飞航班，订票无法完成。核对事实：含延迟航班 HAT018 的预订为 4OG6T3，实际乘客 **1 人**（非用户声称的 3 人），flight 为 delayed 而非 cancelled；因用户拒绝改签/取消，且航班未取消，按政策不提供补偿。未执行任何修改/取消/预订数据库操作。",
+      "elapsed": 61.8,
+      "status": "COMPLETED",
+      "linkage": {
+        "execution_perceive": 1.0,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [],
+        "primary_breakpoint": null,
+        "structural_limitation": false
+      }
+    },
+    {
+      "task_id": "4",
+      "expected_actions": 6,
+      "unique_expected": 2,
+      "found": 2,
+      "match_rate": 1.0,
+      "matched": [
+        "get_reservation_details",
+        "get_user_details"
+      ],
+      "missing": [],
+      "actual_tool_calls": [
+        "find_user",
+        "get_user_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "get_reservation_details",
+        "get_reservation_details"
+      ],
+      "exec_result": "Denied compensation request for sophia_silva_7557 — verified all 5 reservations (NM1VX1, KC18K6, S61CZX, H8Q05L, WUNA5K); none are business class and no flights were cancelled, so no valid basis for compensation.",
+      "elapsed": 16.4,
+      "status": "COMPLETED",
+      "linkage": {
+        "execution_perceive": 1.0,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 1.0,
+        "issues": [],
+        "primary_breakpoint": null,
+        "structural_limitation": false
+      }
+    }
+  ]
+}

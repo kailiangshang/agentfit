@@ -1,0 +1,263 @@
+{
+  "schema_name": "ExecutionTrace",
+  "schema_version": "0.1.0",
+  "trace_id": "retail-task0-c1-deepseek-run1",
+  "project_case_id": "retail-task0-exchange",
+  "candidate_ref": {
+    "candidate_class": "C1",
+    "candidate_version": "c1-single-react-v0.1",
+    "G_description": "single LLM agent with ReAct observe-think-act loop",
+    "Pi_description": "{A1} one partition, one agent holds all capabilities"
+  },
+  "sample_ref": {
+    "sample_id": "tau2-retail-0",
+    "sample_version": "tau2-bench-v1.0.1-task0",
+    "sample_set": "preflight"
+  },
+  "run_index": 1,
+  "runtime": {
+    "agent_runtime": "opencode-cli-1.4.1",
+    "model": "deepseek/deepseek-chat",
+    "temperature": "default",
+    "max_steps": "unlimited (opencode default)",
+    "tool_execution": "bash subprocess → retail_mock_tool.py"
+  },
+  "theta_snapshot": {
+    "system_prompt": "retail_policy_full + task0_scenario + tool_usage_instructions",
+    "prompt_source": ".local-demo/retail-m1/source/policy.md",
+    "model": "deepseek/deepseek-chat",
+    "max_steps": null,
+    "temperature": null
+  },
+
+  "episodes": [
+    {
+      "episode_id": "ep1",
+      "sample_id": "tau2-retail-0",
+      "start_time": "2026-08-13T21:30:00Z",
+      "end_time": "2026-08-13T21:34:00Z",
+      "wall_clock_seconds": 240,
+      "status": "COMPLETED",
+      "reward": 1.0,
+      "reward_source": "mock_evaluator",
+
+      "steps": [
+        {
+          "step_id": 1,
+          "agent": "A1",
+          "decision_type": "tool_call",
+          "decision_reason": "Policy requires identity verification before any action. User provided name + zip.",
+          "tool_call": {
+            "name": "find_user_id_by_name_zip",
+            "arguments": {"first_name": "Yusuf", "last_name": "Rossi", "zip": "19122"}
+          },
+          "tool_result": {"user_id": "10201", "email": "yusuf.rossi@example.com"},
+          "expected_action_ref": "0_0",
+          "action_match": true,
+          "input_tokens_estimate": 3500,
+          "output_tokens_estimate": 120
+        },
+        {
+          "step_id": 2,
+          "agent": "A1",
+          "decision_type": "tool_call",
+          "decision_reason": "Need to verify order exists and check status (must be delivered for exchange).",
+          "tool_call": {
+            "name": "get_order_details",
+            "arguments": {"order_id": "#W2378156"}
+          },
+          "tool_result": {
+            "order_id": "#W2378156",
+            "status": "delivered",
+            "items": [
+              {"item_id": "1151293680", "product_id": "1656367028", "name": "Mechanical Keyboard"},
+              {"item_id": "4983901480", "product_id": "4896585277", "name": "Smart Thermostat"}
+            ]
+          },
+          "expected_action_ref": "0_1",
+          "action_match": true,
+          "input_tokens_estimate": 3700,
+          "output_tokens_estimate": 100
+        },
+        {
+          "step_id": 3,
+          "agent": "A1",
+          "decision_type": "tool_call",
+          "decision_reason": "User wants clicky+RGB+full_size keyboard. Need to check available variants.",
+          "tool_call": {
+            "name": "get_product_details",
+            "arguments": {"product_id": "1656367028"}
+          },
+          "tool_result": {
+            "product_id": "1656367028",
+            "name": "Mechanical Keyboard",
+            "variants": [
+              {"item_id": "1151293680", "switch_type": "tactile", "backlight": "RGB", "size": "full_size"},
+              {"item_id": "7706410293", "switch_type": "clicky", "backlight": "RGB", "size": "full_size"},
+              {"item_id": "8812540634", "switch_type": "linear", "backlight": "RGB", "size": "full_size"},
+              {"item_id": "9923651745", "switch_type": "clicky", "backlight": "none", "size": "full_size"}
+            ]
+          },
+          "expected_action_ref": "0_2",
+          "action_match": true,
+          "input_tokens_estimate": 4200,
+          "output_tokens_estimate": 80
+        },
+        {
+          "step_id": 4,
+          "agent": "A1",
+          "decision_type": "tool_call",
+          "decision_reason": "User wants Google Home compatible thermostat. Need to check available variants.",
+          "tool_call": {
+            "name": "get_product_details",
+            "arguments": {"product_id": "4896585277"}
+          },
+          "tool_result": {
+            "product_id": "4896585277",
+            "name": "Smart Thermostat",
+            "variants": [
+              {"item_id": "4983901480", "compatibility": "Apple HomeKit"},
+              {"item_id": "7747408585", "compatibility": "Google Home"},
+              {"item_id": "6655299472", "compatibility": "Amazon Alexa"}
+            ]
+          },
+          "expected_action_ref": "0_3",
+          "action_match": true,
+          "input_tokens_estimate": 5000,
+          "output_tokens_estimate": 80
+        },
+        {
+          "step_id": 5,
+          "agent": "A1",
+          "decision_type": "constraint_matching",
+          "decision_reason": "Keyboard: clicky+RGB+full_size exists as item 7706410293 (first choice, no fallback needed). Thermostat: Google Home variant is 7747408585. Collecting both into single exchange call per policy.",
+          "constraint_matching": {
+            "keyboard": {
+              "constraint": "clicky + RGB + full_size",
+              "candidates_evaluated": 4,
+              "selected_item_id": "7706410293",
+              "fallback_triggered": false,
+              "fallback_reason": "First choice exists"
+            },
+            "thermostat": {
+              "constraint": "Google Home compatible",
+              "candidates_evaluated": 3,
+              "selected_item_id": "7747408585"
+            }
+          },
+          "expected_action_ref": null,
+          "action_match": null,
+          "input_tokens_estimate": 5500,
+          "output_tokens_estimate": 200
+        },
+        {
+          "step_id": 6,
+          "agent": "A1",
+          "decision_type": "user_confirmation",
+          "decision_reason": "Policy requires explicit user confirmation before any DB write action (exchange).",
+          "confirmation_content": "Exchange plan: keyboard 1151293680→7706410293 ($0 diff), thermostat 4983901480→7747408585 ($0 diff). Total price difference: $0.00.",
+          "policy_compliance_check": {
+            "listed_action_details": true,
+            "obtained_confirmation": true,
+            "collected_all_items_before_call": true,
+            "single_tool_call_rule": true
+          },
+          "input_tokens_estimate": 5800,
+          "output_tokens_estimate": 300
+        },
+        {
+          "step_id": 7,
+          "agent": "A1",
+          "decision_type": "tool_call",
+          "decision_reason": "User confirmed (yes). Executing exchange with collected items.",
+          "tool_call": {
+            "name": "exchange_delivered_order_items",
+            "arguments": {
+              "order_id": "#W2378156",
+              "item_ids": ["1151293680", "4983901480"],
+              "new_item_ids": ["7706410293", "7747408585"],
+              "payment_method_id": "credit_card_9513926"
+            }
+          },
+          "tool_result": {
+            "status": "exchange_requested",
+            "exchanged_items": [
+              {"old_item_id": "1151293680", "new_item_id": "7706410293"},
+              {"old_item_id": "4983901480", "new_item_id": "7747408585"}
+            ]
+          },
+          "expected_action_ref": "0_4",
+          "action_match": {
+            "order_id": true,
+            "item_ids": true,
+            "new_item_ids": true,
+            "payment_method_id": true
+          },
+          "input_tokens_estimate": 6200,
+          "output_tokens_estimate": 100
+        }
+      ],
+
+      "policy_compliance_summary": {
+        "authentication_before_action": true,
+        "status_check_before_exchange": true,
+        "user_confirmation_before_write": true,
+        "single_exchange_call": true,
+        "all_items_collected_before_call": true,
+        "one_tool_at_a_time": true,
+        "no_fabrication": true,
+        "violations": []
+      },
+
+      "cost_summary": {
+        "input_tokens": 33900,
+        "output_tokens_estimate": 980,
+        "tool_calls": 5,
+        "llm_calls": 7,
+        "wall_clock_seconds": 240,
+        "estimated_cost_usd": 0.034
+      }
+    }
+  ],
+
+  "evaluation_summary": {
+    "evaluator": "mock_manual_comparison",
+    "expected_actions_count": 5,
+    "matched_actions_count": 5,
+    "action_match_rate": 1.0,
+    "item_id_matches": {
+      "keyboard": {"expected": "7706410293", "actual": "7706410293", "match": true},
+      "thermostat": {"expected": "7747408585", "actual": "7747408585", "match": true}
+    },
+    "reward": 1.0,
+    "reward_interpretation": "All 5 expected actions matched + both item_ids correct + policy compliant"
+  },
+
+  "agent_observations": [
+    {
+      "type": "policy_edge_case",
+      "description": "Agent noted price difference is $0, questioned whether payment_method_id is needed. Sealed answer includes credit_card_9513926. τ³-bench evaluator behavior unknown for this edge case.",
+      "impact": "May affect reward in official eval if evaluator requires payment_method_id regardless of price diff",
+      "requires_official_eval": true
+    },
+    {
+      "type": "constraint_reasoning_quality",
+      "description": "Agent correctly identified clicky+RGB+full_size as first-choice preference, checked all 4 variants, confirmed 7706410293 matches, and correctly determined fallback is unnecessary.",
+      "impact": "Validates CAP-06 (variant constraint matching) as the key differentiator between C0 and C1"
+    }
+  ],
+
+  "provenance": {
+    "run_by": "opencode-cli + deepseek-chat",
+    "run_at": "2026-08-13T21:30:00Z",
+    "tools_source": ".local-demo/retail-m1/retail_mock_tool.py",
+    "policy_source": ".local-demo/retail-m1/source/policy.md",
+    "task_source": ".local-demo/retail-m1/source/task-0.json",
+    "recorded_by": "human → TrialRecord conversion",
+    "recorded_at": "2026-08-13T22:00:00Z"
+  },
+
+  "status": "real_model_run",
+  "evidence_role": "design-smoke-evidence",
+  "_note": "真实模型运行，但非 τ³-bench 原生 eval。evidence_role=design-smoke-evidence：比 design-mockup 更强（真实模型调用），但比 preflight-only 弱（非官方 runner/evaluator）。"
+}

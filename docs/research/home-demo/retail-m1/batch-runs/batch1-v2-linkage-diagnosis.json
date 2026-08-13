@@ -1,0 +1,101 @@
+{
+  "batch": "batch1-v2",
+  "candidate": "C1+skills+v2tools",
+  "linkage_diagnosis": {
+    "task_0": {
+      "reward_proxy": 1.0,
+      "linkage": {
+        "execution_perceive": 0.5,
+        "knowledge_guide": 1.0,
+        "reasoning_understand": 1.0,
+        "execution_act": 0.3
+      },
+      "diagnosis": "全对。EXEC_RESULT没输出但行为正确。链路完整。act分数低是评估器问题(agent没写EXEC总结行)。",
+      "real_issue": "无"
+    },
+
+    "task_1": {
+      "reward_proxy": 0.75,
+      "linkage": {
+        "execution_perceive": 0.5,
+        "knowledge_guide": 0.6,
+        "reasoning_understand": 0.4,
+        "execution_act": 0.3
+      },
+      "diagnosis": "agent查到了product变体,用了Skill知识(提到策略),但输出停在'presenting plan to user',没调exchange。可能原因:①opencode session在agent输出文本后结束,没继续工具调用 ②agent先回复用户(违反'一次只做一件事')导致session中断",
+      "real_issue": "推理层·执行序列问题:agent在应该调exchange时改成了回复用户文本,session可能因此结束",
+      "breakpoint": "reasoning_understand: 执行序列中断",
+      "contributing_factor": "prompt规则'每次只调一个工具'可能导致agent在回复文本后停止"
+    },
+
+    "task_5": {
+      "reward_proxy": 0.8,
+      "linkage": {
+        "execution_perceive": 0.3,
+        "knowledge_guide": 0.6,
+        "reasoning_understand": 0.3,
+        "execution_act": 0.3
+      },
+      "diagnosis": "agent正确识别了用户的3层fallback偏好(exchange both→only lamp→return water bottle)。但agent选择了'问用户选哪个水瓶'而不是自己决策。task5是故意设计的多轮交互:agent问一次→用户只换lamp→agent再问→用户改为return。opencode单轮模式无法模拟多轮对话!",
+      "real_issue": "推理层·runtime限制:opencode run是单轮模式,不能模拟τ³-bench的多轮对话。task5需要agent和用户多轮协商fallback,但我们的runtime不支持",
+      "breakpoint": "reasoning_understand: runtime不支持多轮对话",
+      "contributing_factor": "task5设计了多轮fallback协商,需要用户simulator配合",
+      "structural_limitation_candidate": "单轮runtime无法处理多轮协商——但这不是Agent架构问题,是runtime问题"
+    },
+
+    "task_10": {
+      "reward_proxy": 0.5,
+      "linkage": {
+        "execution_perceive": 1.0,
+        "knowledge_guide": 0.6,
+        "reasoning_understand": 0.4,
+        "execution_act": 0.3
+      },
+      "diagnosis": "email认证成功(v2修复生效)。agent正确推理出'交叉退款不可行'。但agent在查完两个订单后输出停止,没有调transfer_to_human_agents。和task1类似:agent做了推理和文字回复但没执行最后一步工具调用",
+      "real_issue": "推理层·执行序列问题:同task1,agent推理正确但工具执行中断",
+      "breakpoint": "reasoning_understand: 推理后未执行最终工具调用",
+      "contributing_factor": "opencode run模式:agent可能把transfer当成了'建议'而不是'必须执行的动作'"
+    }
+  },
+
+  "batch_level_systemic_finding": {
+    "pattern_1": {
+      "name": "执行序列中断",
+      "description": "task1/5/10都出现:agent推理正确但最后一步工具调用没执行。agent在输出文本回复后session结束。",
+      "frequency": "3/4 task (75%)",
+      "root_layer": "推理层·runtime(不是模型推理能力问题)",
+      "systemic": true,
+      "fix_direction": "不是Skill问题也不是架构问题。是opencode run模式限制:它不是真正的agent loop,是单次请求→响应。需要改prompt让agent明确'所有步骤必须在同一轮用工具调用完成,不要停下来回复文本等用户'"
+    },
+
+    "pattern_2": {
+      "name": "多轮对话不支持",
+      "description": "task5设计了多轮fallback协商(用户逐步退让),opencode run无法模拟。",
+      "frequency": "1/4 task",
+      "root_layer": "推理层·runtime",
+      "systemic": true,
+      "fix_direction": "需要真正的多轮agent loop(支持用户simulator),或改prompt模拟'乐观执行'(假设用户每次都按最理想方式回应)"
+    },
+
+    "pattern_3": {
+      "name": "知识层部分有效",
+      "description": "Skill注入让task1从0%→75%,task5的agent正确识别了fallback逻辑。但知识层不是主要瓶颈——主要瓶颈在runtime执行序列。",
+      "frequency": "改善明显但不是主断点",
+      "root_layer": "知识层(已修复，部分有效)"
+    },
+
+    "no_structural_limitation": {
+      "finding": "没有发现架构(Π)的结构性限制",
+      "evidence": "所有失败的根因在runtime执行序列,不是单Agent的结构问题。C1单Agent在推理层是够的——它推理正确,只是没执行最后一步",
+      "implication": "不需要C2架构变换"
+    }
+  },
+
+  "linkage_fix_decision": {
+    "primary_breakpoint": "推理层·runtime执行序列(3/4 task受影响)",
+    "fix_type": "prompt修复(推理层·θ)——不是Skill问题,不是架构问题",
+    "fix_description": "改prompt:①明确要求'所有操作必须在本次对话中用工具调用完成' ②'不要停下来等待用户文本回复——假设用户已确认并继续执行' ③对多轮协商场景:按乐观路径执行",
+    "step_size": "小(只改prompt)",
+    "expected_impact": "解决task1/10的执行中断(task5的多轮问题需要更深runtime修复)"
+  }
+}

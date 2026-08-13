@@ -1,0 +1,141 @@
+{
+  "schema_name": "TaskSemanticSpec",
+  "schema_version": "0.1.0-design-mockup",
+  "spec_id": "retail-customer-service-tool-use-v0.1",
+  "version": "0.1.0",
+  "sample_spec_ref": "retail-exchange-v0.1",
+  "objective": "让 agent 在遵守 retail policy 的前提下，正确识别用户意图、完成身份验证、查询相关信息、执行正确的工具调用序列，并在数据库写入前获得用户确认。",
+
+  "input_space": {
+    "source": "tau2-bench retail split (train=74, test=40)",
+    "input_dimensions": {
+      "user_request_type": ["cancel_pending", "modify_pending", "return_delivered", "exchange_delivered", "info_query"],
+      "user_persona": "varying (detail-oriented, impatient, confused, etc.)",
+      "order_status": ["pending", "processed", "delivered", "cancelled"],
+      "payment_methods": ["gift_card", "paypal", "credit_card"],
+      "product_types": 50,
+      "complexity": "single_request | multi_request | edge_case"
+    },
+    "task_0_example": {
+      "request_type": "exchange_delivered (multi-item)",
+      "user": "Yusuf Rossi, zip 19122",
+      "order": "#W2378156 (delivered)",
+      "items_to_exchange": [
+        {"product": "mechanical keyboard", "change": "switch type to clicky, fallback: no backlight"},
+        {"product": "smart thermostat", "change": "compatibility: Apple HomeKit -> Google Home"}
+      ]
+    }
+  },
+
+  "expected_output": {
+    "per_sample": "工具调用序列匹配 task.evaluation_criteria.actions + 用户沟通满足 policy 要求",
+    "evaluation": "tau2-bench native evaluator (reward_basis: DB + NL_ASSERTION)",
+    "task_0_expected_actions": [
+      {"step": 1, "action": "find_user_id_by_name_zip", "purpose": "身份验证（policy 强制要求）"},
+      {"step": 2, "action": "get_order_details", "purpose": "确认订单存在且状态为 delivered"},
+      {"step": 3, "action": "get_product_details(product=1656367028)", "purpose": "查键盘可选变体"},
+      {"step": 4, "action": "get_product_details(product=4896585277)", "purpose": "查温控器可选变体"},
+      {"step": 5, "action": "exchange_delivered_order_items", "purpose": "执行换货（需用户确认）"}
+    ],
+    "_note": "以上 5 步是 sealed holdout 内容，候选生成时不可见。这里写出是为了设计演练。"
+  },
+
+  "metrics": {
+    "primary": {
+      "name": "task_success",
+      "definition": "tau2-bench reward = 1.0 (所有 DB action 正确执行 + NL assertion 通过)",
+      "per_sample": true
+    },
+    "secondary": {
+      "action_match_rate": "正确执行的 action 数 / 期望 action 总数",
+      "tool_call_efficiency": "实际工具调用数 / 期望工具调用数（多余调用 = 效率低）",
+      "confirmation_compliance": "是否在 DB 写入前获得用户确认（policy 强制）",
+      "authentication_compliance": "是否在操作前完成身份验证（policy 强制）"
+    },
+    "cost": {
+      "token_usage": "agent-llm + user-llm 的 token 总量",
+      "api_calls": "工具调用次数",
+      "latency": "wall-clock 时间"
+    }
+  },
+
+  "tradeoffs": {
+    "accuracy_vs_cost": "更高准确率可能需要更多轮对话和工具调用，增加成本",
+    "safety_vs_speed": "用户确认步骤增加安全性但降低速度",
+    "note": "这些权衡在 Pareto 前沿比较时用于候选选择"
+  },
+
+  "acceptance_thresholds": {
+    "primary": "task_success = 1.0 (tau2-bench 全通过)",
+    "budget_gates": "token / api_calls / latency 上限由 TrialSpec 冻结",
+    "safety_gates": "authentication_compliance = 1.0 AND confirmation_compliance = 1.0 (硬阈值，不 Pareto)",
+    "note": "安全合规是硬约束，不是优化目标。违反身份验证或确认规则 = 自动失败，不计入 Pareto。"
+  },
+
+  "budgets": {
+    "token_budget": "待 TrialSpec 冻结",
+    "tool_call_budget": "待 TrialSpec 冻结",
+    "timeout_per_episode": "300s (τ³-bench 默认)",
+    "max_concurrency": "1 (preflight 阶段)",
+    "note": "预算必须在候选生成前冻结，候选不得通过未披露的预算扩张获胜。"
+  },
+
+  "risk_constraints": {
+    "fabrication": "agent 不得编造产品信息、库存状态或政策（policy.md 明确禁止）",
+    "authentication": "必须通过 email 或 name+zip 验证身份，不得跳过",
+    "confirmation": "所有 DB 写入动作（cancel/modify/return/exchange）前必须获得用户 yes 确认",
+    "scope": "每个对话只服务一个用户，拒绝其他用户的请求",
+    "human_transfer": "只在超出能力范围时转人工，不得滥用"
+  },
+
+  "failure_costs": {
+    "wrong_exchange": "换错商品 → 用户投诉 + 逆向物流成本",
+    "missing_auth": "未验证身份 → 数据泄露风险",
+    "missing_confirm": "未确认就执行 → 用户不满 + 潜在赔偿",
+    "fabrication": "编造信息 → 信任损失 + 错误决策"
+  },
+
+  "human_boundaries": {
+    "transfer_to_human": "当请求超出工具能力范围时，agent 调用 transfer_to_human_agents",
+    "human_gates": "本场景无外部写入门禁（τ³-bench 是 mock 环境），但真实部署时 exchange/cancel 动作需要 Human 审批",
+    "note": "τ³-bench preflight 不涉及真实 Human 门禁；这是设计约束，不是已运行门禁。"
+  },
+
+  "evidence_requirements": {
+    "per_episode": "tau2-bench results.json (含 actions, reward, trace)",
+    "per_candidate": "所有 episode 的 reward 分布 + 成本 + 失败模式分析",
+    "trace_completeness": "每次工具调用的 input/output/决策理由必须可追溯",
+    "note": "preflight 的 results.json 不等于 AgentFit EvaluationRun，因为缺少冻结的 manifest 和 Candidate 版本。"
+  },
+
+  "provenance": {
+    "source": "tau2-bench v1.0.1 retail domain",
+    "compiled_by": "human BusinessEngineer (design mockup)",
+    "compiled_at": "2026-08-13",
+    "source_refs": [
+      "source/policy.md",
+      "source/tasks.json",
+      "source/task-0.json"
+    ]
+  },
+
+  "status": "design_mockup",
+  "evidence_role": "design-mockup",
+
+  "_agentfit_note": "本文件是 Skill S1 的设计演练产物。不是冻结的 TaskSemanticSpec，未通过 Human 审批。sealed holdout 的期望动作序列在此写出仅用于设计验证，真实流程中 AgentArchitect 不可见。",
+
+  "_design_findings": {
+    "gaps_found": [
+      "τ³-bench 的 task.initial_state = null，初始状态在运行时由 mock server 注入。SampleSemanticSpec 的 replay_contract 必须记录 mock server 版本和配置，不能只靠 task.json 重放。",
+      "task 0 的 evaluation_criteria.nl_assertions = null，reward_basis 仍含 NL_ASSERTION。需确认 evaluator 如何处理 null nl_assertions。",
+      "policy.md 规定 'at most one tool call at a time'，但 evaluation_criteria.actions 有 5 步。这意味着一个成功 episode 至少 5 个 Step。预算约束需要考虑最小步数。",
+      "公开 test split (40 tasks) 不是 sealed holdout。四份正式 SampleSetManifest 尚未实例化，不能把 preflight 样本硬拆成 manifest。"
+    ],
+    "s1_skill_validation": [
+      "SampleSemanticSpec 的 15 个字段全部可从 task 0 + policy.md 编译——S1 的契约结构对这个场景可落地。",
+      "temporal_boundary 和 grouping_rule 在这个场景里很自然（一个 task = 一个对话 = 一个 Sample）。",
+      "label_or_oracle 的访问策略（候选不可见、审计官独占）能直接映射到 tau2-bench 的 evaluation_criteria。",
+      "replay_contract 暴露了一个设计缺口：初始状态不在 task.json 里，依赖运行时注入。Schema 需要加 env_snapshot_ref 字段。"
+    ]
+  }
+}
