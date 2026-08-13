@@ -1,6 +1,6 @@
 # AgentFit 元 Agent Identity 清单
 
-> 状态:设计契约 `READY`,真实实例 `NOT_STARTED`。方案包含 5 个不同职能 Agent,每个具有独立身份、目标、决策、状态、权限和责任产物,不是为凑数的名称拆分。
+> 状态:设计契约 `READY`,真实实例 `NOT_STARTED`。方案包含 5 个不同职能 Agent,每个具有独立身份、目标、决策、状态、权限和责任产物。
 >
 > 真实 AgentTeams 实例化待完成。在 [AgentFit 整体方案](../../../docs/agentfit-solution.md) 第 13 节门禁全部满足前,本清单描述的是设计身份,不是已运行实例。
 
@@ -9,12 +9,11 @@
 本清单从以下文件派生:
 
 - [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.4(Agent 严格定义)、§7.1(常驻元团队);
-- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁);
-- 官方要求矩阵 §2(Agent 数量与职能、Agent Identity 字段)。
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁)。
 
-## 官方字段对照
+## Identity 契约结构
 
-官方要求每个 Agent Identity 提供:Name / Role / Capabilities / Inputs / Outputs / Dependencies / Decision Boundary / Trace。本清单按此 8 字段展开。
+每个 Identity 同时定义 Name、Role、Capabilities、Inputs、Outputs、Dependencies、Decision Boundary 和 Trace，使职责、输入输出、权限边界与责任证据可以独立检查。
 
 ## Agent 的严格定义
 
@@ -132,12 +131,12 @@ sealed_holdout_access_timing: after_candidate_freeze
 
 **当前状态:设计契约 `READY`,真实实例 `NOT_STARTED`。** 既有 AgentTeams smoke test 仅证明平台能力,不构成 AgentFit 闭环证据。
 
-## 与官方要求的映射
+## 设计摘要
 
-| 官方要求 | 本清单如何满足 |
+| 设计要点 | AgentFit 定义 |
 |---|---|
-| ≥3 个不同职能 Agent | 5 个,每个有独立 Identity 和责任产物 |
-| 身份清晰,共同完成端到端闭环 | 责任链覆盖接收→编译→设计→评测→审计→交付全流程 |
-| AgentTeams 作为协同基点 | 见 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3 |
-| Agent Identity 8 字段 | 本清单逐项展开 |
-| 高风险动作人工确认 | 见 [风险与人工门禁清单](risk-and-human-gates.md) |
+| 元团队 | 5 个不同职能 Agent,每个有独立 Identity 和责任产物 |
+| 责任闭环 | 接收→编译→设计→评测→审计→交付 |
+| 运行映射 | AgentTeams Worker、Team、Room、Human 与共享存储，见 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3 |
+| Identity 完整性 | 同时记录职责、能力、输入输出、依赖、决策边界与 Trace |
+| 高风险动作 | 由 [风险与人工门禁清单](risk-and-human-gates.md)定义审批、拒绝与回滚 |

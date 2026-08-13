@@ -127,6 +127,39 @@ class SubmissionContractTest(unittest.TestCase):
             with self.subTest(filename=filename):
                 self.assertTrue((ROOT / filename).is_file())
 
+    def test_audience_materials_avoid_rubric_answering_language(self) -> None:
+        audience_materials = (
+            AGENT_IDENTITY,
+            SKILL_CATALOG,
+            RISK_GATES,
+            OPENNESS,
+            OUTLINE,
+            ROOT / "README.md",
+            INTRODUCTION,
+            *sorted(SLIDES_DIR.glob("*.html")),
+        )
+        forbidden = (
+            "官方字段对照",
+            "官方要求",
+            "与官方要求的映射",
+            "本清单按此",
+            "本清单如何满足",
+            "覆盖要求",
+            "不按数量凑分",
+            "红线对齐",
+            "官方 8 字段",
+            "Skill 必选",
+            "上下文 4 选 2",
+            "上下文能力 · 4 选 2",
+            "8 字段契约",
+            "10 字段契约",
+        )
+        for path in audience_materials:
+            text = path.read_text(encoding="utf-8")
+            for term in forbidden:
+                with self.subTest(path=path, term=term):
+                    self.assertNotIn(term, text)
+
     def test_detailed_agent_identity_contract_is_complete(self) -> None:
         text = AGENT_IDENTITY.read_text(encoding="utf-8")
         for agent in (
@@ -588,7 +621,7 @@ class SubmissionContractTest(unittest.TestCase):
 
         page_9 = _pdf_layout_lines(9)
         for label in (
-            "共享状态 · 上下文 4 选 2",
+            "共享状态 · 项目事实源",
             "示例：读配置 · 列变更 · 写回滚",
         ):
             with self.subTest(page=9, label=label):

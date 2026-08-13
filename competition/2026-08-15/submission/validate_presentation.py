@@ -32,7 +32,7 @@ EXPECTED_PAGE_TITLES = (
     "从 OpsPilot 回到通用：Fit 是有证据选对方案。",
     "七层 ML 映射、候选四元组与内外循环。",
     "五个 Agent Identity：判断权、状态边界与责任产物。",
-    "七个 Skill、HTTP/MCP 等价工具与上下文 4 选 2。",
+    "七个 Skill、HTTP/MCP 等价工具、共享状态与 Trace。",
     "Human 门禁、风险、异常与回滚。",
     "开放、依赖、许可证、baseline 引用与未实现边界。",
 )

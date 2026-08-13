@@ -27,11 +27,11 @@
 
 ## 五页附录
 
-| 页 | 内容 | 覆盖要求 |
+| 页 | 内容 | 阅读重点 |
 |---:|---|---|
 | A1 | 七层 ML 映射、候选四元组 `(G, Π, θ, ρ)`、DAG 主干、局部 SCC、inner/outer loop | 方法论与未来 Meta-learning 边界 |
-| A2 | 五个 Agent Identity 与 8 字段契约 | 身份、责任与 Trace |
-| A3 | 七个 Skill、HTTP/MCP 等价工具、上下文 4 选 2 | Skill、工具与上下文 |
+| A2 | 五个 Agent Identity 契约 | 身份、责任与 Trace |
+| A3 | 七个 Skill、HTTP/MCP 等价工具、共享状态与 Trace | Skill、工具与上下文 |
 | A4 | Human 门禁、风险、异常与回滚 | 安全、审批、降级与审计 |
 | A5 | 开放、依赖、许可证、baseline 引用与未实现边界 | 开放、合规与事实披露 |
 
