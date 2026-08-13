@@ -8,7 +8,7 @@
 
 本清单从以下文件派生:
 
-- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.4(Agent 严格定义)、§7.1(常驻元团队);
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.10(Agent 严格定义)、§7.1(常驻元团队);
 - [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁)。
 
 ## Identity 契约结构

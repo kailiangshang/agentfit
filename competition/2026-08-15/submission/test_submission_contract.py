@@ -32,6 +32,7 @@ AGENT_IDENTITY = ROOT / "agent-identity.md"
 SKILL_CATALOG = ROOT / "skill-catalog.md"
 RISK_GATES = ROOT / "risk-and-human-gates.md"
 OPENNESS = ROOT / "openness-and-compliance.md"
+SOLUTION = REPO_ROOT / "docs/agentfit-solution.md"
 EVIDENCE_REGISTRY = REPO_ROOT / "docs/internal/evidence-research/evidence-registry.json"
 OPSPILOT_EVIDENCE_CARD = (
     REPO_ROOT
@@ -275,6 +276,68 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertIn("2026-08-15 初赛提交阶段", text)
                 self.assertIn("后续阶段", text)
                 self.assertIn("晋级结果", text)
+
+    def test_canonical_solution_guides_later_implementation_without_contract_drift(self) -> None:
+        solution = SOLUTION.read_text(encoding="utf-8")
+        identity = AGENT_IDENTITY.read_text(encoding="utf-8")
+        skills = SKILL_CATALOG.read_text(encoding="utf-8")
+
+        self.assertEqual(1, solution.count("SampleSemanticSpec = {"))
+        self.assertEqual(
+            1,
+            solution.count("核心能力缺口无法在授权范围内补齐"),
+        )
+        self.assertIn(
+            "单项目必须包含 adaptation、validation、sealed holdout 和 "
+            "stress and failure 四份互异的 SampleSetManifest",
+            solution,
+        )
+        self.assertIn("### 13.3 后续最小实施顺序与阶段完成定义", solution)
+        for milestone in (
+            "M0 · 启动授权与基线冻结",
+            "M1 · 手动可审计 walking skeleton",
+            "M2 · 确定性合同代码化",
+            "M3 · 统一候选对照",
+            "M4 · 复现与比赛证据包",
+        ):
+            with self.subTest(milestone=milestone):
+                self.assertIn(milestone, solution)
+        self.assertIn("§4.10(Agent 严格定义)", identity)
+        self.assertIn("§4.9(能力语义)", skills)
+        self.assertIn("§4.11(任务—能力对齐)", skills)
+        self.assertNotIn("`AUTHORIZED`", solution)
+        self.assertIn(
+            "SampleSemanticSpec、Sample、SampleSetManifest",
+            OPENNESS.read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "以下顺序只在第 13.2 节第一段的外部授权条件满足后生效",
+            solution,
+        )
+        self.assertIn(
+            "M1 只证明当前环境首次贯通，不构成可复现最小闭环完成声明",
+            solution,
+        )
+        self.assertIn(
+            "独立复现成功且第 13.2 节七项完成门禁全部满足后，才可声明"
+            "“AgentFit 已在 AgentTeams 跑通最小闭环”",
+            solution,
+        )
+        self.assertIn(
+            "必须真实运行 Agentless、单 Agent 和多 Agent 三类候选",
+            solution,
+        )
+        self.assertIn(
+            "Human 混合候选必须真实运行，或由 GovernanceAuditor 记录不适用理由、"
+            "证据与重新评估条件",
+            solution,
+        )
+        self.assertEqual(
+            2,
+            solution.count(
+                "候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout"
+            ),
+        )
 
     def test_deck_keeps_later_runtime_work_conditional(self) -> None:
         conclusion = (SLIDES_DIR / "12-conclusion.html").read_text(encoding="utf-8")

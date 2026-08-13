@@ -154,7 +154,7 @@ AgentFit 的真实运行预期使用商业 LLM API。相关依赖、成本和替
 
 明确披露以下尚未完成:
 
-- SampleSemanticSpec、SampleSetManifest、SampleEvaluation、SplitLeakagePolicy、SplitLeakageReport、TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema;
+- SampleSemanticSpec、Sample、SampleSetManifest、SampleEvaluation、SplitLeakagePolicy、SplitLeakageReport、TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema;
 - 自动候选生成、内外循环搜索、Pareto 选择;
 - ProjectAsset/MetaAsset 的正式存储、晋升、回归系统;
 - 任一完整 ProjectCase;

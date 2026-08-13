@@ -8,7 +8,7 @@
 
 本清单从以下文件派生:
 
-- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.3(能力语义)、§7(元团队与流程);
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.9(能力语义)、§4.11(任务—能力对齐)、§7(元团队与流程);
 - [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁)。
 
 ## Skill 契约结构

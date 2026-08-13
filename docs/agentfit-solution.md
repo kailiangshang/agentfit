@@ -500,7 +500,7 @@ ProjectDossier = {
 }
 ```
 
-数据应按仓库、环境、任务族、模板、时间或其他真实分布边界划分，而不是只做随机行切分。Project Dossier 先保存样本规格、样本、清单和样本级评价，再保存聚合报告；单项目至少区分 adaptation、validation 和 sealed holdout；失败与压力样例单独记录。
+数据应按仓库、环境、任务族、模板、时间或其他真实分布边界划分，而不是只做随机行切分。Project Dossier 先保存样本规格、样本、清单和样本级评价，再保存聚合报告；单项目必须包含 adaptation、validation、sealed holdout 和 stress and failure 四份互异的 SampleSetManifest，失败与压力样例不能只作为普通 validation 样本附带记录。
 
 ### 8.2 版本与可复现
 
@@ -702,7 +702,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 当前没有证据表明以下能力已经完成：
 
-- TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate 和 Trace 的正式机器可执行 Schema；
+- SampleSemanticSpec、Sample、SampleSetManifest、SampleEvaluation、SplitLeakagePolicy、SplitLeakageReport、TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema；
 - Task–Capability 覆盖、冲突和缺口算法；
 - Agentize 必要性、复杂度代价和自动候选搜索；
 - ProjectAsset/MetaAsset 正式存储、晋升和回归系统；
@@ -725,7 +725,21 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 6. 固定 AgentTeams 版本、配置、已验证能力和未验证边界；
 7. 能在干净环境按仓库说明复现。
 
-### 13.3 代码边界判定
+### 13.3 后续最小实施顺序与阶段完成定义
+
+以下顺序只在第 13.2 节第一段的外部授权条件满足后生效。每个里程碑必须独立验收；前一阶段未完成时，不得用后一阶段的界面、自动化或演示材料替代缺失证据。
+
+| 里程碑 | 实施内容 | 阶段完成定义 |
+|---|---|---|
+| M0 · 启动授权与基线冻结 | 记录赛事条件、授权范围和首个 ProjectCase；固定 AgentTeams 版本、运行入口、可用能力和未验证边界；冻结本阶段代码与材料基线 | 存在审批记录、ProjectCase 选择理由、版本清单和可复现的 AgentTeams 基线；只能声明“已获准启动”，不能声明已运行闭环 |
+| M1 · 手动可审计 walking skeleton | 先使用 AgentTeams 原生 Worker、Team、Room、Human、Skill/工具和共享存储实例化五元团队；允许人工触发阶段，但必须写出第 7.4 节规定的结构化产物 | 一个冻结 ProjectCase 在当前环境从 Intake 到 Deliver；执行至少一个真实候选，并保留至少一个失败、降级、拒绝或 Human 门禁分支。M1 只证明当前环境首次贯通，不构成可复现最小闭环完成声明 |
+| M2 · 确定性合同代码化 | 只把 M1 暴露的真实缺口固化为 Schema、版本/哈希、阶段状态机、四份 manifest 的冻结与访问策略、审批、预算和 Trace 校验；继续复用 AgentTeams 运行能力 | 机器校验可以拒绝非法状态推进、holdout 越权、版本漂移、预算越界和缺失审批；候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout；同一 M1 ProjectCase 可在不依赖口头补证据的情况下重放 |
+| M3 · 统一候选对照 | 在同一冻结 Sample/Task、四份 manifest、模型/工具边界、预算、指标和 Human 规则下比较候选 | 必须真实运行 Agentless、单 Agent 和多 Agent 三类候选；Human 混合候选必须真实运行，或由 GovernanceAuditor 记录不适用理由、证据与重新评估条件。每个 `EvaluationUnit = CandidateVersion × SampleVersion × RunIndex` 均有 SampleEvaluation 和 Trace；候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout；报告同时呈现成功、失败、成本、风险与人工投入，并形成可追溯的 DeliveryDecision，不预设多 Agent 胜出 |
+| M4 · 复现与比赛证据包 | 在干净环境复现选定 ProjectCase，固定依赖、配置、模型、工具、预算和运行入口；汇总日志、Trace、审批、失败、审计与交付产物 | 独立复现得到同一合同边界下的结论；比赛声明可逐项反向定位到仓库产物，完成态只依据可复现证据更新。独立复现成功且第 13.2 节七项完成门禁全部满足后，才可声明“AgentFit 已在 AgentTeams 跑通最小闭环” |
+
+M0–M4 是单项目落地顺序，不等于跨项目 Meta-learning。只有多个 ProjectAsset 经过第 11 节的脱敏、迁移、未见项目比较和独立审计后，才允许进入 MetaAsset 或 Meta-learning 工作。
+
+### 13.4 代码边界判定
 
 后续验证若获准启动，只有以下内容应优先固化为 AgentFit 代码：
 
