@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the AgentFit preliminary presentation deliverables."""
+"""Validate the final AgentFit preliminary-submission deliverables."""
 
 from __future__ import annotations
 
@@ -16,93 +16,125 @@ from pypdf import PdfReader
 
 
 EXPECTED_SLIDES = 17
+
 EXPECTED_PAGE_TITLES = (
-    "Agent 架构不该靠猜。",
-    "企业不知道的，不只是“用几个 Agent”",
-    "平台提供砖块，但企业仍缺一位建筑师",
-    "AgentFit 先定义样本，再编译任务和方案",
-    "无、单、多 Agent 是同一个搜索空间",
-    "最简单的合格者获胜",
-    "五个元 Agent 把方案选择变成责任闭环",
-    "AgentTeams 让团队运行，AgentFit 负责选对方案",
-    "不同行业，共用一种方案决策方法",
-    "最终交付的不是 Prompt，而是可验收方案包",
-    "方法已经收敛，真实运行证据仍待补",
-    "Fit：刚刚好，不多不少",
-    "七层 ML 映射把“方案设计”变成可优化对象",
-    "五个 Agent 各自拥有判断权、状态边界与责任产物",
-    "七个 Skill 固化方案工程；MCP 只承接确定性接口",
-    "高风险动作先审批；异常必须能停止、降级和回滚",
-    "开放计划与当前事实分开披露",
+    "企业真正缺少的，是选对 Agent 方案。",
+    "OpsPilot 官方示例：4 个 Worker 加 1 个 Leader，仍未回答该用哪种。",
+    "AgentFit 把 baseline 材料编译成首个 ProjectCase。",
+    "两个事故变成 TaskSample：输入、输出与验收。",
+    "Agentless、单 Agent、多 Agent 与 Human 混合是同一搜索空间。",
+    "同一冻结样本、预算与门禁下，最简合格候选胜出。",
+    "五个元 Agent 完成方案闭环，区别于候选业务执行 Agent。",
+    "AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。",
+    "Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。",
+    "交付 AgentSolutionPackage 与五种合法结果。",
+    "证据账本：baseline 已代码级审计，候选对照仍待运行。",
+    "从 OpsPilot 回到通用：Fit 是有证据选对方案。",
+    "七层 ML 映射、候选四元组与内外循环。",
+    "五个 Agent Identity：判断权、状态边界与责任产物。",
+    "七个 Skill、HTTP/MCP 等价工具与上下文 4 选 2。",
+    "Human 门禁、风险、异常与回滚。",
+    "开放、依赖、许可证、baseline 引用与未实现边界。",
 )
+
 SLIDE_REQUIRED_TERMS = {
-    4: (
-        "AgentFit 先定义样本，再编译任务和方案",
-        "同一冻结样本集",
-    ),
-    6: (
-        "同一冻结 SampleSetManifest",
-        "同一版本化 TaskSample",
-    ),
-    7: (
-        "候选冻结后，仅 GovernanceAuditor 消费 sealed-holdout 结果",
-        "候选前冻结 Sample/Task · 候选后批准 TrialSpec",
-        "TaskSample",
-        "Episode",
-    ),
+    2: ("OpsPilot", "ProjectCase", "baseline"),
+    4: ("TaskSample", "db_pool_exhausted", "slow_sql_degradation"),
+    5: ("同一搜索空间", "Agentless"),
+    7: ("元 Agent", "业务执行 Agent", "EngagementLead", "GovernanceAuditor"),
+    8: ("Worker", "Team", "Room", "Human", "Dossier", "Trace"),
+    9: ("Skill", "MCP", "HTTP"),
+    10: ("AgentSolutionPackage",),
+    11: ("代码级审计", "仍待运行"),
     13: (
-        "L1 样本语义",
-        "L7 跨项目学习",
+        "七层 ML 映射",
+        "G, Π, θ, ρ",
+        "inner loop",
+        "outer loop",
+        "Meta-learning",
+    ),
+    14: (
+        "EngagementLead",
+        "BusinessEngineer",
+        "AgentArchitect",
+        "ValidationEngineer",
+        "GovernanceAuditor",
     ),
 }
+
+FIRST_PAGE_ML_BAN = (
+    "Architecture Search",
+    "NAS",
+    "Meta-learning",
+    "Meta learning",
+    "七层",
+    "L1",
+    "L2",
+    "L3",
+    "SVD",
+    "argmin",
+    "Pareto",
+    "贝叶斯",
+    "inner loop",
+    "outer loop",
+)
+
 REQUIRED_TERMS = (
     "AgentFit",
     "AgentTeams",
+    "OpsPilot",
+    "ProjectCase",
+    "db_pool_exhausted",
+    "slow_sql_degradation",
+    "TaskSample",
+    "Episode",
+    "CandidateVersion × SampleVersion × RunIndex",
     "EngagementLead",
     "BusinessEngineer",
     "AgentArchitect",
     "ValidationEngineer",
     "GovernanceAuditor",
     "Agentless",
-    "Agent Architecture Search",
+    "C0",
+    "C1",
+    "C2",
+    "C3",
     "Human",
     "Skill",
     "MCP",
+    "HTTP",
     "上下文",
     "验证",
     "安全",
     "开放",
     "未实现",
-    "证据待补",
-    "用户反馈定位",
-    "官网参考案例",
-    "零人工运维",
-    "智能客服自主闭环",
-    "软件研发全流程协同",
-    "金融风控与理赔自动化",
-    "设计模拟",
-    "非运行证据",
+    "AgentSolutionPackage",
+    "设计契约，非运行证据",
     "requires_runtime_trial",
-    "https://goaihz.com/tracks?track=infra",
-    "Sample",
-    "TaskSample",
-    "Episode",
+    "Worker",
+    "Team",
+    "Room",
+    "Dossier",
+    "同一搜索空间",
     "七层 ML 映射",
-    "同一冻结样本集",
+    "元 Agent",
+    "业务执行 Agent",
+)
+
+FORBIDDEN_TERMS = (
+    "已选定 C2",
+    "已选定 C1",
+    "C2 胜出",
+    "已跑通最小闭环",
+    "ROI 提升",
+    "准确率 9",
+    "ImageNet",
+    "90%+",
+    "Meta-learning 已验证",
+    "已开放",
 )
 
 PRESENTATIONML_NAMESPACE = "http://schemas.openxmlformats.org/presentationml/2006/main"
-FORBIDDEN_TERMS = (
-    "TODO",
-    "TBD",
-    "已验证 Meta-learning",
-    "ImageNet 75%",
-    "90%+",
-    "超越人工设计 1.2%",
-    "methodology §13",
-    "首个真实项目案例与五元 Agent 在 AgentTeams 上的闭环正在实施",
-    "六层 ML 映射",
-)
 
 
 def _shape_text(shape: object) -> list[str]:
@@ -169,7 +201,6 @@ def _package_editability_errors(pptx_path: Path) -> list[str]:
             )
             for name in media:
                 errors.append(f"PPTX package contains embedded media: {name}")
-
             for slide_number in range(1, EXPECTED_SLIDES + 1):
                 member = f"ppt/slides/slide{slide_number}.xml"
                 if member not in package.namelist():
@@ -187,14 +218,13 @@ def _package_editability_errors(pptx_path: Path) -> list[str]:
 
 def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
     """Return human-readable validation errors; an empty list means success."""
-
     errors: list[str] = []
     if not pptx_path.is_file():
         return [f"PPTX file does not exist: {pptx_path}"]
 
     try:
         presentation = Presentation(pptx_path)
-    except Exception as exc:  # pragma: no cover - parser diagnostics vary
+    except Exception as exc:  # pragma: no cover
         return [f"Unable to read PPTX {pptx_path}: {exc}"]
 
     slide_count = len(presentation.slides)
@@ -221,17 +251,24 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
             elif shape.shape_type == MSO_SHAPE_TYPE.MEDIA:
                 errors.append(f"PPTX slide {index} contains a media shape")
 
+        normalized_text = _normalized(text)
         if index <= len(EXPECTED_PAGE_TITLES):
             title = EXPECTED_PAGE_TITLES[index - 1]
-            if _normalized(title) not in _normalized(text):
+            if _normalized(title) not in normalized_text:
                 errors.append(
                     f"PPTX slide {index} is missing expected title: {title}"
                 )
         for term in SLIDE_REQUIRED_TERMS.get(index, ()):
-            if _normalized(term) not in _normalized(text):
+            if _normalized(term) not in normalized_text:
                 errors.append(
                     f"PPTX slide {index} is missing required term: {term}"
                 )
+        if index <= 4:
+            for term in FIRST_PAGE_ML_BAN:
+                if _normalized(term) in normalized_text:
+                    errors.append(
+                        f"PPTX slide {index} uses an ML/NAS term forbidden in the first four pages: {term}"
+                    )
 
     errors.extend(_package_editability_errors(pptx_path))
 
@@ -250,37 +287,57 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
             try:
                 pdf_reader = PdfReader(pdf_path)
                 pdf_pages = len(pdf_reader.pages)
-            except Exception as exc:  # pragma: no cover - parser diagnostics vary
+            except Exception as exc:  # pragma: no cover
                 errors.append(f"Unable to read PDF {pdf_path}: {exc}")
             else:
                 if pdf_pages != EXPECTED_SLIDES:
                     errors.append(
                         f"PDF must contain exactly {EXPECTED_SLIDES} pages; found {pdf_pages}"
                     )
+                pdf_texts: list[str] = []
                 for index, page in enumerate(pdf_reader.pages, start=1):
                     try:
                         page_text = page.extract_text() or ""
-                    except Exception as exc:  # pragma: no cover - parser diagnostics vary
+                    except Exception as exc:  # pragma: no cover
                         errors.append(f"Unable to extract PDF page {index} text: {exc}")
                         continue
+                    pdf_texts.append(page_text)
+                    normalized_page = _normalized(page_text)
                     if index <= len(EXPECTED_PAGE_TITLES):
                         title = EXPECTED_PAGE_TITLES[index - 1]
-                        if _normalized(title) not in _normalized(page_text):
+                        if _normalized(title) not in normalized_page:
                             errors.append(
                                 f"PDF page {index} is missing expected title: {title}"
                             )
                     for term in SLIDE_REQUIRED_TERMS.get(index, ()):
-                        if _normalized(term) not in _normalized(page_text):
+                        if _normalized(term) not in normalized_page:
                             errors.append(
                                 f"PDF page {index} is missing required term: {term}"
                             )
+                    if index <= 4:
+                        for term in FIRST_PAGE_ML_BAN:
+                            if _normalized(term) in normalized_page:
+                                errors.append(
+                                    f"PDF page {index} uses an ML/NAS term forbidden in the first four pages: {term}"
+                                )
+                    if index <= len(slide_texts):
+                        pptx_text = _normalized(slide_texts[index - 1])
+                        if pptx_text and pptx_text not in normalized_page:
+                            errors.append(
+                                f"PDF page {index} is missing PPTX text: {slide_texts[index - 1][:80]}"
+                            )
+
+                pdf_text = "\n".join(pdf_texts)
+                for term in FORBIDDEN_TERMS:
+                    if term in pdf_text:
+                        errors.append(f"PDF contains forbidden term: {term}")
 
     return errors
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate AgentFit preliminary PPTX and optional PDF."
+        description="Validate the final AgentFit submission PPTX and optional PDF."
     )
     parser.add_argument("pptx", type=Path, help="Path to the PPTX file")
     parser.add_argument("pdf", type=Path, nargs="?", help="Optional PDF export")

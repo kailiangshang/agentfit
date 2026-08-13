@@ -1,18 +1,20 @@
 # AgentFit 文档
 
-本目录只保留一个当前整体方案，以及支撑它的事实证据、契约和比赛约束。历史设计不再以并行文档保留，需要追溯时使用 Git 提交记录。
+本目录只保留一个当前整体方案，以及支撑它的比赛约束、来源证据和官方参考。历史设计和过程计划不再并行保留，需要追溯时使用 Git。
 
 ## 唯一当前方案
 
-- [AgentFit 整体方案](agentfit-solution.md)：产品定位、方法论、系统边界、执行闭环、评测治理、跨项目成长和比赛证明责任的唯一有效基线。
+- [AgentFit 整体方案](agentfit-solution.md)：产品定位、样本/任务/能力语义、候选搜索、元团队、AgentTeams 边界、评测治理、交付和阶段门禁的唯一有效基线。
 
-当前阶段：初赛材料已经就绪；真实 AgentFit 集成尚未开始。近期唯一执行目标是在 AgentTeams 上用一个冻结 ProjectCase 跑通可复现的 walking skeleton，具体门禁见整体方案第 13 节。
+## 2026-08-15 初赛提交阶段
 
-当前初赛材料与 2026 年 8 月 15 日内部冻结工作在 [`competition/2026-08-15/`](../competition/2026-08-15/) 独立管理；该目录从本方案和内部证据派生，不能反向覆盖总体定义。
+本阶段只完成简介、PPTX、PDF、Agent Identity、Skill、Human/风险和开放披露，以及上传前验证。真实 AgentTeams 元团队、ProjectCase 和候选对照不是提交前置条件；当前运行结论保持 `requires_runtime_trial`。唯一材料入口见 [初赛提交工作区](../competition/2026-08-15/README.md)。
 
-Git 历史中的旧讨论、旧方法论或执行计划均不具备当前规范地位。
+## 后续阶段
 
-## 内部事实与评测依据
+初赛提交后暂停扩展性开发。是否启动 AgentTeams walking skeleton、复赛工程或跨项目试验，由晋级结果、评审反馈和后续赛程共同决定；在获得新的赛事条件与明确授权前，只保留整体方案中的启动门禁。
+
+## 内部依据
 
 ### 比赛约束
 
@@ -23,16 +25,10 @@ Git 历史中的旧讨论、旧方法论或执行计划均不具备当前规范�
 
 - [证据研究规则](internal/evidence-research/README.md)
 - [Evidence Registry](internal/evidence-research/evidence-registry.json)
-- `internal/evidence-research/cards/`：十二张已核验来源卡
+- [证据卡模板](internal/evidence-research/evidence-card-template.md)
 
-### 下一阶段执行契约
-
-- [ProjectCase 契约](internal/contracts/project-case-template.md)
-
-仓库不预设六项目集或跨项目迁移对。首个真实 ProjectCase 完成后，再基于运行证据选择后续迁移与跨项目研究对象。
-
-## 原始参考材料
+### 官方参考
 
 - [《新智基座》Agent Infra 参赛手册](reference/新智基座-参赛手册.pdf)
 
-历史只通过 Git 提交记录追溯，不能作为正式实现输入，也不能覆盖 [AgentFit 整体方案](agentfit-solution.md)中的当前定义、完成状态和证据边界。
+历史内容只通过 Git 追溯，不能覆盖 [AgentFit 整体方案](agentfit-solution.md)中的当前定义、状态和证据边界。

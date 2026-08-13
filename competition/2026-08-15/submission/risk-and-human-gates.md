@@ -7,7 +7,7 @@
 本清单从以下文件派生:
 
 - [AgentFit 整体方案](../../../docs/agentfit-solution.md) §8.4(安全和 Human 边界)、§9(评测与审计);
-- [AgentTeams 落地设计](../design/agentteams-landing-design.md) §7(错误与降级);
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁);
 - 官方要求矩阵 §2(高风险动作)、§3(八步闭环第 7 步审批与回滚)。
 
 ## 核心原则
@@ -19,7 +19,7 @@
 5. **沙箱、超时、预算和最大循环次数**必须预先设定;
 6. **失败、拒绝、人工接管、降级和回滚路径**必须预先定义。
 
-## 人工门禁类型
+## Human 门禁（人工审批）类型
 
 | 门禁类型 | 触发时机 | 审批主体 | 拒绝路径 | 回滚路径 |
 |---|---|---|---|---|
@@ -127,7 +127,7 @@
 
 ## 当前状态
 
-本清单的设计契约状态为 `READY`,真实运行状态为 `NOT_STARTED`。后续完成态以 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁为准。
+本清单的设计契约状态为 `READY`,真实运行状态为 `NOT_STARTED`。后续完成态以 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §13 门禁为准。
 
 **红线**:任何路演材料、简介或 PPT 不得声称高风险动作已具备完整审批/回滚/审计链路,除非上述门禁已在真实 AgentTeams 运行中得到验证并保留 Trace。
 

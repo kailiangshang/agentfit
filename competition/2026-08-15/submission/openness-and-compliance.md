@@ -6,8 +6,7 @@
 
 本清单从以下文件派生:
 
-- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §12.4(红线)、§13(未实现范围);
-- [AgentTeams 落地设计](../design/agentteams-landing-design.md) §6(必须用代码保证的部分);
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §12.5(红线)、§13(未实现范围与启动门禁);
 - 官方要求矩阵 §2(开放与合规)、§5(阶段边界);
 - [红线检查表](../../../docs/internal/competition/preliminary-red-line-checklist.md)。
 
@@ -21,16 +20,17 @@
 | 冻结样本集合 Schema(SampleSetManifest) | 结构化 Schema 文档 + JSON/YAML 样例 | 计划中,尚未实现或发布 |
 | 样本级评价 Schema(SampleEvaluation) | 结构化 Schema 文档 + JSON/YAML 样例 | 计划中,尚未实现或发布 |
 | split-leakage schemas(SplitLeakagePolicy / SplitLeakageReport) | 分组泄漏、重复 content_hash、cutoff 与隔离审计的结构化 Schema 文档 + 样例 | 计划中,尚未实现或发布 |
-| 任务说明书 Schema(TaskSemanticSpec) | 结构化 Schema 文档 + JSON/YAML 样例 | 设计中,初赛后开放 |
-| 能力语义 Schema(CapabilitySemanticSpec) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
-| 执行轨迹 Schema(ExecutionTrace) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
-| 候选方案描述 Schema(Candidate) | 结构化 Schema 文档 + 样例 | 设计中,初赛后开放 |
+| 任务说明书 Schema(TaskSemanticSpec) | 结构化 Schema 文档 + JSON/YAML 样例 | 设计中,后续阶段是否开放取决于晋级结果与授权 |
+| 能力语义 Schema(CapabilitySemanticSpec) | 结构化 Schema 文档 + 样例 | 设计中,后续阶段是否开放取决于晋级结果与授权 |
+| 执行轨迹 Schema(ExecutionTrace) | 结构化 Schema 文档 + 样例 | 设计中,后续阶段是否开放取决于晋级结果与授权 |
+| 候选方案描述 Schema(Candidate) | 结构化 Schema 文档 + 样例 | 设计中,后续阶段是否开放取决于晋级结果与授权 |
 | 元 Agent Identity 与责任契约 | 本仓库 [agent-identity.md](agent-identity.md) | 私有仓库内完成，尚未发布 |
 | 核心 Skill 契约 | 本仓库 [skill-catalog.md](skill-catalog.md) | 私有仓库内完成，尚未发布 |
-| 路演 PPT/PDF | 本仓库 [submission/](.) | 私有仓库内提交候选，尚未发布 |
-| 设计模拟案例 | [research/official-case-simulation.md](../research/official-case-simulation.md) | 私有仓库内完成，非运行证据 |
+| 路演 PPT/PDF | 本仓库 [最终提交目录](.) | 私有仓库内最终初赛提交，尚未发布 |
 
-### 1.2 复赛计划开放
+### 1.2 后续阶段候选开放范围
+
+以下不是已承诺计划。只有晋级结果、评审反馈或后续赛程要求继续，且获得明确授权后，才按条件决定是否开放：
 
 | 资产 | 条件 |
 |---|---|
@@ -78,7 +78,7 @@ AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、�
 
 | 数据 | 来源 | License / 授权 | 用途 |
 |---|---|---|---|
-| 官网四类参考案例 | [GOAI Agent Infra 官网](https://goaihz.com/tracks?track=infra) | 官网公开,场景启发,非运行证据 | 路演第 9 页 |
+| 官网四类参考案例 | [GOAI Agent Infra 官网](https://goaihz.com/tracks?track=infra) | 官网公开,场景启发,非运行证据 | 附录 A5 来源披露 |
 | 参赛手册 | 新智基座 Agent Infra 参赛手册 | 官方文件 | 要求矩阵与红线 |
 | 跨场景证据卡(SWE-bench/GAIA/CyBench/τ-bench/CUAD 等) | 各 benchmark 官方 | 各自 license,内部研究用,不二次分发 | 未来 ProjectCase 的任务、能力与评测建模证据;不代表已经选择项目 |
 
@@ -113,9 +113,8 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 ### 4.1 当前可复现
 
 - 路演 PPT/PDF 生成链:`build_presentation.py` → PPTX → PDF(命令见 [ppt-outline.md](ppt-outline.md));
-- 设计模拟推理链:[official-case-simulation.md](../research/official-case-simulation.md) 可人工逐步复现。
 
-### 4.2 复赛后可复现
+### 4.2 后续阶段可复现目标
 
 - 元团队 AgentTeams 配置 + 运行入口;
 - 首个 ProjectCase 的样例输入输出;
@@ -138,9 +137,8 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 
 | 阶段 | 维护承诺 |
 |---|---|
-| 初赛(8 月 16 日) | 方案、Schema 设计契约、路演材料维护 |
-| 复赛 | 首个真实 ProjectCase 代码包、可复现实验、完整 Trace 维护 |
-| 赛后 | Schema、Skill、评测模板作为开源资产持续维护;MetaAsset 跨项目验证按路线图推进 |
+| 2026-08-15 初赛提交阶段 | 只维护并验证最终提交材料，不以前置开发换取尚不存在的运行结论 |
+| 后续阶段 | 由晋级结果、评审反馈、后续赛程和明确授权决定是否维护真实 ProjectCase、可复现实验与 Trace |
 
 ## 7. 红线对齐
 
@@ -166,4 +164,4 @@ AgentFit 的真实运行预期使用商业 LLM API。**这是官方要求必须�
 - 统一预算下的无 Agent/单 Agent/多 Agent 真实对照;
 - 真实业务或生产效果。
 
-下一门禁不是扩展总体概念,而是:选择并冻结首个 ProjectCase → 在 AgentTeams 跑通最小闭环 → 保留失败或 Human 分支 → 独立审计并复现。真实证据形成后更新路演中的运行状态与证据页,不改变已经冻结的产品定义。
+后续工作不会自动启动。只有晋级结果、评审反馈或新的赛程要求继续，且获得明确授权后，才执行:选择并冻结首个 ProjectCase → 在 AgentTeams 跑通最小闭环 → 保留失败或 Human 分支 → 独立审计并复现。真实证据形成后再更新运行状态，不改变已经冻结的产品定义。

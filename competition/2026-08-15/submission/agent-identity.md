@@ -2,14 +2,14 @@
 
 > 状态:设计契约 `READY`,真实实例 `NOT_STARTED`。方案包含 5 个不同职能 Agent,每个具有独立身份、目标、决策、状态、权限和责任产物,不是为凑数的名称拆分。
 >
-> 真实 AgentTeams 实例化待完成。在 [AgentTeams 落地设计](../design/agentteams-landing-design.md) 第 8 节门禁全部满足前,本清单描述的是设计身份,不是已运行实例。
+> 真实 AgentTeams 实例化待完成。在 [AgentFit 整体方案](../../../docs/agentfit-solution.md) 第 13 节门禁全部满足前,本清单描述的是设计身份,不是已运行实例。
 
 ## 事实源
 
 本清单从以下文件派生:
 
 - [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.4(Agent 严格定义)、§7.1(常驻元团队);
-- [AgentTeams 落地设计](../design/agentteams-landing-design.md) §4(映射表);
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁);
 - 官方要求矩阵 §2(Agent 数量与职能、Agent Identity 字段)。
 
 ## 官方字段对照
@@ -120,7 +120,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 
 ## 当前状态与门禁
 
-根据 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8,只有同时满足以下条件,才可声称"元团队已在 AgentTeams 跑通":
+根据 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §13,只有同时满足以下条件,才可声称"元团队已在 AgentTeams 跑通":
 
 1. 五个 Agent 在 AgentTeams 中具有可检查的身份和独立责任产物;
 2. 一个冻结的项目案例完成从接收到交付的状态流转;
@@ -138,6 +138,6 @@ sealed_holdout_access_timing: after_candidate_freeze
 |---|---|
 | ≥3 个不同职能 Agent | 5 个,每个有独立 Identity 和责任产物 |
 | 身份清晰,共同完成端到端闭环 | 责任链覆盖接收→编译→设计→评测→审计→交付全流程 |
-| AgentTeams 作为协同基点 | 见 [AgentTeams 映射](../design/agentteams-landing-design.md) §4 |
+| AgentTeams 作为协同基点 | 见 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3 |
 | Agent Identity 8 字段 | 本清单逐项展开 |
 | 高风险动作人工确认 | 见 [风险与人工门禁清单](risk-and-human-gates.md) |

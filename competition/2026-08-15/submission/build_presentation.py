@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the HTML-first AgentFit roadshow deck into editable PPTX shapes."""
+"""Compile the final HTML-first AgentFit submission into editable PPTX shapes."""
 
 from __future__ import annotations
 
@@ -15,8 +15,9 @@ from pptx.util import Inches
 
 
 ROOT = Path(__file__).resolve().parent
+REPO_ROOT = ROOT.parents[2]
 SLIDES_DIR = ROOT / "slides"
-OUTPUT_PATH = ROOT / "agentfit-preliminary-draft.pptx"
+OUTPUT_PATH = ROOT / "agentfit-submission.pptx"
 EXPECTED_SLIDES = 17
 DEFAULT_DECK_SKILL = Path.home() / "workspace/.codex-home/skills/hands-on-deck"
 DECK_SKILL = Path(os.environ.get("HANDS_ON_DECK_DIR", DEFAULT_DECK_SKILL))
@@ -25,7 +26,7 @@ DECK = DECK_SKILL / "scripts/deck.py"
 
 
 def _run(*args: str | Path) -> None:
-    subprocess.run([str(arg) for arg in args], check=True, cwd=ROOT.parent.parent.parent)
+    subprocess.run([str(arg) for arg in args], check=True, cwd=REPO_ROOT)
 
 
 def _make_base(path: Path) -> None:
@@ -47,7 +48,7 @@ def build_deck(output_path: Path = OUTPUT_PATH) -> None:
                 f"missing hands-on-deck tool: {tool}; set HANDS_ON_DECK_DIR to its skill directory"
             )
 
-    with tempfile.TemporaryDirectory(prefix="agentfit-pptx-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="agentfit-submission-pptx-") as temp_dir:
         temp = Path(temp_dir)
         base = temp / "base.pptx"
         patch = temp / "slides.patch.json"
@@ -70,11 +71,11 @@ def build_deck(output_path: Path = OUTPUT_PATH) -> None:
         payload["ops"].append(
             {
                 "op": "set-props",
-                "title": "AgentFit GOAI Agent Infra 初赛路演方案",
-                "subject": "AgentTeams 上的 Agent 方案建筑师",
+                "title": "AgentFit 初赛提交版",
+                "subject": "OpsPilot baseline 作首个 ProjectCase 的通用方案建筑师路演",
                 "author": "AgentFit Team",
-                "keywords": "AgentFit, AgentTeams, Agent Infra, HTML-first",
-                "comments": "Preliminary submission candidate. Official cases and the software scenario are references or design simulations, not runtime evidence.",
+                "keywords": "AgentFit, AgentTeams, OpsPilot, preliminary submission, HTML-first",
+                "comments": "Final preliminary submission. OpsPilot baseline is a code-level audited reference and first ProjectCase input, not AgentFit runtime evidence.",
             }
         )
         patch.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -43,6 +43,17 @@
       "license_status": "verified"
     },
     {
+      "evidence_id": "opspilot-zero-demo",
+      "domain": "operations",
+      "card_path": "docs/internal/evidence-research/cards/operations/opspilot-zero-demo.md",
+      "canonical_url": "https://assets.datawhale.cn/131266/dashboard/1785575974456/opspilot-zero-demo.zip",
+      "evidence_level": "E3",
+      "fact_check_status": "checked",
+      "reproducibility": "partial",
+      "license_status": "unclear",
+      "source_sha256": "0bb0f37c227fb5031cd66b6d69dbcbd533602c26b7d5e93f66f93fa02f653478"
+    },
+    {
       "evidence_id": "tau-bench",
       "domain": "business",
       "card_path": "docs/internal/evidence-research/cards/business/tau-bench.md",

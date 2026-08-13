@@ -2,24 +2,24 @@
 
 > 文档地位：唯一当前有效的整体方案
 >
-> 最近收敛：2026-08-11
+> 最近收敛：2026-08-13
 >
-> 当前阶段：初赛材料仍为 `IN_PROGRESS`；完整 17 页 PPTX/PDF 的逐页视觉复核待完成，之后在 AgentTeams 上验证一个可复现的 walking skeleton
+> 当前阶段：唯一初赛提交版本已冻结；真实 AgentFit 运行保持 `NOT_STARTED`，后续是否启动由晋级结果与赛事反馈决定
 
 ## 1. 文档地位与当前状态
 
-本文件统一 AgentFit 的产品定位、方法论、系统边界、责任闭环、评测治理、交付结果和近期验证门禁。后续设计与实现必须以本文件为准；旧方案只存在于 Git 历史中，不构成并行方案。
+本文件统一 AgentFit 的产品定位、方法论、系统边界、责任闭环、评测治理、交付结果和阶段门禁。后续设计与实现必须以本文件为准；旧方案只存在于 Git 历史中，不构成并行方案。
 
 当前证据状态分为四层：
 
 | 层级 | 当前状态 | 可以对外表述 | 不可以对外表述 |
 |---|---|---|---|
 | 整体方案与设计契约 | `READY` | 产品定义、方法、五元团队、Skill、Human 与风险边界已收敛 | 已经自动生成或优化了真实 Agent 方案 |
-| 初赛材料 | `IN_PROGRESS` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX 结构/内容/几何和 PDF 页数/逐页文本验证已完成；完整视觉复核仍待完成 | PPT 中的设计图等于运行证据，或材料已经通过完整逐页视觉门禁 |
+| 初赛材料 | `READY` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX/PDF 的结构、内容、可编辑性、几何和视觉检查已完成 | PPT 中的设计图等于运行证据 |
 | AgentTeams 平台试用 | 已有独立 smoke test | Worker、Team、Human、文件同步、定时任务等底座能力曾被单独试用 | 历史平台测试等于 AgentFit 已集成 |
-| AgentFit 真实运行 | `NOT_STARTED` | 正在准备首个 walking skeleton | 已跑通 ProjectCase、候选评测或跨项目学习 |
+| AgentFit 真实运行 | `NOT_STARTED` | 运行合同和启动条件已定义 | 已经批准或启动 walking skeleton，或已跑通 ProjectCase、候选评测、跨项目学习 |
 
-初赛材料的当前完成态以[准备看板](../competition/2026-08-15/planning/readiness-board.md)为准；真实 AgentFit 运行状态以本文件第 13 节和[AgentTeams 落地设计](../competition/2026-08-15/design/agentteams-landing-design.md)为准。
+初赛材料以[唯一提交目录](../competition/2026-08-15/submission/)为准；真实 AgentFit 运行状态、AgentTeams 边界和后续启动条件以本文件第 3、7、8、13 节为准。
 
 所有事实必须区分“规范设计”“设计模拟”“平台单项试用”“AgentFit 真实运行”和“生产效果”。下游简介、PPT、演示与口头陈述不得反向改变本文件的事实状态。
 
@@ -91,7 +91,7 @@ AgentFit 当前不做：
 - 托管所有 MCP、模型和业务系统；
 - 开发独立产品界面；
 - 修改 AgentTeams 核心；
-- 在第一阶段接入飞书；
+- 将飞书或其他外部 IM 作为初赛提交依赖；
 - 让优化器静默修改任务目标、验收标准或权限；
 - 用本地模拟或历史平台试用替代真实 AgentFit 证据；
 - 在没有跨项目未见集验证前宣称 Meta-learning。
@@ -104,7 +104,7 @@ AgentFit 当前不做：
 | AgentFit | 任务与能力语义、能力对齐、候选生成、架构搜索、统一评测、审计、Human 门禁和交付 | 重造通用 Agent 运行时、IM、容器编排或企业 IAM |
 | Human | 提供材料、确认任务契约、批准预算与高风险动作、处理责任边界、接受或否决交付 | 替 Agent 静默补证据、修改评测结果或承担未记录的兜底 |
 
-第一阶段采用“AgentTeams 原生底座 + AgentFit 能力包”：
+后续工程若启动，采用“AgentTeams 原生底座 + AgentFit 能力包”：
 
 - 使用 AgentTeams 已有 Dashboard、Manager/聊天入口、Worker、Team、Human、Skill、MCP、共享存储和通信；
 - 用元 Agent 配置、Prompt、Skill、Schema、项目档案、评测工具和审计模板表达 AgentFit；
@@ -155,6 +155,22 @@ EvaluationUnit = CandidateVersion × SampleVersion × RunIndex
 `SourceObservation` 是告警、用户反馈、Issue、日志或工单等原始业务观察，保留来源与时间边界；是否构成可评价样本由当前任务契约决定。`TaskSample` 是当前 `TaskSemanticSpec` 下可独立执行和验收的单位，`Episode` 是固定候选在固定 `TaskSample` 上的一次完整运行轨迹，而不是输入样本。
 
 Sample can be independently frozen, replayed, executed, and evaluated under one task contract. 因此 `ProjectCase != Sample`：前者描述任务分布、样本集合、候选空间、预算和评测协议，后者是其中一个具体评价单位。样本边界不得由候选运行时临时改变；从告警级改为事故级会创建新的 Sample 和 Task 版本，并重新批准试验。
+
+`ProjectCase` 是一次完整方案选择的版本化试验合同，而不是一个示例或一个样本：
+
+```text
+ProjectCase = {
+  project_case_id, version,
+  source_evidence, sample_semantic_spec, task_semantic_spec,
+  adaptation_manifest, validation_manifest,
+  sealed_holdout_manifest, stress_and_failure_manifest,
+  capability_boundary, candidate_space,
+  trial_protocol, budgets, safety_constraints,
+  approvals, audit_policy, delivery_contract
+}
+```
+
+四份 `SampleSetManifest` 必须互异、不可变并各自具有版本、内容哈希与访问策略；Sample/Task 契约和四份 manifest 在候选生成前冻结，候选冻结后只有 GovernanceAuditor 可以解析 sealed-holdout 结果。
 
 ### 4.4 SampleSemanticSpec
 
@@ -405,7 +421,7 @@ LLM、Embedding、SVD、图算法或其他方法都只是更新表示、局部�
 | ValidationEngineer | 在 adaptation、validation 和 failure samples 上部署候选、执行可重放试验和故障注入 | SampleEvaluation[]、EvaluationRun、ExecutionTrace |
 | GovernanceAuditor | 候选冻结后独占 sealed holdout 的解析、评价和泄漏检查 | Holdout EvaluationReport、审计结论 |
 
-五个 Agent 具有独立目标、状态、决策、权限和责任产物，不是五个角色标签。`EngagementLead` 第一阶段可映射到 AgentTeams Manager 或 Team Leader；其余四个角色使用独立 Worker，实际映射以固定版本的运行配置为准。
+五个 Agent 具有独立目标、状态、决策、权限和责任产物，不是五个角色标签。`EngagementLead` 在后续运行中可映射到 AgentTeams Manager 或 Team Leader；其余四个角色使用独立 Worker，实际映射以固定版本的运行配置为准。
 
 ### 7.2 固定阶段骨架
 
@@ -445,9 +461,9 @@ RawMaterials + SourceObservations
 
 一个 Agent 不可用时，对应阶段保持未完成并记录失败；其他 Agent 不得静默冒充其责任产物。
 
-### 7.4 首轮 walking skeleton
+### 7.4 后续阶段候选 walking skeleton
 
-最近几天只验证一条链路：
+如后续阶段获准启动，只验证一条最小链路：
 
 ```text
 Human 提交 RawMaterials + SourceObservations
@@ -462,7 +478,7 @@ Human 提交 RawMaterials + SourceObservations
 → EngagementLead 输出 DeliveryDecision
 ```
 
-首轮允许人工触发阶段和创建资源，但不得人工口头补齐结构化产物、责任归属、候选输入、预算或审计结论。
+该链路不是初赛提交前置条件，也不是当前已批准计划。若启动，允许人工触发阶段和创建资源，但不得人工口头补齐结构化产物、责任归属、候选输入、预算或审计结论。
 
 ## 8. Project Dossier、版本、预算与安全
 
@@ -639,19 +655,23 @@ AgentFit 的差异不是“又一个多 Agent 框架”，而是：
 4. 同时优化效果、成本、风险、稳定性和可审计性；
 5. 只在未见项目验证后才更新跨项目先验。
 
-### 12.2 初赛材料状态
+### 12.2 2026-08-15 初赛提交阶段
 
-当前已完成结构、内容与自动验证，完整 17 页 PPTX/PDF 的逐页视觉复核仍待完成：
+本阶段只负责完成、验证和上传初赛材料，不把真实 AgentTeams 元团队或 walking skeleton 作为提交前置。当前唯一提交版本包括：
 
-- 488 个非空白字符的作品简介；
+- 不超过 500 个非空白字符的作品简介；
 - 12 页主路演 + 5 页附录；
 - 17 页 HTML-first、可编辑 PPTX 和同版 PDF；
 - 五个 Agent Identity、七个核心 Skill、Human/风险门禁、开放与合规披露；
-- 官网参考方向拆解与软件研发设计模拟，均明确标记为非运行证据。
+- 自动合同、结构、逐页内容、原生可编辑性、几何和视觉复核。
 
-ProjectCase、真实五元团队和统一候选对照尚未完成，不是初赛方案冻结的前置条件，也不得在材料中伪装为完成。
+OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依据；真实五元团队和统一候选对照尚未完成，不得伪装为运行证据。
 
-### 12.3 官方关注点映射
+### 12.3 后续阶段
+
+初赛提交后暂停扩展性开发。是否进入 AgentTeams walking skeleton、复赛工程或跨项目试验，由晋级结果、评审反馈和后续赛程共同决定；在出现新的赛事条件与明确授权前，只保留启动门禁，不把后续设想写成已启动计划。
+
+### 12.4 官方关注点映射
 
 | 官方关注点 | AgentFit 证明对象 |
 |---|---|
@@ -664,7 +684,7 @@ ProjectCase、真实五元团队和统一候选对照尚未完成，不是初赛
 | 工程和安全 | 可复现入口、依赖、配置、故障、成本、权限和证据包 |
 | 开放贡献 | 可复用 Schema、Skill、评测、示例、文档、许可证和维护计划 |
 
-### 12.4 红线
+### 12.5 红线
 
 禁止：
 
@@ -676,7 +696,7 @@ ProjectCase、真实五元团队和统一候选对照尚未完成，不是初赛
 - 只展示成功，不保留失败、降级、人工保留和否决；
 - 让比赛材料与内部证据状态不一致。
 
-## 13. 当前未实现范围与 AgentTeams 首轮验证门禁
+## 13. 当前未实现范围与 AgentTeams 后续运行门禁
 
 ### 13.1 当前未实现
 
@@ -691,9 +711,9 @@ ProjectCase、真实五元团队和统一候选对照尚未完成，不是初赛
 - 统一预算下的 Agentless、单 Agent和多 Agent真实对照；
 - 跨项目迁移收益、Meta-learning、生产部署或真实业务效果。
 
-### 13.2 近期唯一验证目标
+### 13.2 后续运行启动条件
 
-下一阶段不是继续扩展方案，也不是同时建设六个场景，而是在 AgentTeams 上完成一个最小 walking skeleton。首个 ProjectCase 仍需明确选择，在冻结前不得写成已批准测试项目。
+后续工作不会因初赛提交自动启动。只有晋级结果、评审反馈或新的赛事安排证明值得继续，并得到明确授权后，才在 AgentTeams 上选择一个首个 ProjectCase，执行第 7.4 节的最小 walking skeleton；在此之前不得写成已批准测试项目。
 
 可声称“AgentFit 已在 AgentTeams 跑通最小闭环”，必须同时满足：
 
@@ -707,7 +727,7 @@ ProjectCase、真实五元团队和统一候选对照尚未完成，不是初赛
 
 ### 13.3 代码边界判定
 
-首轮验证后，只有以下内容应优先固化为 AgentFit 代码：
+后续验证若获准启动，只有以下内容应优先固化为 AgentFit 代码：
 
 - Schema 校验和版本约束；
 - 阶段状态、审批主体和失败状态的确定性门禁；
@@ -720,9 +740,8 @@ AgentFit 不开发独立 UI、不修改 AgentTeams 核心，也不自建通用�
 
 ## 14. 规范引用
 
-- [初赛方案与路演冻结设计](../competition/2026-08-15/design/presentation-redesign.md)
-- [AgentTeams 落地设计](../competition/2026-08-15/design/agentteams-landing-design.md)
-- [初赛准备看板](../competition/2026-08-15/planning/readiness-board.md)
+- [初赛提交入口](../competition/2026-08-15/README.md)
+- [最终初赛提交](../competition/2026-08-15/submission/README.md)
 - [Agent Identity 清单](../competition/2026-08-15/submission/agent-identity.md)
 - [核心 Skill 清单](../competition/2026-08-15/submission/skill-catalog.md)
 - [Human 与风险门禁](../competition/2026-08-15/submission/risk-and-human-gates.md)
@@ -730,7 +749,6 @@ AgentFit 不开发独立 UI、不修改 AgentTeams 核心，也不自建通用�
 - [GOAI Agent Infra 初赛要求矩阵](internal/competition/preliminary-requirements-matrix.md)
 - [GOAI Agent Infra 初赛红线与声明检查表](internal/competition/preliminary-red-line-checklist.md)
 - [Evidence Registry](internal/evidence-research/evidence-registry.json)
-- [ProjectCase Contract](internal/contracts/project-case-template.md)
 - [《新智基座》Agent Infra 参赛手册](reference/新智基座-参赛手册.pdf)
 
 历史版本只通过 Git 提交记录追溯，不能覆盖本文件的当前定义、完成状态和证据边界。

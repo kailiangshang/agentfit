@@ -2,14 +2,14 @@
 
 > 状态:设计契约 `READY`,真实绑定 `NOT_STARTED`。当前定义 7 个核心 Skill。
 >
-> 真实 AgentTeams Skill 绑定待完成。在 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁满足前,本清单描述的是设计契约,不是已运行的 Skill 实例。
+> 真实 AgentTeams Skill 绑定待完成。在 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §13 门禁满足前,本清单描述的是设计契约,不是已运行的 Skill 实例。
 
 ## 事实源
 
 本清单从以下文件派生:
 
 - [AgentFit 整体方案](../../../docs/agentfit-solution.md) §4.3(能力语义)、§7(元团队与流程);
-- [AgentTeams 落地设计](../design/agentteams-landing-design.md) §4(Skill/MCP 映射);
+- [AgentFit 整体方案](../../../docs/agentfit-solution.md) §3(AgentTeams 边界)、§13(后续运行门禁);
 - 官方要求矩阵 §2(Skill 字段、阿里云官方 Skills)、§5(Skill 附件字段)。
 
 ## 官方字段对照
@@ -162,7 +162,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 
 ## 当前状态与门禁
 
-本清单的设计契约状态为 `READY`,真实 AgentTeams 绑定状态为 `NOT_STARTED`。当前只能表述为"Skill 设计完成";实际绑定工作启动并更新状态后,才能表述为"Skill 实现进行中"。最终完成态以 [AgentTeams 落地设计](../design/agentteams-landing-design.md) §8 门禁为准。
+本清单的设计契约状态为 `READY`,真实 AgentTeams 绑定状态为 `NOT_STARTED`。当前只能表述为"Skill 设计完成";实际绑定工作启动并更新状态后,才能表述为"Skill 实现进行中"。最终完成态以 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §13 门禁为准。
 
 ## 与官方要求的映射
 

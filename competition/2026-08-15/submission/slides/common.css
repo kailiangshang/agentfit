@@ -38,7 +38,7 @@ body {
   line-height: 1.2;
   font-weight: 700;
   color: #1a8d85;
-  width: 360px;
+  width: 420px;
   white-space: nowrap;
 }
 
@@ -50,8 +50,8 @@ body {
   top: 76px;
   width: 1136px;
   margin: 0;
-  font-size: 44px;
-  line-height: 1.08;
+  font-size: 42px;
+  line-height: 1.1;
   font-weight: 800;
   color: #102a43;
 }
@@ -94,6 +94,7 @@ body {
 .soft-coral { background: #f8ddd4; border-color: #f26b4b; }
 .soft-amber { background: #f3e5b8; border-color: #d6a43b; }
 .soft-blue { background: #dfeaf2; border-color: #426b86; }
+.soft-ink { background: #eef1f5; border-color: #53697c; }
 
 .label {
   position: absolute;
@@ -122,6 +123,14 @@ body {
   color: #53697c;
 }
 
+.tiny-copy {
+  position: absolute;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.28;
+  color: #718190;
+}
+
 .section-title {
   position: absolute;
   margin: 0;
@@ -135,14 +144,25 @@ body {
   position: absolute;
   margin: 0;
   font-family: "Noto Sans Mono CJK SC", "Courier New", monospace;
-  font-size: 56px;
+  font-size: 52px;
   line-height: 1;
+  font-weight: 700;
+  color: #1a8d85;
+}
+
+.code-tag {
+  position: absolute;
+  margin: 0;
+  font-family: "Noto Sans Mono CJK SC", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.2;
   font-weight: 700;
   color: #1a8d85;
 }
 
 .line { position: absolute; height: 2px; background: #1a8d85; }
 .line-v { position: absolute; width: 2px; background: #1a8d85; }
+.line-dim { position: absolute; height: 2px; background: #28516d; }
 
 .pill {
   position: absolute;
@@ -198,6 +218,22 @@ body {
   color: #1a8d85;
 }
 
+.chip {
+  position: absolute;
+  border: 1.5px solid #53697c;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.chip p {
+  margin: 4px 8px;
+  font-family: "Noto Sans Mono CJK SC", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #53697c;
+}
+
 .footer-left,
 .footer-right {
   position: absolute;
@@ -214,9 +250,9 @@ body {
 .dark .footer-left,
 .dark .footer-right { color: #8fa6b9; }
 
-.appendix .title { font-size: 38px; top: 70px; }
+.appendix .title { font-size: 36px; top: 70px; }
 .appendix .subtitle { top: 132px; font-size: 17px; }
 .appendix .top-rule { top: 178px; }
 .appendix .body-copy { font-size: 15px; line-height: 1.32; }
-.appendix .small-copy { font-size: 14px; line-height: 1.26; }
-.appendix .section-title { font-size: 20px; }
+.appendix .small-copy { font-size: 13px; line-height: 1.26; }
+.appendix .section-title { font-size: 19px; }
