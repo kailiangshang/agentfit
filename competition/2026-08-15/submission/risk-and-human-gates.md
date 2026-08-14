@@ -17,6 +17,7 @@
 4. **密钥由基础设施持有,不进入 Agent 上下文**;
 5. **沙箱、超时、预算和最大循环次数**必须预先设定;
 6. **失败、拒绝、人工接管、降级和回滚路径**必须预先定义。
+7. **探索性 Demo 不能进入正式决议**：retail/airline 的 DeepSeek + OpenCode 本地记录、自建工具、代理评估器和原始路径只可用于提出风险或设计问题；正式 Candidate、试验和交付必须按冻结合同重新执行。
 
 ## Human 门禁（人工审批）类型
 
@@ -129,6 +130,8 @@
 本清单的设计契约状态为 `READY`,真实运行状态为 `NOT_STARTED`。后续完成态以 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §13 门禁为准。
 
 **红线**:任何路演材料、简介或 PPT 不得声称高风险动作已具备完整审批/回滚/审计链路,除非上述门禁已在真实 AgentTeams 运行中得到验证并保留 Trace。
+
+OpsPilot 是官方案例锚点，但不证明 AgentFit 运行。retail/airline overnight 探索不使用官方 evaluator，且依赖 DeepSeek、OpenCode、本地路径/原始记录与自建工具；它们不产生正式 Candidate、官方分数或高风险动作授权。
 
 ## 治理摘要
 

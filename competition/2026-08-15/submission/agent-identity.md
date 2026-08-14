@@ -15,6 +15,8 @@
 
 每个 Identity 同时定义 Name、Role、Capabilities、Inputs、Outputs、Dependencies、Decision Boundary 和 Trace，使职责、输入输出、权限边界与责任证据可以独立检查。
 
+五个固定 Identity 共同完成同一条方案工程链：EngagementLead 负责目标、停止与交付控制；BusinessEngineer 负责业务材料和代表性案例的样本工程；AgentArchitect 负责完整方案建模；ValidationEngineer 负责受控试验执行；GovernanceAuditor 负责错误、证据与治理分析。名称、数量和责任边界不因具体案例而改变。
+
 ## Agent 的严格定义
 
 > Agent 是具有独立身份、任务所有权、决策闭环、状态边界、权限边界和责任边界的可执行子图。
@@ -39,7 +41,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 | 字段 | 内容 |
 |---|---|
 | Name | 交付官(EngagementLead) |
-| Role | 项目对外唯一入口,控制阶段推进、审批流转和最终交付 |
+| Role | 项目对外唯一入口，接收业务材料、代表性案例和用户优先级，控制阶段推进、审批流转和最终交付 |
 | Capabilities | 接收材料、冻结目标与边界；先组织 Sample/Task 契约及四份 manifest 的 Human 审批，再在候选生成后组织 TrialSpec、权限、预算和风险审批；控制阶段状态机并生成交付决议 |
 | Inputs | 用户原始材料、业务目标、约束条件、各阶段产物回传、审计结论 |
 | Outputs | **Project Dossier 状态**、ArchitectureDecision、最终 DeliveryDecision(SelectedSolution / HumanRetained / RejectionDecision) |
@@ -52,7 +54,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 | 字段 | 内容 |
 |---|---|
 | Name | 业务架构师(BusinessEngineer) |
-| Role | 理解原始业务观察，先编译样本语义与冻结样本集合，再编译任务语义并划定自动化边界 |
+| Role | 将原始业务材料和代表性案例编译为样本语义与冻结样本集合，再编译任务语义、验收和自动化边界 |
 | Capabilities | SourceObservation 解析、样本单位与 Schema 定义、分组/cutoff/split 设计、任务目标提炼、验收指标量化、风险与预算约束识别、Human 边界标注 |
 | Inputs | Project Dossier 中冻结的项目范围、用户原始材料、SourceObservation、现有流程描述、案例数据、验收目标 |
 | Outputs | **SampleSemanticSpec**、**SampleSetManifest**、**TaskSemanticSpec**；分别定义可重放样本单位与边界、版本化冻结集合及访问策略、目标/输出/指标/聚合/预算/风险/Human 边界 |
@@ -65,7 +67,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 | 字段 | 内容 |
 |---|---|
 | Name | 方案架构师(AgentArchitect) |
-| Role | 盘点能力,对齐任务与能力,生成并列候选,执行 Agent 分区 |
+| Role | 盘点能力，对齐任务与能力，构建包含 Tool、Skill、MCP、Memory、模型、Agent 拓扑和 Human 边界的并列候选，并执行 Agent 分区 |
 | Capabilities | 能力语义建模、任务—能力对齐分析、候选图构建、Agentize 必要性判定、复杂度代价评估 |
 | Inputs | SampleSemanticSpec、获准的 SampleSetManifest 与分布摘要、TaskSemanticSpec、可用能力清单(Skill/MCP/工具/模型/规则/记忆/Human)、权限边界、预算 |
 | Outputs | **能力库(Capability Registry)**、**缺口报告(AlignmentReport)**、**候选图集合(CandidateGraphSet)**:含无 Agent/单 Agent/多 Agent/人工混合并列候选 |
@@ -78,7 +80,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 | 字段 | 内容 |
 |---|---|
 | Name | 验证工程师(ValidationEngineer) |
-| Role | 在 adaptation、validation 和 failure samples 上部署候选，执行隔离评测与统一试验，收集样本级结果、成本和失败证据 |
+| Role | 在 adaptation、validation 和 failure samples 上部署候选，执行隔离试验，收集样本级结果、成本、失败和新案例验证证据 |
 | Capabilities | 沙箱执行、预算控制、adaptation/validation/failure 隔离、故障注入、成本与资源计量、Episode/Step Trace 采集 |
 | Inputs | CandidateGraphSet、获准的 SampleSetManifest(adaptation/validation/stress_and_failure)、TrialSpec、预算、权限、安全门禁 |
 | Outputs | **SampleEvaluation[]**、**EvaluationRun**、**ExecutionTrace**；每个 `CandidateVersion × SampleVersion × RunIndex` 产生一个 SampleEvaluation 和完整 Episode，记录 Step 级决策、工具、审批、成本、失败与回滚 |
@@ -91,7 +93,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 | 字段 | 内容 |
 |---|---|
 | Name | 审计官(GovernanceAuditor) |
-| Role | 在候选冻结后独立解析 sealed holdout，检查完整性、安全、复杂度和证据质量并出具最终审计结论 |
+| Role | 在候选冻结后独立解析 sealed holdout，分析错误、完整性、安全、复杂度和证据质量，并出具最终审计结论 |
 | Capabilities | sealed holdout 独占解析与评价、安全合规检查、复杂度代价复核、证据可复现性验证、数据污染与泄漏检测 |
 | Inputs | 已冻结 CandidateVersion、sealed_holdout SampleSetManifest、EvaluationRun、ExecutionTrace、安全约束、预算记录(只读) |
 | Outputs | **Holdout EvaluationReport**、**审计结论**:选择、否决、降级或保留人工建议 |

@@ -4,9 +4,11 @@
 
 ## 提交主线
 
-AgentFit 是运行在 AgentTeams 上的通用 Agent 方案建筑师。它把业务材料编译成 ProjectCase 与 TaskSample，在同一冻结样本、预算、权限和门禁下比较 Agentless、单 Agent、多 Agent及 Human 混合候选，交付最小充分、可验收、可审计的方案，也允许有证据地保留人工或拒绝自动化。
+AgentFit 是运行在 AgentTeams 上的 Agent 方案建筑师。企业提供业务材料、代表性案例和用户优先级；它先定义案例与验收，从简单方案开始运行，再依据证据调整完整方案，并以新案例验证后交付最小充分的已验证方案包，也允许保留人工或拒绝自动化。
 
-OpsPilot 官方 baseline 是首个 ProjectCase 的代码级审计参考，不是 AgentFit 运行证据。当前真实 ProjectCase、五元 Agent 团队和统一候选对照仍未运行，结论保持 `requires_runtime_trial`。
+内部候选严格表示为 `Candidate = (G, Π, θ, ρ)`：能力图、Agent 分区、参数与共享范围。Tool、Skill、MCP、Memory、Model、Agent 拓扑和 Human 边界都是方案变量；这不是以 Agent 数量或 ML 术语命名的产品。
+
+OpsPilot 是官方案例锚点，作为材料和设计参考，不是 AgentFit 运行证据。retail/airline 的 overnight 记录是 DeepSeek + OpenCode、本地路径与自建工具/代理评估器产生的探索性 Demo，非官方 evaluator、非 Candidate、非正式分数。真实 AgentFit 运行保持 `NOT_STARTED`。
 
 阶段边界：2026-08-15 初赛提交阶段只完成本目录材料、验证和上传；是否进入后续 AgentTeams walking skeleton、复赛工程或跨项目试验，由晋级结果、评审反馈、后续赛程和明确授权决定。AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。
 
@@ -42,7 +44,7 @@ OpsPilot 官方 baseline 是首个 ProjectCase 的代码级审计参考，不是
 | 8 | AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。 |
 | 9 | Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。 |
 | 10 | 交付 AgentSolutionPackage 与五种合法结果。 |
-| 11 | 证据账本：baseline 已代码级审计，候选对照仍待运行。 |
+| 11 | 证据账本：OpsPilot 为官方锚点，retail/airline 仅探索性 Demo。 |
 | 12 | 从 OpsPilot 回到通用：Fit 是有证据选对方案。 |
 | A1 | 七层 ML 映射、候选四元组与内外循环。 |
 | A2 | 五个 Agent Identity：判断权、状态边界与责任产物。 |
@@ -52,8 +54,8 @@ OpsPilot 官方 baseline 是首个 ProjectCase 的代码级审计参考，不是
 
 ## 事实边界
 
-- 五个元 Agent 负责设计、评测和审计方案；候选 C2 内的 Agent 才是业务执行 Agent。
-- 两个事故用于定义 TaskSample 的设计契约，不是 AgentFit 运行结果。
+- 五个元 Agent 分别负责目标/停止控制、业务与样本工程、方案建模、试验执行、错误/治理分析；候选 C2 内的 Agent 才是业务执行 Agent。
+- OpsPilot 是官方案例锚点；retail/airline 只是不使用官方 evaluator 的探索性 Demo。
 - AgentTeams 历史 smoke test 只证明底座能力，不等于 AgentFit 已集成。
-- 不声称已有候选分数、赢家、ROI、生产收益或 Meta-learning 证据。
+- 不声称已有候选分数、赢家、ROI、生产收益、训练系统或 Meta-learning 证据。
 - 生成、验证和最终证据见 [ppt-outline.md](ppt-outline.md) 与 [REVIEW.md](REVIEW.md)。

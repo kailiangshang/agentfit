@@ -68,11 +68,24 @@
 
 AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、审计结论是模型无关的结构化产物;模型是候选的参数 θ,可替换并重新评测。
 
-### 2.3 第三方库与工具
+### 2.3 探索性 Demo 依赖与证据限制
+
+| 资产或依赖 | 当前用途 | 不可作出的声明 |
+|---|---|---|
+| OpsPilot | 官方案例锚点、材料与设计参考 | AgentFit 已运行、已集成或已得分 |
+| τ³-bench retail / airline 材料 | 探索性 Demo 的案例来源 | AgentFit 正式 ProjectCase、Candidate 或官方结果 |
+| DeepSeek | retail/airline 探索中的模型提供方 | 经正式模型冻结与统一对照验证的结论 |
+| OpenCode | 本地探索的 CLI 运行环境 | AgentTeams 端到端集成 |
+| 自建工具、代理评估器 | 检查局部流程与失败模式 | 官方 evaluator、官方 benchmark 成绩或生产效果 |
+| 本地路径与原始记录 | 可追溯的本地探索线索 | 可移植、可公开或可复现实验包 |
+
+retail/airline 的 overnight 运行只属于探索性 Demo 证据。其原始记录可能含环境、路径或未脱敏材料，不能因存在于仓库或本机而自动成为可发布的复现实验资产。正式 AgentFit runtime 仍为 `NOT_STARTED`；只有按冻结 ProjectCase、Candidate、TrialSpec、权限、预算和独立审计门禁重新运行，才可形成正式证据。
+
+### 2.4 第三方库与工具
 
 真实实现时在 `pyproject.toml` 或等价文件中固定并披露。当前仓库未锁定实现依赖,因为核心实现尚未完成。
 
-### 2.4 数据来源
+### 2.5 数据来源
 
 | 数据 | 来源 | License / 授权 | 用途 |
 |---|---|---|---|
@@ -80,7 +93,7 @@ AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、�
 | 参赛手册 | 新智基座 Agent Infra 参赛手册 | 官方文件 | 要求矩阵与红线 |
 | 跨场景证据卡(SWE-bench/GAIA/CyBench/τ-bench/CUAD 等) | 各 benchmark 官方 | 各自 license,内部研究用,不二次分发 | 未来 ProjectCase 的任务、能力与评测建模证据;不代表已经选择项目 |
 
-### 2.5 商业 API 与闭源模型披露
+### 2.6 商业 API 与闭源模型披露
 
 AgentFit 的真实运行预期使用商业 LLM API。相关依赖、成本和替换边界将完整披露:
 
@@ -143,8 +156,9 @@ AgentFit 的真实运行预期使用商业 LLM API。相关依赖、成本和替
 本项目遵循以下披露原则:
 
 - 不把概念图或本地模拟写成真实运行;
+- 不把 DeepSeek + OpenCode 的 retail/airline 探索、代理评估器或本地原始记录写成官方评测、正式 Candidate 或 AgentTeams 集成;
 - 不把 AgentTeams 名称当作集成证据;
-- 不隐瞒既有仓库、第三方贡献、商业 API 或闭源模型(本文件 §2.5 明确披露);
+- 不隐瞒既有仓库、第三方贡献、商业 API 或闭源模型(本文件 §2.6 明确披露);
 - 明确披露数据授权、许可证、密钥、权限和依赖的当前状态;
 - 设计契约要求高风险动作具备审批、拒绝、回滚和审计;真实链路为 `NOT_STARTED`(见 [risk-and-human-gates.md](risk-and-human-gates.md));
 - 不只展示成功,失败、降级、否决证据同等保留;

@@ -17,7 +17,9 @@
 
 ## Skill 与 Agent 的关系
 
-Skill 是**可复用的做事方法**,不是 Agent。Agent 是组合和支配能力子图的独立决策与责任主体。一个 Skill 可被多个 Agent 调用,一个 Agent 可调用多个 Skill。AgentFit 不把每个 Prompt、Skill、工具或流程阶段包装成 Agent。
+Skill 是**可复用、可版本化的做事方法**,不是 Agent。Agent 是组合和支配能力子图的独立决策与责任主体。一个 Skill 可被多个 Agent 调用,一个 Agent 可调用多个 Skill。AgentFit 不把每个 Prompt、Skill、工具或流程阶段包装成 Agent。
+
+失败模式可以提出新的 Skill 或新版本，但不能自动成为共享能力：必须限定适用边界、完成版本化记录，并在新案例上验证后才允许晋升。当前七个核心 Skill 固定；真实绑定仍为 `NOT_STARTED`。
 
 ## 与阿里云官方 Skills 的关系
 
@@ -132,7 +134,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 输出结果 | ProjectAsset(项目作用域);MetaAsset 候选(脱敏 + 参数化 + 适用域 + 失败边界) |
 | 调用条件 | 交付阶段后触发;MetaAsset 晋升必须经过跨项目复验与独立审计 |
 | 依赖工具系统 | 版本化存储、脱敏器、回归测试器 |
-| 失败处理 | 未见项目 holdout 退化、数据污染、适用边界不清或证据被推翻时不得晋升或必须冻结 |
+| 失败处理 | 未见项目 holdout 退化、数据污染、适用边界不清或证据被推翻时不得晋升或必须冻结；失败模式可提出新版本 Skill，但必须经新案例验证后才可晋升 |
 | 权限安全 | 共享资产晋升前必须脱敏;不携带密钥或敏感数据 |
 | 复用价值 | MetaAsset 是跨项目学习载体;但**未见项目验证前不宣称 Meta-learning** |
 
