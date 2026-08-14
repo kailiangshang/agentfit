@@ -14,7 +14,7 @@ from pathlib import Path
 
 from pptx import Presentation
 from pptx.util import Inches
-from pypdf import PdfWriter
+from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen.canvas import Canvas
 
 
@@ -518,6 +518,81 @@ class SubmissionContractTest(unittest.TestCase):
             [path.name[:2] for path in slides],
         )
 
+    def test_submission_page_and_contract_counts_are_exact(self) -> None:
+        slides = sorted(SLIDES_DIR.glob("[0-9][0-9]-*.html"))
+        self.assertEqual(17, len(slides))
+        self.assertEqual(17, len(Presentation(PPTX).slides))
+        self.assertEqual(17, len(PdfReader(PDF).pages))
+
+        identity = AGENT_IDENTITY.read_text(encoding="utf-8")
+        identity_headings = re.findall(
+            r"^## (\d+)\.\s", identity, flags=re.MULTILINE
+        )
+        self.assertEqual(["1", "2", "3", "4", "5"], identity_headings)
+
+        skills = SKILL_CATALOG.read_text(encoding="utf-8")
+        skill_headings = re.findall(
+            r"^### (S\d+)\.\s", skills, flags=re.MULTILINE
+        )
+        self.assertEqual([f"S{index}" for index in range(1, 8)], skill_headings)
+
+    def test_revised_narrative_and_evidence_boundaries_are_frozen(self) -> None:
+        page_5 = (SLIDES_DIR / "05-search-space.html").read_text(encoding="utf-8")
+        page_6 = (SLIDES_DIR / "06-selection-rule.html").read_text(encoding="utf-8")
+        page_11 = (SLIDES_DIR / "11-evidence.html").read_text(encoding="utf-8")
+
+        for term in (
+            "完整方案空间",
+            "工具",
+            "Skill",
+            "MCP",
+            "Memory",
+            "模型",
+            "Agent 拓扑",
+            "Human 边界",
+            "C0",
+            "C1",
+            "C2",
+            "C3",
+        ):
+            with self.subTest(page=5, term=term):
+                self.assertIn(term, page_5)
+        for term in (
+            "五阶段闭环",
+            "定义案例与验收",
+            "构建最小候选",
+            "运行并测量",
+            "分析并调整",
+            "验证并停止",
+        ):
+            with self.subTest(page=6, term=term):
+                self.assertIn(term, page_6)
+        for term in (
+            "探索性 Demo 证据",
+            "retail",
+            "airline",
+            "非官方 evaluator",
+            "不代表正式 Candidate",
+        ):
+            with self.subTest(page=11, term=term):
+                self.assertIn(term, page_11)
+
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(SLIDES_DIR.glob("*.html"))
+        )
+        for term in (
+            "Agent 方案训练系统",
+            "AutoML for Agents",
+            "语义反向传播",
+            "proxy 分数是官方结果",
+            "代理分数是官方结果",
+            "proxy score is official",
+            "exploratory proxy scores are official results",
+        ):
+            with self.subTest(forbidden=term):
+                self.assertNotIn(term, source)
+
     def test_html_sources_use_pptx_safe_solid_colors(self) -> None:
         for path in sorted(SLIDES_DIR.glob("*.html")):
             source = path.read_text(encoding="utf-8")
@@ -857,16 +932,48 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(term=term):
                 self.assertIn(term, validator.REQUIRED_TERMS)
+        self.assertEqual(
+            "完整方案空间：工具、Skill、MCP、Memory、模型、Agent 拓扑与 Human 边界都是变量。",
+            validator.EXPECTED_PAGE_TITLES[4],
+        )
+        self.assertEqual(
+            "五阶段闭环：定义案例与验收、构建最小候选、运行并测量、分析并调整、验证并停止。",
+            validator.EXPECTED_PAGE_TITLES[5],
+        )
+        self.assertEqual(
+            "证据账本：探索性 Demo 已有证据，非官方 evaluator 与正式 AgentFit 候选仍待运行。",
+            validator.EXPECTED_PAGE_TITLES[10],
+        )
+        for term in (
+            "完整方案空间",
+            "五阶段闭环",
+            "探索性 Demo 证据",
+            "非官方 evaluator",
+        ):
+            with self.subTest(term=term):
+                self.assertTrue(
+                    any(
+                        term in terms
+                        for terms in validator.SLIDE_REQUIRED_TERMS.values()
+                    )
+                )
 
     def test_validator_forbids_overclaims(self) -> None:
         validator = _load_validator()
         for term in (
+            "Agent 方案训练系统",
+            "AutoML for Agents",
+            "语义反向传播",
             "已选定 C2",
             "C2 胜出",
             "已跑通最小闭环",
             "ROI 提升",
             "准确率 9",
             "Meta-learning 已验证",
+            "proxy 分数是官方结果",
+            "代理分数是官方结果",
+            "proxy score is official",
+            "exploratory proxy scores are official results",
         ):
             with self.subTest(term=term):
                 self.assertIn(term, validator.FORBIDDEN_TERMS)
