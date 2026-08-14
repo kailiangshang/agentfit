@@ -1151,66 +1151,161 @@ class SubmissionContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="submission-entry-count-") as temp_dir:
             temp = Path(temp_dir)
 
-            identity_pptx = temp / "extra-identity-numbered.pptx"
-            presentation = Presentation(PPTX)
-            identity_shape = presentation.slides[6].shapes[12]
-            identity_shape.text = f"{identity_shape.text}\n{identity_numbered_mutation}"
-            presentation.save(identity_pptx)
-            identity_numbered_errors = validator.validate(identity_pptx)
+            def mutate_pptx(
+                path: Path, slide_number: int, anchor: str, mutation: str
+            ) -> list[str]:
+                presentation = Presentation(PPTX)
+                matches = [
+                    shape
+                    for shape in validator._iter_shapes(
+                        presentation.slides[slide_number - 1].shapes
+                    )
+                    if getattr(shape, "has_text_frame", False)
+                    and anchor in shape.text
+                ]
+                self.assertEqual(
+                    1,
+                    len(matches),
+                    f"frozen list anchor must identify one text shape: {anchor!r}",
+                )
+                matches[0].text = f"{matches[0].text}\n{mutation}"
+                presentation.save(path)
+                return validator.validate(path)
 
-            identity_unnumbered_pptx = temp / "extra-identity-unnumbered.pptx"
-            presentation = Presentation(PPTX)
-            identity_shape = presentation.slides[6].shapes[12]
-            identity_shape.text = f"{identity_shape.text}\n{identity_unnumbered_mutation}"
-            presentation.save(identity_unnumbered_pptx)
-            identity_unnumbered_errors = validator.validate(identity_unnumbered_pptx)
+            identity_numbered_errors = mutate_pptx(
+                temp / "extra-identity-numbered.pptx",
+                7,
+                "01 交付官",
+                identity_numbered_mutation,
+            )
+            identity_unnumbered_errors = mutate_pptx(
+                temp / "extra-identity-unnumbered.pptx",
+                7,
+                "01 交付官",
+                identity_unnumbered_mutation,
+            )
+            skill_numbered_errors = mutate_pptx(
+                temp / "extra-skill-numbered.pptx",
+                15,
+                "1 任务编译",
+                skill_numbered_mutation,
+            )
+            skill_unnumbered_errors = mutate_pptx(
+                temp / "extra-skill-unnumbered.pptx",
+                15,
+                "1 任务编译",
+                skill_unnumbered_mutation,
+            )
 
-            skill_pptx = temp / "extra-skill-numbered.pptx"
-            presentation = Presentation(PPTX)
-            skill_shape = presentation.slides[14].shapes[8]
-            skill_shape.text = f"{skill_shape.text}\n{skill_numbered_mutation}"
-            presentation.save(skill_pptx)
-            skill_numbered_errors = validator.validate(skill_pptx)
+            def pdf_anchor_position(
+                page_number: int, number: int, label: str
+            ) -> tuple[float, float, float]:
+                page = PdfReader(PDF).pages[page_number - 1]
+                spans: list[tuple[float, float, str, float]] = []
 
-            skill_unnumbered_pptx = temp / "extra-skill-unnumbered.pptx"
-            presentation = Presentation(PPTX)
-            skill_shape = presentation.slides[14].shapes[8]
-            skill_shape.text = f"{skill_shape.text}\n{skill_unnumbered_mutation}"
-            presentation.save(skill_unnumbered_pptx)
-            skill_unnumbered_errors = validator.validate(skill_unnumbered_pptx)
+                def visitor(
+                    text: str,
+                    _cm: object,
+                    tm: object,
+                    _font: object,
+                    size: float,
+                ) -> None:
+                    if text.strip():
+                        spans.append((float(tm[4]), float(tm[5]), text, float(size)))
 
-            overlay_path = temp / "entry-overlay.pdf"
-            canvas = Canvas(str(overlay_path), pagesize=(1280, 720))
+                page.extract_text(visitor_text=visitor)
+                anchor_pattern = rf"^\s*0?{number}(?=\s|/|$)"
+                matches = [
+                    span
+                    for span in spans
+                    if re.match(anchor_pattern, span[2])
+                    and any(
+                        abs(span[1] - other[1]) <= 1
+                        and abs(span[0] - other[0]) <= 120
+                        and label[:1] in other[2]
+                        for other in spans
+                    )
+                ]
+                self.assertEqual(
+                    1,
+                    len(matches),
+                    f"frozen PDF list anchor must identify one text span: {number} {label}",
+                )
+                return matches[0][0], matches[0][1], matches[0][3]
+
             pdfmetrics.registerFont(
                 TTFont(
                     "DroidSansFallback",
                     "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
                 )
             )
-            canvas.setFont("DroidSansFallback", 10)
-            for page_number in range(17):
-                if page_number == 6:
-                    canvas.drawString(112, 272, identity_numbered_mutation)
-                    canvas.drawString(112, 256, identity_unnumbered_mutation)
-                if page_number == 14:
-                    canvas.drawString(112, 338, skill_numbered_mutation)
-                    canvas.drawString(112, 322, skill_unnumbered_mutation)
-                if page_number < 16:
-                    canvas.showPage()
-            canvas.save()
 
-            overlay_reader = PdfReader(overlay_path)
-            pdf_path = temp / "extra-entries.pdf"
-            writer = PdfWriter(clone_from=str(PDF))
-            writer.pages[6].merge_page(overlay_reader.pages[6])
-            writer.pages[14].merge_page(overlay_reader.pages[14])
-            with pdf_path.open("wb") as stream:
-                writer.write(stream)
-            pdf_errors = validator.validate(PPTX, pdf_path)
+            def mutate_pdf(
+                path: Path,
+                page_number: int,
+                number: int,
+                label: str,
+                mutation: str,
+                unnumbered: bool = False,
+            ) -> list[str]:
+                base_reader = PdfReader(PDF)
+                page = base_reader.pages[page_number - 1]
+                x, y, size = pdf_anchor_position(page_number, number, label)
+                overlay_path = temp / f"{path.stem}-overlay.pdf"
+                canvas = Canvas(
+                    str(overlay_path),
+                    pagesize=(float(page.mediabox.width), float(page.mediabox.height)),
+                )
+                canvas.setFont("DroidSansFallback", size)
+                for overlay_page in range(len(base_reader.pages)):
+                    if overlay_page == page_number - 1:
+                        draw_y = y - size * 1.5 if unnumbered else y
+                        canvas.drawString(x, draw_y, mutation)
+                    canvas.showPage()
+                canvas.save()
+                overlay_reader = PdfReader(overlay_path)
+                writer = PdfWriter(clone_from=str(PDF))
+                writer.pages[page_number - 1].merge_page(
+                    overlay_reader.pages[page_number - 1]
+                )
+                with path.open("wb") as stream:
+                    writer.write(stream)
+                return validator.validate(PPTX, path)
+
+            identity_numbered_pdf_errors = mutate_pdf(
+                temp / "extra-identity-numbered.pdf",
+                7,
+                1,
+                "交付官",
+                identity_numbered_mutation,
+            )
+            identity_unnumbered_pdf_errors = mutate_pdf(
+                temp / "extra-identity-unnumbered.pdf",
+                7,
+                1,
+                "交付官",
+                identity_unnumbered_mutation,
+                True,
+            )
+            skill_numbered_pdf_errors = mutate_pdf(
+                temp / "extra-skill-numbered.pdf",
+                15,
+                1,
+                "任务编译",
+                skill_numbered_mutation,
+            )
+            skill_unnumbered_pdf_errors = mutate_pdf(
+                temp / "extra-skill-unnumbered.pdf",
+                15,
+                1,
+                "任务编译",
+                skill_unnumbered_mutation,
+                True,
+            )
 
         for errors in (
             identity_numbered_errors,
-            pdf_errors,
+            identity_numbered_pdf_errors,
         ):
             with self.subTest(artifact_errors=errors):
                 self.assertTrue(
@@ -1220,14 +1315,15 @@ class SubmissionContractTest(unittest.TestCase):
         for errors in (
             identity_unnumbered_errors,
             skill_unnumbered_errors,
-            pdf_errors,
+            identity_unnumbered_pdf_errors,
+            skill_unnumbered_pdf_errors,
         ):
             with self.subTest(artifact_errors=errors):
                 self.assertTrue(
                     any("unrecognized extra identity/Skill entry" in error for error in errors),
                     errors,
                 )
-        for errors in (skill_numbered_errors, pdf_errors):
+        for errors in (skill_numbered_errors, skill_numbered_pdf_errors):
             with self.subTest(artifact_errors=errors):
                 self.assertTrue(
                     any("exactly seven fixed Skill entries" in error for error in errors),

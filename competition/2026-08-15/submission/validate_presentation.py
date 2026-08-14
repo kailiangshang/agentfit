@@ -365,7 +365,7 @@ def _structured_integer_entries(text: str) -> list[tuple[int, str]]:
 
 
 def _skill_list_residual(text: str) -> str:
-    """Return non-entry content inside the explicit seven-Skill list region."""
+    """Return non-entry content inside a seven-Skill list text region."""
     start = text.find("SEVEN SKILLS")
     end = text.find("SKILL ·", start + len("SEVEN SKILLS"))
     if start < 0:
@@ -410,12 +410,12 @@ def _has_unnumbered_identity_card(text: str) -> bool:
 
 
 def _pdf_positioned_list_text(page: object, page_number: int) -> str:
-    """Extract the page's visual list band for PDF-only overlay mutations."""
-    spans: list[tuple[float, str]] = []
+    """Extract a list band derived from frozen numbered-entry anchors."""
+    spans: list[tuple[float, str, float, float]] = []
 
-    def visitor(text: str, _cm: object, tm: object, _font: object, _size: float) -> None:
+    def visitor(text: str, _cm: object, tm: object, _font: object, size: float) -> None:
         if text.strip():
-            spans.append((float(tm[5]), text))
+            spans.append((float(tm[4]), float(tm[5]), text, float(size)))
 
     try:
         page.extract_text(visitor_text=visitor)
@@ -423,43 +423,56 @@ def _pdf_positioned_list_text(page: object, page_number: int) -> str:
         return ""
 
     if page_number == 15:
-        heading_ys = [y for y, text in spans if "SEVEN SKILLS" in text]
-        boundary_ys = [
-            y for y, text in spans if text.strip().startswith("SKILL ·")
-        ]
-        if not heading_ys or not boundary_ys:
-            return ""
-        high, low = max(heading_ys), min(boundary_ys)
-        groups: dict[float, list[str]] = {}
-        for y, text in spans:
-            if low < y < high:
-                groups.setdefault(round(y, 1), []).append(text)
-        lines: list[str] = []
-        for y in sorted(groups, reverse=True):
-            line = ""
-            for text in groups[y]:
-                if line and re.match(r"\s*\d", text):
-                    line += " "
-                line += text
-            lines.append(line)
-        return "\n".join(lines)
+        anchor_labels = EXPECTED_SKILL_ENTRIES
+        number_pattern = lambda number: rf"^\s*{number}(?=\s|/|$)"
+    elif page_number in (7, 14):
+        anchor_labels = ("交付官", "业务架构师", "方案架构师", "验证工程师", "审计官")
+        number_pattern = lambda number: rf"^\s*0?{number}(?=\s|/|$)"
+    else:
+        return ""
 
-    if page_number in (7, 14):
-        title_ys = [
-            y for y, text in spans if re.match(r"\s*0[1-5](?:\s*/\s*|\s+)", text)
+    anchor_spans: list[tuple[float, float, str, float]] = []
+    for number, label in enumerate(anchor_labels, start=1):
+        candidates = [
+            span
+            for span in spans
+            if re.match(number_pattern(number), span[2])
+            and any(
+                abs(span[1] - other[1]) <= 1
+                and abs(span[0] - other[0]) <= 120
+                and label[:1] in other[2]
+                for other in spans
+            )
         ]
-        if not title_ys:
+        if len(candidates) != 1:
             return ""
-        title_y = title_ys[0]
-        return "\n".join(text for y, text in spans if abs(y - title_y) <= 18)
-    return ""
+        anchor_spans.append(candidates[0])
+    if len(anchor_spans) != len(anchor_labels):
+        return ""
+
+    anchor_ys = [y for _, y, _, _ in anchor_spans]
+    padding = max(size for _, _, _, size in anchor_spans) * 2
+    low, high = min(anchor_ys) - padding, max(anchor_ys) + padding
+    groups: dict[float, list[str]] = {}
+    for _, y, text, _ in spans:
+        if low <= y <= high:
+            groups.setdefault(round(y, 1), []).append(text)
+    lines: list[str] = []
+    for y in sorted(groups, reverse=True):
+        line = ""
+        for text in groups[y]:
+            if line and re.match(r"\s*\d", text):
+                line += " "
+            line += text
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _numbered_contract_errors(
     page_label: str,
     page_number: int,
     text: str,
-    positioned_list_text: str = "",
+    positioned_list_text: str | None = None,
 ) -> list[str]:
     errors: list[str] = []
     marker = EXPECTED_PAGE_MARKERS[page_number - 1]
@@ -500,14 +513,14 @@ def _numbered_contract_errors(
                     f"{page_label} is missing fixed Skill entry: {skill}"
                 )
     if page_number == 15:
-        list_text = positioned_list_text or text
-        if _skill_list_residual(list_text):
+        list_text = text if positioned_list_text is None else positioned_list_text
+        if list_text and _skill_list_residual(list_text):
             errors.append(
                 f"{page_label} contains an unrecognized extra identity/Skill entry"
             )
     elif page_number in (7, 14):
-        identity_text = positioned_list_text or text
-        if _has_unnumbered_identity_card(identity_text):
+        identity_text = text if positioned_list_text is None else positioned_list_text
+        if identity_text and _has_unnumbered_identity_card(identity_text):
             errors.append(
                 f"{page_label} contains an unrecognized extra identity/Skill entry"
             )
