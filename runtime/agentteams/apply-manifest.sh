@@ -59,7 +59,7 @@ command -v "${CONTAINER_COMMAND}" >/dev/null || die "container command is unavai
 umask 077
 mkdir -p -- "$(dirname -- "${APPLY_LOG}")"
 : >"${APPLY_LOG}"
-chmod 600 -- "${APPLY_LOG}"
+chmod -- 600 "${APPLY_LOG}"
 
 controller="$(${CONTAINER_COMMAND} ps --format '{{.Names}}' 2>>"${APPLY_LOG}" | awk '/^(agentteams|hiclaw)-controller$/ { print; exit }')"
 [[ -n "${controller}" ]] || die 'running AgentTeams controller was not found'
@@ -79,7 +79,10 @@ human_update=""
 command -v python3 >/dev/null || die 'python3 is required to inspect multi-document manifests'
 python3 -c 'import yaml' >/dev/null 2>>"${APPLY_LOG}" || die \
   'PyYAML is required to inspect multi-document manifests; inspect the private apply log'
-mapfile -t human_names < <(
+human_names=()
+while IFS= read -r human_name; do
+  [[ -n "${human_name}" ]] && human_names+=("${human_name}")
+done < <(
   python3 -c \
     'import sys, yaml; print("\\n".join(str(d["metadata"]["name"]) for d in yaml.safe_load_all(open(sys.argv[1], encoding="utf-8")) if d and d.get("kind") == "Human"))' \
     "${MANIFEST}"
@@ -96,7 +99,7 @@ if ((${#existing_humans[@]})); then
   [[ "${REUSE_EXISTING_HUMAN}" == true ]] || die \
     'existing Human scope cannot be verified or updated on AgentTeams v1.1.2; inspect the applied manifest and rerun with --reuse-existing-human to acknowledge reuse'
   filtered_manifest="$(mktemp "${TMPDIR:-/tmp}/agentfit-manifest.XXXXXX.yaml")"
-  chmod 600 -- "${filtered_manifest}"
+  chmod -- 600 "${filtered_manifest}"
   python3 -c \
     'import sys, yaml; source, target, *existing = sys.argv[1:]; docs = [d for d in yaml.safe_load_all(open(source, encoding="utf-8")) if d and not (d.get("kind") == "Human" and str(d.get("metadata", {}).get("name")) in existing)]; yaml.safe_dump_all(docs, open(target, "w", encoding="utf-8"), allow_unicode=True, explicit_start=True, sort_keys=False)' \
     "${MANIFEST}" "${filtered_manifest}" "${existing_humans[@]}"

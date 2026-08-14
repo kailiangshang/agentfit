@@ -63,7 +63,7 @@ printf "export AGENTFIT_TEAM_MANIFEST='%s'\n" \
   > .local-demo/agentteams/m1/manifest.env
 source .local-demo/agentteams/m1/manifest.env
 
-test "$(stat -c '%a' .local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml)" = 600
+test "$(stat -f '%Lp' .local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml 2>/dev/null || stat -c '%a' .local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml)" = 600
 git check-ignore -q .local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml
 ```
 

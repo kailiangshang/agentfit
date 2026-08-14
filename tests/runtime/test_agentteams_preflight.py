@@ -3,10 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from runtime.agentteams import preflight as preflight_module
 from runtime.agentteams.preflight import (
     CommandResult,
     HostResources,
     OFFICIAL_IMAGES,
+    _detect_memory_bytes,
     run_preflight,
 )
 
@@ -50,7 +52,7 @@ class AgentTeamsPreflightTest(unittest.TestCase):
             (
                 "git",
                 "-C",
-                str(self.repo),
+                str(self.repo.resolve()),
                 "rev-parse",
                 "--verify",
                 f"refs/tags/{self.version}",
@@ -108,7 +110,7 @@ class AgentTeamsPreflightTest(unittest.TestCase):
         tag_command = (
             "git",
             "-C",
-            str(self.repo),
+            str(self.repo.resolve()),
             "rev-parse",
             "--verify",
             f"refs/tags/{self.version}",
@@ -165,6 +167,35 @@ class AgentTeamsPreflightTest(unittest.TestCase):
             "AGENTTEAMS_OPENAI_BASE_URL": "https://example.invalid/v1",
             "AGENTTEAMS_DEFAULT_MODEL": "model",
         }
+
+
+class MemoryDetectionTest(unittest.TestCase):
+    def test_proc_meminfo_is_preferred_when_present(self):
+        with tempfile.TemporaryDirectory() as td:
+            meminfo = Path(td) / "meminfo"
+            meminfo.write_text("MemTotal:       16384000 kB\n", encoding="utf-8")
+            self.assertEqual(16384000 * 1024, _detect_memory_bytes(meminfo))
+
+    def test_darwin_sysctl_is_used_when_meminfo_is_missing(self):
+        original_platform = preflight_module.sys.platform
+        original_run = preflight_module.SubprocessRunner.run
+        try:
+            preflight_module.sys.platform = "darwin"
+            preflight_module.SubprocessRunner.run = lambda self, argv, timeout=30: CommandResult(
+                0, str(8 * 1024**3), ""
+            )
+            self.assertEqual(8 * 1024**3, _detect_memory_bytes(Path("/nonexistent-meminfo")))
+        finally:
+            preflight_module.sys.platform = original_platform
+            preflight_module.SubprocessRunner.run = original_run
+
+    def test_unknown_platform_reports_zero(self):
+        original_platform = preflight_module.sys.platform
+        try:
+            preflight_module.sys.platform = "linux"
+            self.assertEqual(0, _detect_memory_bytes(Path("/nonexistent-meminfo")))
+        finally:
+            preflight_module.sys.platform = original_platform
 
 
 if __name__ == "__main__":

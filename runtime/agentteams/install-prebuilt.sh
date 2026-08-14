@@ -48,8 +48,16 @@ while (($#)); do
   esac
 done
 
+file_mode() {
+  if stat -f '%Lp' -- "$1" >/dev/null 2>&1; then
+    stat -f '%Lp' -- "$1"
+  else
+    stat -c '%a' -- "$1"
+  fi
+}
+
 test -f "${ENV_FILE}" || die "private env file does not exist: ${ENV_FILE}"
-test "$(stat -c '%a' -- "${ENV_FILE}")" = "600" || die 'private env file must have mode 0600'
+test "$(file_mode "${ENV_FILE}")" = "600" || die 'private env file must have mode 0600'
 git -C "${AGENTFIT_ROOT}" check-ignore -q -- "${ENV_FILE}" || die 'private env file must be ignored by Git'
 [[ "${INSTALL_LOG}" != "${ENV_FILE}" ]] || die 'install log must not overwrite the private env file'
 git -C "${AGENTFIT_ROOT}" check-ignore -q -- "${INSTALL_LOG}" || die 'install log must be ignored by Git'
@@ -130,7 +138,7 @@ cd -- "${AGENTTEAMS_REPO}/install"
 umask 077
 mkdir -p -- "$(dirname -- "${INSTALL_LOG}")"
 : >"${INSTALL_LOG}"
-chmod 600 -- "${INSTALL_LOG}"
+chmod -- 600 "${INSTALL_LOG}"
 
 if bash "${INSTALLER}" >"${INSTALL_LOG}" 2>&1; then
   printf 'AgentTeams prebuilt install completed; private install log: %s\n' "${INSTALL_LOG}"

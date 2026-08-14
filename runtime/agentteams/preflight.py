@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Mapping, Protocol, Sequence
@@ -61,6 +62,18 @@ class SubprocessRunner:
         )
 
 
+def _detect_memory_bytes(meminfo: Path) -> int:
+    if meminfo.exists():
+        for line in meminfo.read_text(encoding="utf-8").splitlines():
+            if line.startswith("MemTotal:"):
+                return int(line.split()[1]) * 1024
+    if sys.platform == "darwin":
+        result = SubprocessRunner().run(["sysctl", "-n", "hw.memsize"])
+        if result.returncode == 0 and result.stdout.strip().isdigit():
+            return int(result.stdout.strip())
+    return 0
+
+
 @dataclass(frozen=True)
 class HostResources:
     cpu_count: int
@@ -69,13 +82,7 @@ class HostResources:
 
     @classmethod
     def detect(cls, disk_path: Path) -> "HostResources":
-        memory_bytes = 0
-        meminfo = Path("/proc/meminfo")
-        if meminfo.exists():
-            for line in meminfo.read_text(encoding="utf-8").splitlines():
-                if line.startswith("MemTotal:"):
-                    memory_bytes = int(line.split()[1]) * 1024
-                    break
+        memory_bytes = _detect_memory_bytes(Path("/proc/meminfo"))
         return cls(
             cpu_count=os.cpu_count() or 0,
             memory_bytes=memory_bytes,
