@@ -36,6 +36,8 @@ class MatrixRunTest(unittest.TestCase):
         fake_docker.chmod(0o700)
         self.environment = os.environ.copy()
         self.environment["PATH"] = f"{self.fake_bin}:{self.environment['PATH']}"
+        self.environment.setdefault("HICLAW_ADMIN_USER", "admin")
+        self.environment.setdefault("HICLAW_ADMIN_PASSWORD", "test-password")
 
     def tearDown(self):
         self.tempdir.cleanup()

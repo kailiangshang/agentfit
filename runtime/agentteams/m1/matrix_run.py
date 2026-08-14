@@ -112,11 +112,26 @@ def controller_json(
     *,
     input_text: str = "",
 ) -> dict[str, Any]:
+    # v1.1.2 exported HICLAW_ADMIN_* as container env; v1.2.0-beta.1 only has
+    # the credentials in the controller process environ, so forward them from
+    # the host environment without ever printing them.
+    forwarded_env: list[str] = []
+    for name in ("HICLAW_ADMIN_USER", "HICLAW_ADMIN_PASSWORD"):
+        value = os.environ.get(name, "")
+        if value:
+            forwarded_env.append("-e")
+            forwarded_env.append(f"{name}={value}")
+    if not forwarded_env:
+        raise RuntimeError(
+            "HICLAW_ADMIN_USER/HICLAW_ADMIN_PASSWORD must be exported on the host "
+            "to authenticate Matrix send/export against the controller"
+        )
     result = run_checked(
         [
             container_command,
             "exec",
             "-i",
+            *forwarded_env,
             controller,
             "sh",
             "-ceu",
