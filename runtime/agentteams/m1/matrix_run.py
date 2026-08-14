@@ -427,7 +427,7 @@ def usage_snapshot(args: argparse.Namespace) -> int:
     find_controller(args.container_command)
     per_agent: dict[str, dict[str, int]] = {}
     for agent in agents:
-        result = run_checked(
+        ledger_result = subprocess.run(
             [
                 args.container_command,
                 "exec",
@@ -435,9 +435,21 @@ def usage_snapshot(args: argparse.Namespace) -> int:
                 "cat",
                 f"/root/hiclaw-fs/agents/{agent}/.copaw/token_usage.json",
             ],
-            input_text="",
+            input="",
+            text=True,
+            capture_output=True,
+            check=False,
         )
-        ledger = json.loads(result.stdout)
+        if ledger_result.returncode != 0 and "no such file" in ledger_result.stderr.lower():
+            # A freshly provisioned agent that has made no LLM calls yet has
+            # no ledger file; that is a valid zero-usage state, not an error.
+            ledger = {}
+        elif ledger_result.returncode != 0:
+            raise RuntimeError(
+                f"failed to read token ledger for {agent}: {ledger_result.stderr.strip()}"
+            )
+        else:
+            ledger = json.loads(ledger_result.stdout)
         if not isinstance(ledger, dict):
             raise RuntimeError(f"token ledger for {agent} is not a JSON object")
         per_agent[agent] = usage_totals(ledger)

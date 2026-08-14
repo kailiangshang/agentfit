@@ -389,6 +389,75 @@ class MatrixRunTest(unittest.TestCase):
             events[0]["mentioned_user_ids"],
         )
 
+    def test_usage_snapshot_treats_missing_ledger_as_zero_usage(self):
+        response = self.write_json(
+            "usage.json",
+            {
+                "2026-08-14": {
+                    "provider:model": {
+                        "call_count": 1,
+                        "prompt_tokens": 40,
+                        "completion_tokens": 10,
+                    }
+                }
+            },
+        )
+        missing_docker = self.fake_bin / "docker"
+        missing_docker.write_text(
+            "#!/bin/sh\n"
+            "if [ \"$1\" = ps ]; then\n"
+            "  printf '%s\\n' agentteams-controller\n"
+            "elif [ \"$1\" = exec ] && [ \"$2\" = agentteams-worker-agentfit-engagement-lead ]; then\n"
+            "  cat >/dev/null\n"
+            "  printf 'cat: /root/hiclaw-fs/agents/agentfit-engagement-lead/.copaw/token_usage.json: No such file or directory\\n' >&2\n"
+            "  exit 1\n"
+            "elif [ \"$1\" = exec ]; then\n"
+            "  cat >/dev/null\n"
+            "  /bin/cat \"$FAKE_MATRIX_RESPONSE\"\n"
+            "else\n"
+            "  exit 64\n"
+            "fi\n",
+            encoding="utf-8",
+        )
+        self.environment["FAKE_MATRIX_RESPONSE"] = str(response)
+        team = self.write_json(
+            "usage-team-missing.json",
+            {
+                "leaderName": "agentfit-engagement-lead",
+                "leaderDMRoomID": "!dm:matrix.example",
+                "teamRoomID": "!team:matrix.example",
+                "workerNames": ["agentfit-business-engineer"],
+            },
+        )
+        output = self.root / "usage-snapshot-missing.json"
+
+        result = subprocess.run(
+            [
+                "python3",
+                str(SCRIPT),
+                "usage-snapshot",
+                "--team-file",
+                str(team),
+                "--output-file",
+                str(output),
+            ],
+            cwd=REPO_ROOT,
+            env=self.environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        snapshot = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(2, snapshot["totals"]["agent_count"])
+        self.assertEqual(1, snapshot["totals"]["call_count"])
+        self.assertEqual(40, snapshot["totals"]["prompt_tokens"])
+        self.assertEqual(
+            {"call_count": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            snapshot["agents"]["agentfit-engagement-lead"],
+        )
+
     def test_usage_snapshot_aggregates_cumulative_agent_ledgers(self):
         response = self.write_json(
             "usage.json",
