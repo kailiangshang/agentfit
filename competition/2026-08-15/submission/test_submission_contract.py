@@ -6,8 +6,10 @@ from __future__ import annotations
 import base64
 import html
 import importlib.util
+import json
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -115,6 +117,49 @@ def _html_title(text: str) -> str:
         raise AssertionError("missing h1.title")
     title = re.sub(r"<[^>]+>", "", match.group("title"))
     return re.sub(r"\s+", "", html.unescape(title))
+
+
+def _compile_html_sources(*sources: Path) -> dict[str, object]:
+    """Compile HTML sources to the native-shape patch used by the deck builder."""
+    builder = _load_builder()
+    with tempfile.TemporaryDirectory(prefix="submission-html-contract-") as temp_dir:
+        temp = Path(temp_dir)
+        base = temp / "base.pptx"
+        patch = temp / "slides.patch.json"
+        presentation = Presentation()
+        presentation.slide_width = Inches(13.333)
+        presentation.slide_height = Inches(7.5)
+        presentation.save(base)
+        subprocess.run(
+            [
+                sys.executable,
+                str(builder.HTML2PATCH),
+                *(str(source) for source in sources),
+                "--deck",
+                str(base),
+                "--layout",
+                "Blank",
+                "--strict",
+                "-o",
+                str(patch),
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(patch.read_text(encoding="utf-8"))
+
+
+def _patch_text(op: dict[str, object]) -> str:
+    return json.dumps(op.get("text", ""), ensure_ascii=False)
+
+
+def _patch_font_sizes(op: dict[str, object]) -> list[float]:
+    return [
+        float(value)
+        for value in re.findall(r'"font_size":\s*([0-9.]+)', _patch_text(op))
+    ]
 
 
 class SubmissionContractTest(unittest.TestCase):
@@ -761,6 +806,144 @@ class SubmissionContractTest(unittest.TestCase):
         arrow = by_text["←"]
         exit_condition = by_text["生成 → 定位 · 最多 3 次 · 未通过退出"]
         self.assertLessEqual(arrow.top + arrow.height, exit_condition.top)
+
+    def test_slide_11_runtime_boundary_has_no_compiled_text_overlap(self) -> None:
+        patch = _compile_html_sources(SLIDES_DIR / "11-evidence.html")
+        text_ops = [
+            op
+            for op in patch["ops"]
+            if isinstance(op, dict) and op.get("op") == "add-shape" and op.get("text")
+        ]
+
+        def find(anchor: str) -> dict[str, object]:
+            matches = [op for op in text_ops if anchor in _patch_text(op)]
+            self.assertEqual(1, len(matches), anchor)
+            return matches[0]
+
+        pending = find("待补：正式 Candidate 与真实 Episode")
+        identity = find(EVALUATION_IDENTITY)
+        pending_bottom = float(pending["at"][1]) + float(pending["size"][1])
+        identity_top = float(identity["at"][1])
+        self.assertLessEqual(pending_bottom, identity_top)
+
+    def test_a1_graph_node_and_return_arrow_do_not_overlap_in_compiled_geometry(
+        self,
+    ) -> None:
+        patch = _compile_html_sources(SLIDES_DIR / "13-a1-search.html")
+        text_ops = [
+            op
+            for op in patch["ops"]
+            if isinstance(op, dict) and op.get("op") == "add-shape" and op.get("text")
+        ]
+
+        def find_exact(text: str) -> dict[str, object]:
+            marker = f'"text": "{text}"'
+            matches = [op for op in text_ops if marker in _patch_text(op)]
+            self.assertEqual(1, len(matches), text)
+            return matches[0]
+
+        locate = find_exact("定位")
+        return_arrow = find_exact("←")
+        locate_bottom = float(locate["at"][1]) + float(locate["size"][1])
+        return_arrow_top = float(return_arrow["at"][1])
+        self.assertLessEqual(locate_bottom, return_arrow_top)
+
+    def test_decision_bearing_slide_copy_meets_projection_size_floor(self) -> None:
+        sources = (
+            SLIDES_DIR / "06-selection-rule.html",
+            SLIDES_DIR / "07-meta-team.html",
+            SLIDES_DIR / "13-a1-search.html",
+            SLIDES_DIR / "15-a3-skills.html",
+            SLIDES_DIR / "16-a4-risk.html",
+        )
+        patch = _compile_html_sources(*sources)
+        text_ops = [
+            op
+            for op in patch["ops"]
+            if isinstance(op, dict) and op.get("op") == "add-shape" and op.get("text")
+        ]
+        body_anchors = (
+            "停止逻辑：",
+            "EngagementLead",
+            "BusinessEngineer",
+            "AgentArchitect",
+            "ValidationEngineer",
+            "GovernanceAuditor",
+            "L1 样本语义",
+            "L7 跨项目学习",
+            "固定 G / Π / ρ",
+            "更新 G / Π / ρ",
+            "最小权限；明确输入输出",
+            "组织 Tool 与判断步骤",
+            "Schema、鉴权、幂等",
+            "保存适用边界、失败模式",
+            "必须人工批准：",
+            "六类异常进入同一 Trace 语义",
+        )
+        compact_anchors = (
+            "C0 · Agentless · 待真实试验",
+            "C3 · Human 混合 · 待真实试验",
+            "生成 → 定位 · 最多 3 次 · 未通过退出",
+            "θ = Prompt / 阈值 / 重试",
+            "1 任务编译",
+            "7 经验沉淀",
+            "只读诊断",
+            "只生成方案",
+        )
+        scoped_labels = (
+            (0, "先定义“通过”"),
+            (0, "SIMPLE FIRST"),
+            (0, "MEASURE"),
+            (0, "EVIDENCE ONLY"),
+            (0, "STOP / CONTINUE"),
+            (0, "完整方案七维：Tool · Skill · MCP · Memory · 模型 · Agent 拓扑 · Human 边界"),
+            (0, "候选搜索顺序 · 设计契约（非运行结果）"),
+            (1, "定义目标 / 决定停止"),
+            (1, "定义案例与验收"),
+            (1, "构建 / 调整候选"),
+            (1, "运行并测量"),
+            (1, "分析证据 / 独立审计"),
+            (1, "候选业务执行 Agent · 被五元团队设计与评测"),
+            (2, "SEVEN-LAYER MAPPING · 七层 ML 映射"),
+            (2, "候选四元组"),
+            (2, "Π · Agent A₁ 分区"),
+            (2, "INNER LOOP · 高层工程类比"),
+            (2, "OUTER LOOP · 高层工程类比"),
+            (2, "类比边界 · 非实现声明"),
+            (3, "SEVEN SKILLS"),
+            (3, "TOOL"),
+            (3, "SKILL"),
+            (3, "MCP / HTTP"),
+            (3, "MEMORY"),
+            (3, "资产晋升门"),
+            (4, "HUMAN GATE · 一条可审计控制路径"),
+            (4, "异常与恢复 · 同一 Trace 语义"),
+            (4, "允许的动作档位"),
+        )
+
+        for anchor, minimum in (
+            *((anchor, 12.0) for anchor in body_anchors),
+            *((anchor, 11.2) for anchor in compact_anchors),
+        ):
+            with self.subTest(anchor=anchor):
+                matches = [op for op in text_ops if anchor in _patch_text(op)]
+                self.assertEqual(1, len(matches), anchor)
+                sizes = _patch_font_sizes(matches[0])
+                self.assertTrue(sizes, anchor)
+                self.assertGreaterEqual(min(sizes), minimum, (anchor, sizes))
+
+        for slide, anchor in scoped_labels:
+            with self.subTest(slide=slide, label=anchor):
+                marker = f'"text": "{anchor}"'
+                matches = [
+                    op
+                    for op in text_ops
+                    if op.get("slide") == slide and marker in _patch_text(op)
+                ]
+                self.assertEqual(1, len(matches), (slide, anchor))
+                sizes = _patch_font_sizes(matches[0])
+                self.assertTrue(sizes, (slide, anchor))
+                self.assertGreaterEqual(min(sizes), 11.2, (slide, anchor, sizes))
 
     def test_final_candidate_graph_and_blocks_geometry(self) -> None:
         presentation = Presentation(PPTX)
