@@ -97,6 +97,7 @@ export AGENTTEAMS_LLM_PROVIDER="openai-compat"
 export AGENTTEAMS_LOCAL_ONLY=1
 export AGENTTEAMS_ROOT_DIR="${AGENTFIT_ROOT}/.local-demo/agentteams/platform"
 export AGENTTEAMS_DATA_DIR="agentfit-agentteams-data"
+export AGENTTEAMS_DASHBOARD=0
 
 if ((CHECK_ONLY)); then
   printf '%s\n' \
@@ -105,6 +106,7 @@ if ((CHECK_ONLY)); then
     'mode=local-only' \
     "root_dir=${AGENTTEAMS_ROOT_DIR}" \
     "data_volume=${AGENTTEAMS_DATA_DIR}" \
+    'dashboard=disabled' \
     'image_source=official-prebuilt' \
     'api_key=configured' \
     'base_url=configured' \

@@ -59,6 +59,7 @@ runtime/agentteams/install-prebuilt.sh
 - local-only 网络模式；
 - `.local-demo/agentteams/platform` 持久化根目录；
 - 独立的 `agentfit-agentteams-data` Docker volume，避免复用其他 AgentTeams smoke 数据；
+- 不启动独立 Dashboard，使用 AgentTeams 自带的 Element/Matrix 入口；
 - `openai-compat` 模型入口；
 - 禁止任何 `AGENTTEAMS_INSTALL_*_IMAGE` 覆盖。
 
