@@ -1,22 +1,23 @@
 # AgentFit 回家 Demo 执行手册
 
-> 目标：用 2–3 小时取得第一批真实、可回放、不夸大完成度的 Demo 证据。本文只把 [AgentFit 整体方案](../agentfit-solution.md)的 M0/M1 变成操作步骤，不是第二套方案。
+> 目标：在家庭 Docker + DeepSeek 环境续接当前 M1，取得最终运行包的第一份可回放证据。本文只把 [AgentFit 整体方案](../agentfit-solution.md)的 M0/M1 变成操作步骤，不是第二套方案。
 
 > 2026-08-14 执行状态：M0 已完成并为 `READY`；M1 已进入 `IN_PROGRESS`。AgentTeams 固定版本、官方预构建镜像、私密配置、安装/回读步骤、`.local-demo/agentteams/evidence` 和 M1 原生声明以唯一的[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为准。本手册从 retail/τ³-bench 样本准备与 ProjectCase 投递继续，不再维护第二套 AgentTeams 安装或资源创建方式。
 
-## 1. 今晚的准确终点
+## 1. 回家后的第一目标
 
-今晚只选择一个 ProjectCase 方向：**retail 客服工具调用方案设计**。样本来自 τ³-bench；OpsPilot 继续作为比赛官方 baseline 与运维场景锚点。**OpsPilot 与 retail 保持两个独立来源、两个独立 ProjectCase，不混入同一个 SampleSet。**
+今晚仍只做 **retail 客服工具调用方案设计**。样本来自 τ³-bench；OpsPilot 继续作为比赛官方 baseline 与运维场景锚点。**OpsPilot 与 retail 保持两个独立来源、两个独立 ProjectCase，不混入同一个 SampleSet。**
 
-今晚可以完成：
+办公室已经完成两轮真实 ProjectCase preparation，但这两轮早于最终 provenance、terminal identity 和结构化 mention 加固。家庭环境也拿不到办公室 `.local-demo`、Matrix 房间和容器状态。因此回家后的第一目标不是继续增加方案复杂度，而是用 DeepSeek 建立全新实例并完成一次**最终加固包重放**：
 
-1. 固定 AgentFit、AgentTeams、τ³-bench 版本、授权范围、运行入口和已知边界，满足 M0；
-2. 用 retail 官方 train 任务做 1 → 3 → 12/20 的 τ³-bench 原生 preflight，验证模型、工具、状态变化、评价和日志链；
-3. 在 AgentTeams 实例化五元元团队，让它编译 task 0 的样本/任务语义，并在正式试验门禁处停下；
-4. 记录一次“答案泄漏”拒绝或预算扩张 Human 门禁；
-5. 将状态如实写为 `M1: IN_PROGRESS`。
+1. `git pull --ff-only` 后按第 3–6 节固定 AgentTeams v1.1.2、τ³-bench v1.0.1 和 DeepSeek 配置；
+2. 渲染并 apply 家庭 DeepSeek manifest，确保 apply 与 ProjectCase provenance 使用同一个 `AGENTFIT_TEAM_MANIFEST`；
+3. 按[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)第 6 节，从 Leader DM 重放 task 0、2、13；
+4. 保存 usage-before/after、合并 Trace、结构化 Dossier、package/export hashes 和 validation；
+5. 只有 `verdict=PASS`、`terminal_prefix_binding=run_bound_send_metadata`、`assignment_binding=structured_matrix_mentions` 同时成立，才把这次结果记为最终包重放证据；
+6. 重放通过后仍先不启动 Candidate，只整理四份 manifest 实例化所需输入，等待 Human freeze。
 
-今晚不会自动完成 M1。原因是 preflight 发生在正式 ProjectCase、四份 manifest、Candidate 和 TrialSpec 冻结前，因此它**不是 AgentFit Candidate**、不是 `EvaluationUnit`，也不能满足 M1 的“冻结 ProjectCase 下执行真实候选”。若今晚只完成上述内容，Demo 的价值是证明底座可运行、语义可编译、无效试验会被门禁拒绝。
+这个目标证明最终运行包能在第二个模型入口和全新 AgentTeams 实例上复现 preparation 路径，不证明模型间等价，也不会自动完成 M1。第 7 节的 τ³-bench 1 → 3 preflight 可在重放前用于验证 DeepSeek 工具链；只有鉴权、时延和费用稳定后才扩到 12/20。preflight 不是 AgentFit Candidate，也不是 `EvaluationUnit`。
 
 硬边界：
 
@@ -145,11 +146,54 @@ jq -e '.status == "PASS"' .local-demo/agentteams/evidence/litellm-smoke.json
 jq -e '.status == "PASS" and .mutations_requested == false' .local-demo/agentteams/evidence/manager-smoke.json
 ```
 
-M0 `READY` 只证明 AgentTeams 底座、模型入口和证据边界可用。当前仍无 Worker、Team、Human 或 Candidate，不能把它写成 M1 或闭环证据。
+M0 `READY` 验收当时只证明 AgentTeams 底座、模型入口和证据边界可用；当时尚无 Worker、Team、Human 或 Candidate。后续 M1 进展必须使用第 8–11 节的独立证据，不能反向扩大 M0 的证明范围。
 
 ## 6. 配置模型，不泄漏密钥
 
-τ³-bench 使用 LiteLLM。只在 benchmark 仓库本地创建 `.env`，已有文件绝不覆盖：
+### 6.1 只有 Docker + DeepSeek API 的家庭配置
+
+家里不需要 LiteLLM Server。AgentTeams 通过 OpenAI-compatible API 直接连接 DeepSeek；τ³-bench 内部使用 LiteLLM Python 客户端调用 provider，这只是随 benchmark 安装的客户端库，也不需要单独的 LiteLLM 服务。
+
+先为 AgentTeams 创建私密配置，已有文件绝不覆盖。复制后在编辑器中填写真实 `AGENTTEAMS_LLM_API_KEY`，不要把 key 写进终端历史：
+
+```bash
+test -e .local-demo/agentteams/private.env || \
+  cp runtime/agentteams/private.env.example .local-demo/agentteams/private.env
+chmod 600 .local-demo/agentteams/private.env
+git check-ignore -q .local-demo/agentteams/private.env
+```
+
+文件中的非密钥项使用：
+
+```text
+AGENTTEAMS_OPENAI_BASE_URL='https://api.deepseek.com/v1'
+AGENTTEAMS_DEFAULT_MODEL='deepseek-chat'
+```
+
+随后生成家庭专用 manifest；canonical `runtime/agentteams/m1/agentfit-retail-m1.yaml` 保留办公室实测模型和 hash，不直接修改：
+
+```bash
+python3 runtime/agentteams/m1/render_model_manifest.py \
+  --input-file runtime/agentteams/m1/agentfit-retail-m1.yaml \
+  --output-file .local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml \
+  --model deepseek-chat
+printf "export AGENTFIT_TEAM_MANIFEST='%s'\n" \
+  '.local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml' \
+  > .local-demo/agentteams/m1/manifest.env
+source .local-demo/agentteams/m1/manifest.env
+git check-ignore -q .local-demo/agentteams/m1/agentfit-retail-m1.deepseek.yaml
+runtime/agentteams/install-prebuilt.sh --check
+runtime/agentteams/install-prebuilt.sh
+runtime/agentteams/apply-manifest.sh \
+  --file "$AGENTFIT_TEAM_MANIFEST" \
+  --log-file .local-demo/agentteams/m1/apply-deepseek-v112.log
+```
+
+家庭 Docker volume、Matrix 状态和 `.local-demo` 不在 Git 中；第一次回家运行必须按[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)重新安装、apply、回读 Team/Human 状态。每个新终端先 `source .local-demo/agentteams/m1/manifest.env`，确保 apply 与 ProjectCase provenance 使用同一个 `AGENTFIT_TEAM_MANIFEST`。全新 Human 不使用 `--reuse-existing-human`；仅在确认是同一实例的重复 apply 时才按运行入口说明显式复用。
+
+### 6.2 τ³-bench 的 DeepSeek 用户模拟与执行模型
+
+只在 benchmark 仓库本地创建 `.env`，已有文件绝不覆盖：
 
 ```bash
 source .local-demo/retail-m1/session.env
@@ -158,13 +202,13 @@ chmod 600 "$AGENTFIT_TAU3_ROOT/.env"
 git -C "$AGENTFIT_TAU3_ROOT" check-ignore -q .env
 ```
 
-在编辑器中填写实际 provider key。OpenCode 订阅或 AgentTeams 内已有模型不自动等于 LiteLLM API 凭据。模型 ID 不是密钥，但仍保存在 ignored 本地配置：
+在编辑器中增加 `DEEPSEEK_API_KEY=<你的实际 key>`。OpenCode 订阅或 AgentTeams 内已有模型不自动等于 benchmark API 凭据。τ³-bench 的 LiteLLM Python 客户端使用 provider-qualified ID `deepseek/deepseek-chat`；模型 ID 不是密钥，但仍保存在 ignored 本地配置：
 
 ```bash
 source .local-demo/retail-m1/session.env
 printf '%s\n' \
-  "export AGENTFIT_AGENT_MODEL='<litellm-agent-model-id>'" \
-  "export AGENTFIT_USER_MODEL='<litellm-user-model-id>'" \
+  "export AGENTFIT_AGENT_MODEL='deepseek/deepseek-chat'" \
+  "export AGENTFIT_USER_MODEL='deepseek/deepseek-chat'" \
   > "$AGENTFIT_RUN_ROOT/model.env"
 ```
 
@@ -176,11 +220,13 @@ source "$AGENTFIT_RUN_ROOT/model.env"
 export AGENTFIT_AGENT_MODEL AGENTFIT_USER_MODEL
 test -n "$AGENTFIT_AGENT_MODEL"
 test -n "$AGENTFIT_USER_MODEL"
-test "$AGENTFIT_AGENT_MODEL" != '<litellm-agent-model-id>'
-test "$AGENTFIT_USER_MODEL" != '<litellm-user-model-id>'
+test "$AGENTFIT_AGENT_MODEL" = 'deepseek/deepseek-chat'
+test "$AGENTFIT_USER_MODEL" = 'deepseek/deepseek-chat'
 ```
 
 `.env`、model.env、原始日志和任何 API key 都不得提交。
+
+同一个 `deepseek-chat` 可先同时承担执行 Agent 与用户模拟，尽快得到第一批 Trace；这只是单模型 smoke，不用于证明跨模型稳健性。后续评测/诊断也可经同一 OpenAI-compatible 路径接入，但正式 Candidate 前仍要固定模型角色、版本、预算和 TrialSpec，且不得越过 Human freeze。
 
 ## 7. τ³-bench 原生 preflight：1 → 3 → 12/20
 
@@ -273,13 +319,13 @@ docker exec agentteams-controller hiclaw get humans agentfit-owner -o json \
 
 创建/更新时使用 `runtime/agentteams/apply-manifest.sh`，不要直接运行当前 AgentTeams `main` 的宿主 apply 脚本：固定 v1.1.2 镜像只提供 `hiclaw`，并使用 Team 内联 `leader + workers` 合同；上游 main 已切换为 `agt + workerMembers`。完整 apply 输出可能包含 Human 初始密码，只允许进入 ignored、`0600` 私密日志。
 
-当前 Team/Leader/Worker/Human 和根 SOUL 已通过回读，但 ProjectCase、Skill/工具绑定、共享 Dossier 和 Candidate 都尚未运行。因此状态只能是 `M1: IN_PROGRESS`。把后续 Leader 消息、room id 和实际 Worker Trace 保存到 `$AGENTFIT_RUN_ROOT/agentteams/`。
+当前 Team/Leader/Worker/Human 和运行合同已通过回读，并已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13）。第二轮真实路径为 Leader → BusinessEngineer → Leader verification → GovernanceAuditor，已导出结构化 Dossier 和合并后的 Team/Leader-DM Trace，结构化验证为 `PASS`；但四份正式 manifest 尚未实例化并经 Human freeze，Skill/工具尚未绑定运行，尚未运行 Candidate。因此状态仍只能是 `M1: IN_PROGRESS`。脱敏结论见[多情景实测报告](../research/home-demo/retail-m1/dossier/15-agentteams-m1-multiscenario-run.md)，原始消息、room id、工件与使用量证据继续保存在 ignored 的 `$AGENTFIT_RUN_ROOT/agentteams/` 和 `$AGENTFIT_RUN_ROOT/dossier/`。
 
 治理边界不因 Team 已运行而变化：post-freeze sealed-holdout outcome consumer = GovernanceAuditor only。
 
-## 9. 发起今晚的语义编译与门禁 Demo
+## 9. 回放已完成的语义编译与门禁 Demo
 
-附上 `source/policy.md`、`source/task-0.json`、`source/split_tasks.json`、三方版本、M0 文件，以及已有 preflight 结果。发送：
+两轮 ProjectCase preparation 已真实完成。第一轮使用 task 0 暴露四类 manifest 合同缺失、生命周期顺序错误和 Team Room 非目标 Worker 唤醒；第二轮使用 task 0、2、13，从 Leader DM 入场并验证改进后的委派、Dossier、Trace、治理阻断和终态识别。下面保留第一轮输入模板用于回放；第二轮的可复现命令以[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为唯一入口。
 
 ```text
 New ProjectCase preparation: agentfit-retail-m1
@@ -296,7 +342,7 @@ New ProjectCase preparation: agentfit-retail-m1
 顺序：EngagementLead → BusinessEngineer → GovernanceAuditor。只有审计确认前置合同齐全，才允许 AgentArchitect；否则输出 blocked DeliveryDecision，列出缺失证据与一个最小下一步。
 ```
 
-今晚预期的诚实结果是 `blocked`：缺少四份正式 manifest、隔离访问策略和审批。这个结果不是坏 Demo，它展示 AgentFit 不会把公开 benchmark 预跑包装成有效方案比较。
+两轮真实结果均为 `BLOCK`。第二轮已经定义四类 manifest 合同及访问策略，但成员、版本和 content hash 仍是 `not_instantiated`，因此最小下一步是先实例化四份 immutable manifest，再由 Human freeze；AgentArchitect 和 ValidationEngineer 仍未被启动。这展示了 AgentFit 不会把公开 benchmark 预跑或 preparation 包装成有效 Candidate 比较。
 
 ## 10. 失败/Human 分支
 
@@ -385,7 +431,7 @@ runtime_effect: none
 可以说：
 
 - “τ³-bench v1.0.1 retail 有 114 个官方任务，本轮从 train 渐进选择 1/3/12 或 20 个做工具链 preflight。”
-- “五元团队在 AgentTeams 完成了当前环境的一次语义编译和治理门禁链。”——仅在真实完成后；
+- “五元团队在 AgentTeams 完成了两轮 ProjectCase preparation；第二轮使用 task 0、2、13，结构化验证为 PASS，但尚未运行 Candidate。”
 - “AgentFit 拒绝把未冻结、答案可能泄漏的预跑当作候选证据。”
 
 不能说：

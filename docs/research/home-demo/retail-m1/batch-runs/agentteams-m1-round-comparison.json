@@ -1,0 +1,89 @@
+{
+  "schema_version": "agentfit.agentteams-m1-comparison/v1",
+  "observed_on": "2026-08-14",
+  "agentteams_version": "v1.1.2",
+  "evidence_scope": "M1_PROJECTCASE_PREPARATION",
+  "rounds": [
+    {
+      "run_id": "retail-r1-task-0",
+      "source_samples": ["tau2-bench/v1.0.1:retail:task-0"],
+      "entry_room": "team",
+      "message_event_count": 140,
+      "duration_to_terminal_ms": 465324,
+      "sender_message_counts": {
+        "admin": 1,
+        "engagement_lead": 74,
+        "business_engineer": 20,
+        "governance_auditor": 43,
+        "validation_engineer": 2,
+        "agent_architect": 0
+      },
+      "assigned_worker_path": ["business_engineer", "governance_auditor"],
+      "unexpected_worker_wakeup": ["validation_engineer"],
+      "semantic_json_count": 3,
+      "manifest_contract_count": 0,
+      "lifecycle_order_correct": false,
+      "terminal_marker_revision_required": false,
+      "decision": "BLOCK",
+      "state": "M1_IN_PROGRESS"
+    },
+    {
+      "run_id": "retail-r2-batch-0-2-13",
+      "source_samples": [
+        "tau2-bench/v1.0.1:retail:task-0",
+        "tau2-bench/v1.0.1:retail:task-2",
+        "tau2-bench/v1.0.1:retail:task-13"
+      ],
+      "entry_room": "leader-dm",
+      "message_event_count": 155,
+      "duration_to_initial_delivery_ms": 666109,
+      "duration_to_verified_terminal_ms": 757614,
+      "sender_message_counts": {
+        "admin": 2,
+        "engagement_lead": 85,
+        "business_engineer": 33,
+        "governance_auditor": 35,
+        "validation_engineer": 0,
+        "agent_architect": 0
+      },
+      "observed_worker_path": ["business_engineer", "governance_auditor"],
+      "unexpected_worker_wakeup": [],
+      "semantic_json_count": 3,
+      "manifest_contract_count": 4,
+      "manifest_not_instantiated_marker_count": 16,
+      "json_files_checked": 8,
+      "answer_payload_match_count": 0,
+      "answer_match_scope": "exact canonical non-empty JSON containers of length >= 40 in dossier JSON",
+      "lifecycle_order_correct": true,
+      "terminal_marker_revision_required": true,
+      "terminal_prefix_binding": "legacy_cli_only",
+      "assignment_binding": "structured_matrix_mentions_from_raw",
+      "dossier_identity_binding": "legacy_task_meta_and_matrix_assignment",
+      "decision": "BLOCK",
+      "state": "M1_IN_PROGRESS"
+    }
+  ],
+  "usage": {
+    "scope": "cumulative_runtime",
+    "snapshot_timing": "after_round_2_only",
+    "call_count": 117,
+    "prompt_tokens": 3459115,
+    "completion_tokens": 67285,
+    "total_tokens": 3526400,
+    "per_run_cost_available": false,
+    "reason": "No pre-round usage snapshot exists; model pricing was not frozen in run evidence."
+  },
+  "provenance": {
+    "round_2_request_sha256_recorded": true,
+    "round_2_pre_run_package_snapshot_recorded": false,
+    "final_package_replay_required": true,
+    "boundary": "Post-run package fixes are not retroactively attributed to Round 2."
+  },
+  "claims": {
+    "projectcase_preparation_completed": true,
+    "candidate_run_completed": false,
+    "evaluation_run_completed": false,
+    "closed_loop_completed": false,
+    "multi_agent_better_than_single_agent": false
+  }
+}

@@ -18,7 +18,7 @@
 | 初赛材料 | `READY` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX/PDF 的结构、内容、可编辑性、几何和视觉检查已完成 | PPT 中的设计图等于运行证据 |
 | AgentTeams 平台试用 | 已有独立 smoke test | Worker、Team、Human、文件同步、定时任务等底座能力曾被单独试用 | 历史平台测试等于 AgentFit 已集成 |
 | retail / airline 探索性 Demo | 有限探索证据 | DeepSeek + OpenCode、本地路径与自建工具/代理评估器可用于发现设计问题 | 官方 τ³-bench 成绩、正式 Candidate、统一候选对照或生产效果 |
-| AgentFit 真实运行 | M0 `READY`；M1 `IN_PROGRESS`；M2–M4 `NOT_STARTED` | 已固定 AgentTeams v1.1.2 官方镜像；原生 Team `Active`、1 个 Leader 和 4 个 Worker 均运行、Human `Active` | AgentFit 已跑通 ProjectCase、候选评测、闭环或跨项目学习 |
+| AgentFit 真实运行 | M0 `READY`；M1 `IN_PROGRESS`；M2–M4 `NOT_STARTED` | 已固定 AgentTeams v1.1.2 官方镜像；原生 Team `Active`、1 个 Leader 和 4 个 Worker 均运行、Human `Active`；已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13），第二轮结构化验证为 `PASS` | 已运行 Candidate、候选评测、闭环、多 Agent 优势或跨项目学习 |
 
 初赛材料以[唯一提交目录](../competition/2026-08-15/submission/)为准；真实 AgentFit 运行状态、AgentTeams 边界和后续启动条件以本文件第 3、7、8、13 节为准。
 
@@ -671,7 +671,7 @@ AgentFit 的差异不是“又一个多 Agent 框架”，而是：
 - 五个 Agent Identity、七个核心 Skill、Human/风险门禁、开放与合规披露；
 - 自动合同、结构、逐页内容、原生可编辑性、几何和视觉复核。
 
-OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依据；真实五元团队和统一候选对照尚未完成，不得伪装为运行证据。
+OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依据；真实五元团队已经实例化并完成两轮 ProjectCase preparation，但统一候选对照尚未运行，不得把 preparation 结果伪装为 Candidate 或闭环证据。
 
 ### 12.3 后续阶段
 
@@ -713,13 +713,13 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 - Agentize 必要性、复杂度代价和自动候选搜索；
 - ProjectAsset/MetaAsset 正式存储、晋升和回归系统；
 - 任一完整、冻结的真实 ProjectCase；
-- AgentFit 五元 Team 已真实实例化，但 Skill/工具、Project Dossier 共享状态、ProjectCase 流转和 Trace 集成尚未完成；
+- AgentFit 五元 Team 已真实实例化，并完成两轮 ProjectCase preparation、结构化 Dossier 导出及 Team/Leader-DM Trace 合并；Skill/工具运行绑定、正式 manifest 实例化与冻结、Project Dossier 持久共享状态和 Candidate 执行尚未完成；
 - 统一预算下的 Agentless、单 Agent和多 Agent真实对照；
 - 跨项目迁移收益、Meta-learning、生产部署或真实业务效果。
 
 ### 13.2 后续运行启动条件
 
-启动门禁已于 2026-08-14 由项目所有者明确放行。当前采用“AgentTeams `v1.1.2` 官方预构建镜像 + AgentFit 源码 + 外部 Benchmark/评测源码服务 + LiteLLM API”的运行方式；不修改 AgentTeams 核心，不执行镜像编译。当前真实状态为：M0：`READY`；M1：`IN_PROGRESS`；M2–M4：`NOT_STARTED`。M0 已固定官方镜像 tag 与 digest、运行入口、首个 ProjectCase、LiteLLM/Manager smoke 和本地证据完整性；镜像内 CLI 版本字段仍报告 `dev`，作为官方构建元数据缺口保留。M1 已取得 Team `Active`、1 个 Leader 和 4 个 Worker `Running`、Human `Active` 与五份 SOUL 合同证据，但尚未流转 ProjectCase 或运行 Candidate，不能写成闭环证据。
+启动门禁已于 2026-08-14 由项目所有者明确放行。当前采用“AgentTeams `v1.1.2` 官方预构建镜像 + AgentFit 源码 + 外部 Benchmark/评测源码服务 + OpenAI-compatible 模型 API”的运行方式；办公室实测连接 LiteLLM，家庭环境可直连 DeepSeek，不修改 AgentTeams 核心，不执行镜像编译。当前真实状态为：M0：`READY`；M1：`IN_PROGRESS`；M2–M4：`NOT_STARTED`。M0 已固定官方镜像 tag 与 digest、运行入口、首个 ProjectCase、LiteLLM/Manager smoke 和本地证据完整性；镜像内 CLI 版本字段仍报告 `dev`，作为官方构建元数据缺口保留。M1 已取得 Team `Active`、1 个 Leader 和 4 个 Worker `Running`、Human `Active` 与五份运行合同证据；已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13），第二轮完成语义规格、四类 manifest 合同、Dossier/Trace 导出和结构化验证。四份正式 manifest 仍未实例化并经 Human freeze，因此尚未运行 Candidate，不能写成候选评测或闭环证据。
 
 可声称“AgentFit 已在 AgentTeams 跑通最小闭环”，必须同时满足：
 

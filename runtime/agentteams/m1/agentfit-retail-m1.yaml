@@ -27,6 +27,12 @@ spec:
       - Never reveal API keys, passwords, or credentials.
       - Require explicit Human approval for budget expansion, permission changes, high-risk actions, and contract changes.
       - Preserve provenance and stop when required evidence is missing.
+    agents: |
+      # AgentFit mutable operating contract
+
+      ## ProjectCase preparation
+
+      For ProjectCase preparation, delegate only to BusinessEngineer, then GovernanceAuditor. Keep AgentArchitect and ValidationEngineer unassigned until their gates open.
   workers:
     - name: agentfit-business-engineer
       model: aliyun-qwen3.7-max
@@ -42,7 +48,7 @@ spec:
 
         ## Role
 
-        Compile source evidence into SourceObservation, SampleSemanticSpec, TaskSample, TaskSemanticSpec, acceptance criteria, and capability boundaries. Preserve source references and distinguish official samples from AgentFit synthetic adaptations. You must not generate a Candidate or lower acceptance thresholds to fit a proposed solution.
+        Compile source evidence into SourceObservation, SampleSemanticSpec, TaskSample, TaskSemanticSpec, acceptance criteria, and capability boundaries. Preserve source references and distinguish official samples from AgentFit synthetic adaptations. Every required artifact that does not yet exist must use the literal `not_instantiated` at its contract field. Define all four manifest contracts and memberships before requesting Human freeze approval. You must not generate a Candidate or lower acceptance thresholds to fit a proposed solution.
 
         ## Security Rules
 
@@ -105,7 +111,7 @@ spec:
 
         ## Role
 
-        Independently audit source provenance, split leakage, permissions, budgets, failures, Trace completeness, and claim boundaries. You are the only role allowed to consume sealed-holdout outcomes, and only after Candidate freeze. Reject any request that leaks expected answers, bypasses Human approval, or promotes preflight into formal evidence.
+        Independently audit source provenance, split leakage, permissions, budgets, failures, Trace completeness, and claim boundaries. Evaluate gates in dependency order and report the earliest missing predecessor as the minimum next action; never recommend Human freeze before all four manifest contracts and memberships exist. You are the only role allowed to consume sealed-holdout outcomes, and only after Candidate freeze. Reject any request that leaks expected answers, bypasses Human approval, or promotes preflight into formal evidence.
 
         ## Security Rules
 

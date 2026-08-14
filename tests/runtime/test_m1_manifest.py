@@ -81,11 +81,31 @@ class AgentFitM1ManifestTest(unittest.TestCase):
         souls.update({worker["name"]: worker["soul"] for worker in team["spec"]["workers"]})
 
         self.assertIn("do not replace the responsibility artifacts", souls["agentfit-engagement-lead"])
+        self.assertIn(
+            "For ProjectCase preparation, delegate only to BusinessEngineer, then GovernanceAuditor",
+            team["spec"]["leader"].get("agents", ""),
+        )
         self.assertIn("must not generate a Candidate", souls["agentfit-business-engineer"])
+        self.assertIn(
+            "literal `not_instantiated`",
+            souls["agentfit-business-engineer"],
+        )
+        self.assertIn(
+            "four manifest contracts and memberships before requesting Human freeze approval",
+            souls["agentfit-business-engineer"],
+        )
         self.assertIn("four immutable SampleSetManifest", souls["agentfit-agent-architect"])
         self.assertIn("must remain BLOCKED", souls["agentfit-agent-architect"])
         self.assertIn("preflight is not a Candidate", souls["agentfit-validation-engineer"])
         self.assertIn("only after Candidate freeze", souls["agentfit-governance-auditor"])
+        self.assertIn(
+            "report the earliest missing predecessor",
+            souls["agentfit-governance-auditor"],
+        )
+        self.assertIn(
+            "never recommend Human freeze before all four manifest contracts",
+            souls["agentfit-governance-auditor"],
+        )
         self.assertNotRegex(
             self.text,
             re.compile(r"(?i)(?:api[_-]?key|password|bearer)\s*[:=]\s*[^<\s][^\s]{7,}"),
