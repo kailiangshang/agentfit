@@ -676,7 +676,7 @@ class SubmissionContractTest(unittest.TestCase):
             with self.subTest(page=6, term=term):
                 self.assertIn(term, page_6)
         self.assertIn(
-            "按失败模式调整完整方案七维，不越过 Human 门禁",
+            "按失败模式调整七维方案；不越过 Human 门禁",
             page_6,
         )
         for term in (
@@ -772,11 +772,17 @@ class SubmissionContractTest(unittest.TestCase):
                 "C2 · 多 Agent · 待真实试验",
                 "C3 · Human 混合 · 待真实试验",
             ),
-            7: ("作出交付决定",),
+            7: (
+                "定义目标 / 决定停止",
+                "定义案例与验收",
+                "构建 / 调整候选",
+                "运行并测量",
+                "分析证据 / 独立审计",
+            ),
             11: (
-                "READY · 已完成",
-                "SMOKE · 平台已单独试用",
-                "NOT STARTED · 仍待运行",
+                "OFFICIAL ANCHOR · 官方案例锚点",
+                "EXPLORATORY DEMO · 探索性证据",
+                "NOT_STARTED · 正式候选",
             ),
             16: (
                 "异常与恢复 · 同一 Trace 语义",
@@ -793,6 +799,34 @@ class SubmissionContractTest(unittest.TestCase):
         self.assertFalse(
             any(line == "据。" for line in page_13),
             f"page 13 contains an orphaned final character: {page_13}",
+        )
+
+    def test_final_visual_copy_keeps_decision_terms_together(self) -> None:
+        expected_by_page = {
+            1: ("AGENTFIT · 由简入繁",),
+            2: ("该用哪种方案”。",),
+            4: ("TaskSample · 事故 A", "TaskSample · 事故 B"),
+            5: (
+                "Human 边界都是变量。",
+                "Agent 拓扑 · 只是其中一维",
+            ),
+            6: ("按失败模式调整七维方案", "复杂度无增益"),
+            11: (
+                "不证明：官方 evaluator / Candidate / 官方分数",
+                "× RunIndex",
+            ),
+        }
+        for page, phrases in expected_by_page.items():
+            lines = _pdf_layout_lines(page)
+            for phrase in phrases:
+                with self.subTest(page=page, phrase=phrase):
+                    self.assertTrue(any(phrase in line for line in lines), lines)
+
+        page_5 = _pdf_layout_lines(5)
+        self.assertGreaterEqual(
+            sum("Human 边界" in line for line in page_5),
+            2,
+            page_5,
         )
 
     def test_final_candidate_graph_has_no_text_overlap(self) -> None:
@@ -820,8 +854,9 @@ class SubmissionContractTest(unittest.TestCase):
             self.assertEqual(1, len(matches), anchor)
             return matches[0]
 
-        pending = find("待补：正式 Candidate 与真实 Episode")
-        identity = find(EVALUATION_IDENTITY)
+        pending = find("待补：正式 Candidate / 真实 Episode")
+        identity = find("CandidateVersion × SampleVersion")
+        self.assertIn("× RunIndex", _patch_text(identity))
         pending_bottom = float(pending["at"][1]) + float(pending["size"][1])
         identity_top = float(identity["at"][1])
         self.assertLessEqual(pending_bottom, identity_top)
@@ -847,6 +882,26 @@ class SubmissionContractTest(unittest.TestCase):
         locate_bottom = float(locate["at"][1]) + float(locate["size"][1])
         return_arrow_top = float(return_arrow["at"][1])
         self.assertLessEqual(locate_bottom, return_arrow_top)
+
+    def test_cover_title_does_not_overlap_the_right_rail_label(self) -> None:
+        patch = _compile_html_sources(SLIDES_DIR / "01-cover.html")
+        text_ops = [
+            op
+            for op in patch["ops"]
+            if isinstance(op, dict) and op.get("op") == "add-shape" and op.get("text")
+        ]
+
+        def find_exact(text: str) -> dict[str, object]:
+            marker = f'"text": "{text}"'
+            matches = [op for op in text_ops if marker in _patch_text(op)]
+            self.assertEqual(1, len(matches), text)
+            return matches[0]
+
+        title = find_exact("企业真正缺少的，")
+        right_rail = find_exact("AGENTFIT · 由简入繁")
+        title_right = float(title["at"][0]) + float(title["size"][0])
+        right_rail_left = float(right_rail["at"][0])
+        self.assertLessEqual(title_right, right_rail_left)
 
     def test_decision_bearing_slide_copy_meets_projection_size_floor(self) -> None:
         sources = (
@@ -1103,11 +1158,19 @@ class SubmissionContractTest(unittest.TestCase):
 
         page_9 = _pdf_layout_lines(9)
         for label in (
-            "共享状态 · 项目事实源",
-            "示例：读配置 · 列变更 · 写回滚",
+            "TOOL · 工具",
+            "SKILL · 方法",
+            "MCP / HTTP · 外部契约",
+            "MEMORY · 已验证经验",
         ):
             with self.subTest(page=9, label=label):
                 self.assertTrue(any(label in line for line in page_9), page_9)
+
+        page_15 = _pdf_layout_lines(15)
+        self.assertTrue(
+            any("读 / 写 / 查询" in line for line in page_15),
+            page_15,
+        )
 
         page_17 = _pdf_layout_lines(17)
         self.assertTrue(
@@ -1120,6 +1183,8 @@ class SubmissionContractTest(unittest.TestCase):
             path.read_text(encoding="utf-8")
             for path in sorted(SLIDES_DIR.glob("*.html"))
         )
+        visible_source = re.sub(r"<br\s*/?>", " ", source, flags=re.I)
+        visible_source = html.unescape(re.sub(r"<[^>]+>", "", visible_source))
         for term in (
             "OpsPilot",
             "ProjectCase",
@@ -1133,7 +1198,8 @@ class SubmissionContractTest(unittest.TestCase):
             "同一搜索空间",
         ):
             with self.subTest(term=term):
-                self.assertIn(term, source)
+                haystack = visible_source if term == EVALUATION_IDENTITY else source
+                self.assertIn(term, haystack)
 
     def test_search_space_and_seven_layer_mapping_restored(self) -> None:
         source = "\n".join(
@@ -1173,6 +1239,13 @@ class SubmissionContractTest(unittest.TestCase):
 
     def test_validator_encodes_submission_contract(self) -> None:
         validator = _load_validator()
+        self.assertTrue(hasattr(validator, "_required_term_present"))
+        self.assertTrue(
+            validator._required_term_present(
+                "CandidateVersion × SampleVersion\n× RunIndex",
+                EVALUATION_IDENTITY,
+            )
+        )
         self.assertEqual(17, validator.EXPECTED_SLIDES)
         self.assertTrue(hasattr(validator, "EXPECTED_PAGE_TITLES"))
         self.assertEqual(17, len(validator.EXPECTED_PAGE_TITLES))
@@ -1613,6 +1686,21 @@ class SubmissionContractTest(unittest.TestCase):
                 for error in pptx_errors
             ),
             pptx_errors,
+        )
+
+    def test_validator_accepts_fixed_identity_names_inside_the_list_band(self) -> None:
+        validator = _load_validator()
+        fixed_band = "\n".join(
+            (
+                "01 交付官 02 业务架构师 03 方案架构师 04 验证工程师 05 审计官",
+                "EngagementLead BusinessEngineer AgentArchitect "
+                "ValidationEngineer GovernanceAuditor",
+            )
+        )
+        self.assertEqual("", validator._identity_list_residual(fixed_band))
+        self.assertEqual(
+            "Coordinator",
+            validator._identity_list_residual(fixed_band + " Coordinator Agent"),
         )
 
     def test_validator_rejects_raster_media_and_transitions(self) -> None:

@@ -44,6 +44,8 @@ SLIDE_11_EVIDENCE_STATEMENT = (
     "使用非官方 evaluator，不是正式 Candidate，也不是官方分数。"
 )
 
+EVALUATION_IDENTITY = "CandidateVersion × SampleVersion × RunIndex"
+
 EXPECTED_PAGE_TITLES = (
     "企业真正缺少的，是选对 Agent 方案。",
     "OpsPilot 官方示例：4 个 Worker 加 1 个 Leader，仍未回答该用哪种。",
@@ -138,7 +140,7 @@ REQUIRED_TERMS = (
     "slow_sql_degradation",
     "TaskSample",
     "Episode",
-    "CandidateVersion × SampleVersion × RunIndex",
+    EVALUATION_IDENTITY,
     "EngagementLead",
     "BusinessEngineer",
     "AgentArchitect",
@@ -303,6 +305,13 @@ def _normalized(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
+def _required_term_present(text: str, term: str) -> bool:
+    """Match exact terms, allowing only the evaluation identity to span lines."""
+    if term in text:
+        return True
+    return term == EVALUATION_IDENTITY and _normalized(term) in _normalized(text)
+
+
 def _has_visible_native_content(
     slide: object, slide_width: int, slide_height: int
 ) -> bool:
@@ -375,6 +384,8 @@ def _identity_list_residual(text: str) -> str:
     """Return non-entry content from an already isolated Identity list."""
     text = re.sub(r"(?<=[\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])", "", text)
     residual = NUMBERED_ENTRY_PATTERN.sub("", text)
+    for identity in EXPECTED_META_AGENT_IDENTITIES:
+        residual = re.sub(re.escape(identity), "", residual, flags=re.I)
     residual = re.sub(r"(?:元|Agent)", "", residual, flags=re.I)
     return re.sub(r"[\s/·•,;:|]+", "", residual)
 
@@ -643,7 +654,7 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
 
     deck_text = "\n".join(slide_texts)
     for term in REQUIRED_TERMS:
-        if term not in deck_text:
+        if not _required_term_present(deck_text, term):
             errors.append(f"PPTX is missing required term: {term}")
     for declaration in forbidden_declarations(deck_text):
         if declaration in FORBIDDEN_TERMS:
