@@ -6,6 +6,8 @@
 
 AgentFit 是面向 AgentTeams 构建的 Agent 方案建筑师。企业提供业务材料、代表性案例和用户优先级；它先定义案例与验收，从简单方案开始运行，再依据证据调整完整方案，并以新案例验证后交付最小充分的已验证方案包，也允许保留人工或拒绝自动化。
 
+主线借鉴机器学习中“样本构建、批量试验、误差分析和验证停止”的工程范式：用户定义目标与边界，AgentFit 在案例上比较完整 Agent Solution；调整的不是模型权重，也不把产品包装成训练系统或 AutoML。
+
 内部候选严格表示为 `Candidate = (G, Π, θ, ρ)`：能力图、Agent 分区、参数与共享范围。Tool、Skill、MCP、Memory、Model、Agent 拓扑和 Human 边界都是方案变量；这不是以 Agent 数量或 ML 术语命名的产品。
 
 OpsPilot 是官方案例锚点，作为材料和设计参考，不是 AgentFit 运行证据。retail/airline 的 overnight 记录是 DeepSeek + OpenCode、本地路径与自建工具/代理评估器产生的探索性 Demo，非官方 evaluator、非 Candidate、非正式分数。真实 AgentFit 运行保持 `NOT_STARTED`。
@@ -38,12 +40,12 @@ OpsPilot 是官方案例锚点，作为材料和设计参考，不是 AgentFit �
 | 2 | OpsPilot 官方示例：4 个 Worker 加 1 个 Leader，仍未回答该用哪种。 |
 | 3 | AgentFit 把业务材料、案例与优先级编译成方案约束。 |
 | 4 | 两个事故变成 TaskSample：输入、输出与验收。 |
-| 5 | Tool、Skill、MCP、Memory、模型、Agent 拓扑与 Human 边界组成完整方案空间。 |
-| 6 | 定义案例与验收→构建最小候选→运行测量→分析调整→验证停止。 |
-| 7 | 五个元 Agent 完成方案闭环，区别于候选业务执行 Agent。 |
+| 5 | 调整对象是完整 Agent Solution，而不是 Agent 数量。 |
+| 6 | 五阶段闭环：把机器学习的工程纪律带入 Agent 方案设计。 |
+| 7 | 五个元 Agent 组成 AgentFit Learning Loop，分别负责目标、样本、方案、实验与诊断。 |
 | 8 | AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。 |
 | 9 | Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。 |
-| 10 | 交付 AgentSolutionPackage 与五种合法结果。 |
+| 10 | 交付的不是一张架构图，而是可复现的 AgentSolutionPackage。 |
 | 11 | 证据账本：OpsPilot 为官方锚点，retail/airline 仅探索性 Demo。 |
 | 12 | 从 OpsPilot 回到通用：Fit 是有证据选对方案。 |
 | A1 | 候选四元组 `(G, Π, θ, ρ)`、DAG 主干、局部 SCC 与高层工程类比 |

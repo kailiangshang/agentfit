@@ -667,11 +667,12 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertIn(term, page_5)
         for term in (
             "五阶段闭环",
-            "定义案例与验收",
-            "构建最小候选",
-            "运行并测量",
-            "分析并调整",
-            "验证并停止",
+            "机器学习的工程纪律",
+            "样本工程",
+            "最小方案假设",
+            "批量试验",
+            "Trace 误差分析",
+            "新案例验证 / 停止",
         ):
             with self.subTest(page=6, term=term):
                 self.assertIn(term, page_6)
@@ -698,6 +699,77 @@ class SubmissionContractTest(unittest.TestCase):
             for path in sorted(SLIDES_DIR.glob("*.html"))
         )
         self.assertEqual([], validator.forbidden_declarations(source))
+
+    def test_ml_engineering_discipline_is_visible_in_the_main_story(self) -> None:
+        introduction = _introduction_body(
+            INTRODUCTION.read_text(encoding="utf-8")
+        )
+        solution = SOLUTION.read_text(encoding="utf-8")
+        outline = OUTLINE.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        page_5 = (SLIDES_DIR / "05-search-space.html").read_text(encoding="utf-8")
+        page_6 = (SLIDES_DIR / "06-selection-rule.html").read_text(encoding="utf-8")
+        page_7 = (SLIDES_DIR / "07-meta-team.html").read_text(encoding="utf-8")
+        page_10 = (SLIDES_DIR / "10-package.html").read_text(encoding="utf-8")
+
+        bridge = "样本构建、批量试验、误差分析和验证停止"
+        for label, text in (
+            ("introduction", introduction),
+            ("solution", solution),
+            ("outline", outline),
+            ("readme", readme),
+        ):
+            with self.subTest(artifact=label):
+                self.assertIn(bridge, text)
+
+        for term in (
+            "完整 Agent Solution",
+            "复杂度控制",
+        ):
+            with self.subTest(page=5, term=term):
+                self.assertIn(term, page_5)
+
+        for term in (
+            "机器学习的工程纪律",
+            "调整的不是模型权重",
+            "样本工程",
+            "最小方案假设",
+            "批量试验",
+            "Trace 误差分析",
+            "新案例验证 / 停止",
+        ):
+            with self.subTest(page=6, term=term):
+                self.assertIn(term, page_6)
+
+        for term in (
+            "AgentFit Learning Loop",
+            "目标 / 停止控制",
+            "业务理解 / 样本工程",
+            "方案建模 / 结构选择",
+            "批量试验 / 指标采集",
+            "误差分析 / 治理审计",
+        ):
+            with self.subTest(page=7, term=term):
+                self.assertIn(term, page_7)
+
+        for term in (
+            "不是一张架构图",
+            "方案版本",
+            "实验历史",
+            "失败记录",
+        ):
+            with self.subTest(page=10, term=term):
+                self.assertIn(term, page_10)
+
+        audience = "\n".join((introduction, outline, readme, page_5, page_6, page_7, page_10))
+        for forbidden in (
+            "Agent 方案训练系统",
+            "AutoML for Agents",
+            "已实现优化器",
+            "语义反向传播",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, audience)
 
     def test_html_sources_reject_normalized_forbidden_claim_mutations(self) -> None:
         validator = _load_validator()
@@ -773,11 +845,11 @@ class SubmissionContractTest(unittest.TestCase):
                 "C3 · Human 混合 · 待真实试验",
             ),
             7: (
-                "定义目标 / 决定停止",
-                "定义案例与验收",
-                "构建 / 调整候选",
-                "运行并测量",
-                "分析证据 / 独立审计",
+                "目标 / 停止控制",
+                "业务理解 / 样本工程",
+                "方案建模 / 结构选择",
+                "批量试验 / 指标采集",
+                "误差分析 / 治理审计",
             ),
             11: (
                 "OFFICIAL ANCHOR · 官方案例锚点",
@@ -953,11 +1025,11 @@ class SubmissionContractTest(unittest.TestCase):
             (0, "STOP / CONTINUE"),
             (0, "完整方案七维：Tool · Skill · MCP · Memory · 模型 · Agent 拓扑 · Human 边界"),
             (0, "候选搜索顺序 · 设计契约（非运行结果）"),
-            (1, "定义目标 / 决定停止"),
-            (1, "定义案例与验收"),
-            (1, "构建 / 调整候选"),
-            (1, "运行并测量"),
-            (1, "分析证据 / 独立审计"),
+            (1, "目标 / 停止控制"),
+            (1, "业务理解 / 样本工程"),
+            (1, "方案建模 / 结构选择"),
+            (1, "批量试验 / 指标采集"),
+            (1, "误差分析 / 治理审计"),
             (1, "候选业务执行 Agent · 被五元团队设计与评测"),
             (2, "SEVEN-LAYER MAPPING · 七层 ML 映射"),
             (2, "候选四元组"),
@@ -1293,12 +1365,20 @@ class SubmissionContractTest(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, validator.REQUIRED_TERMS)
         self.assertEqual(
-            "完整方案空间：工具、Skill、MCP、Memory、模型、Agent 拓扑与 Human 边界都是变量。",
+            "调整对象是完整 Agent Solution，而不是 Agent 数量。",
             validator.EXPECTED_PAGE_TITLES[4],
         )
         self.assertEqual(
-            "五阶段闭环：定义案例与验收、构建最小候选、运行并测量、分析并调整、验证并停止。",
+            "五阶段闭环：把机器学习的工程纪律带入 Agent 方案设计。",
             validator.EXPECTED_PAGE_TITLES[5],
+        )
+        self.assertEqual(
+            "五个元 Agent 组成 AgentFit Learning Loop，分别负责目标、样本、方案、实验与诊断。",
+            validator.EXPECTED_PAGE_TITLES[6],
+        )
+        self.assertEqual(
+            "交付的不是一张架构图，而是可复现的 AgentSolutionPackage。",
+            validator.EXPECTED_PAGE_TITLES[9],
         )
         self.assertEqual(
             "证据账本：OpsPilot 为官方锚点，retail/airline 仅探索性 Demo。",
