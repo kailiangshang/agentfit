@@ -1197,6 +1197,42 @@ class SubmissionContractTest(unittest.TestCase):
                 skill_unnumbered_mutation,
             )
 
+            def mutate_standalone_pptx(
+                path: Path, slide_number: int, anchor: str, mutation: str
+            ) -> list[str]:
+                presentation = Presentation(PPTX)
+                slide = presentation.slides[slide_number - 1]
+                matches = [
+                    shape
+                    for shape in validator._iter_shapes(slide.shapes)
+                    if getattr(shape, "has_text_frame", False)
+                    and anchor in shape.text
+                ]
+                self.assertEqual(1, len(matches), anchor)
+                anchor_shape = matches[0]
+                textbox = slide.shapes.add_textbox(
+                    anchor_shape.left,
+                    anchor_shape.top,
+                    anchor_shape.width,
+                    anchor_shape.height,
+                )
+                textbox.text = mutation
+                presentation.save(path)
+                return validator.validate(path)
+
+            identity_standalone_errors = mutate_standalone_pptx(
+                temp / "extra-identity-standalone.pptx",
+                7,
+                "01 交付官",
+                identity_unnumbered_mutation,
+            )
+            skill_standalone_errors = mutate_standalone_pptx(
+                temp / "extra-skill-standalone.pptx",
+                15,
+                "1 任务编译",
+                skill_unnumbered_mutation,
+            )
+
             def pdf_anchor_position(
                 page_number: int, number: int, label: str
             ) -> tuple[float, float, float]:
@@ -1315,6 +1351,8 @@ class SubmissionContractTest(unittest.TestCase):
         for errors in (
             identity_unnumbered_errors,
             skill_unnumbered_errors,
+            identity_standalone_errors,
+            skill_standalone_errors,
             identity_unnumbered_pdf_errors,
             skill_unnumbered_pdf_errors,
         ):

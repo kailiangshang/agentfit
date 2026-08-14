@@ -407,23 +407,47 @@ def _text_contract_list_text(text: str, page_number: int) -> str:
 
 
 def _pptx_contract_list_text(slide: object, page_number: int) -> str | None:
-    """Isolate list-entry shapes using only the frozen numbered entries."""
+    """Isolate numbered entries plus nearby standalone cards from their geometry."""
     labels = _contract_list_labels(page_number)
     if labels is None:
         return None
 
     entry_texts: list[str] = []
+    entry_shapes: list[object] = []
     for number, label in enumerate(labels, start=1):
         expected = (number, label)
         matches = [
-            shape.text
+            shape
             for shape in _iter_shapes(slide.shapes)
             if getattr(shape, "has_text_frame", False)
             and expected in _structured_integer_entries(shape.text)
         ]
         if len(matches) != 1:
             return ""
-        entry_texts.append(matches[0])
+        entry_shapes.append(matches[0])
+        entry_texts.append(matches[0].text)
+
+    left = min(shape.left for shape in entry_shapes)
+    right = max(shape.left + shape.width for shape in entry_shapes)
+    top = min(shape.top for shape in entry_shapes)
+    bottom = max(shape.top + shape.height for shape in entry_shapes)
+    horizontal_padding = max(shape.width for shape in entry_shapes)
+    vertical_padding = max(shape.height for shape in entry_shapes)
+    entry_ids = {shape.shape_id for shape in entry_shapes}
+    for shape in _iter_shapes(slide.shapes):
+        if (
+            not getattr(shape, "has_text_frame", False)
+            or not shape.text.strip()
+            or shape.shape_id in entry_ids
+        ):
+            continue
+        center_x = shape.left + shape.width / 2
+        center_y = shape.top + shape.height / 2
+        if (
+            left - horizontal_padding <= center_x <= right + horizontal_padding
+            and top - vertical_padding <= center_y <= bottom + vertical_padding
+        ):
+            entry_texts.append(shape.text)
     return "\n".join(entry_texts)
 
 
