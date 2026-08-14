@@ -1343,6 +1343,40 @@ class SubmissionContractTest(unittest.TestCase):
             errors,
         )
 
+        with tempfile.TemporaryDirectory(prefix="submission-list-copy-") as temp_dir:
+            path = Path(temp_dir) / "rewritten-surrounding-copy.pptx"
+            presentation = Presentation(PPTX)
+            replacements = {
+                14: {
+                    "完整 Identity 契约": "Identity 字段说明",
+                    "候选冻结后": "Supporting Agent is ordinary explanatory copy. 候选冻结后",
+                },
+                15: {
+                    "SEVEN SKILLS": "CORE METHODS",
+                    "SKILL · 可复用方法": "METHOD · 可复用能力",
+                    "完整字段见": "additional Skill is ordinary explanatory copy. 完整字段见",
+                },
+            }
+            for page_number, page_replacements in replacements.items():
+                for shape in validator._iter_shapes(
+                    presentation.slides[page_number - 1].shapes
+                ):
+                    if not getattr(shape, "has_text_frame", False):
+                        continue
+                    for old, new in page_replacements.items():
+                        if old in shape.text:
+                            shape.text = shape.text.replace(old, new)
+            presentation.save(path)
+            pptx_errors = validator.validate(path)
+
+        self.assertFalse(
+            any(
+                "unrecognized extra identity/Skill entry" in error
+                for error in pptx_errors
+            ),
+            pptx_errors,
+        )
+
     def test_validator_rejects_raster_media_and_transitions(self) -> None:
         validator = _load_validator()
         with tempfile.TemporaryDirectory(prefix="submission-native-") as temp_dir:

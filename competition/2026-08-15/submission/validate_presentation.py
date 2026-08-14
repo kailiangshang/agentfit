@@ -365,48 +365,66 @@ def _structured_integer_entries(text: str) -> list[tuple[int, str]]:
 
 
 def _skill_list_residual(text: str) -> str:
-    """Return non-entry content inside a seven-Skill list text region."""
-    start = text.find("SEVEN SKILLS")
-    end = text.find("SKILL ·", start + len("SEVEN SKILLS"))
-    if start < 0:
-        region = text
-    elif end < 0:
-        region = text[start + len("SEVEN SKILLS") :]
-    else:
-        region = text[start + len("SEVEN SKILLS") : end]
-    region = re.sub(r"(?<=[\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])", "", region)
-    residual = NUMBERED_ENTRY_PATTERN.sub("", region)
+    """Return non-entry content from an already isolated Skill list."""
+    text = re.sub(r"(?<=[\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])", "", text)
+    residual = NUMBERED_ENTRY_PATTERN.sub("", text)
     return re.sub(r"[\s/·•,;:|]+", "", residual)
 
 
-def _identity_list_region(text: str) -> str:
-    """Return the bounded identity-card region, excluding surrounding prose."""
-    start_match = re.search(r"(?m)^\s*01(?:\s*/\s*|\s+)交付官", text)
-    if start_match is None:
+def _identity_list_residual(text: str) -> str:
+    """Return non-entry content from an already isolated Identity list."""
+    text = re.sub(r"(?<=[\u4e00-\u9fff])[ \t]+(?=[\u4e00-\u9fff])", "", text)
+    residual = NUMBERED_ENTRY_PATTERN.sub("", text)
+    residual = re.sub(r"(?:元|Agent)", "", residual, flags=re.I)
+    return re.sub(r"[\s/·•,;:|]+", "", residual)
+
+
+def _contract_list_labels(page_number: int) -> tuple[str, ...] | None:
+    if page_number == 15:
+        return EXPECTED_SKILL_ENTRIES
+    if page_number in (7, 14):
+        return ("交付官", "业务架构师", "方案架构师", "验证工程师", "审计官")
+    return None
+
+
+def _text_contract_list_text(text: str, page_number: int) -> str:
+    """Isolate numbered-entry lines without relying on surrounding copy."""
+    labels = _contract_list_labels(page_number)
+    if labels is None:
         return ""
-    boundaries = (
-        text.find("下层 · 候选业务执行 Agent", start_match.end()),
-        text.find("完整 Identity 契约", start_match.end()),
-    )
-    ends = [boundary for boundary in boundaries if boundary >= 0]
-    end = min(ends) if ends else len(text)
-    return text[start_match.start() : end]
-
-
-def _has_unnumbered_identity_card(text: str) -> bool:
-    """Detect a short unnumbered Agent card only inside identity-card content."""
-    region = _identity_list_region(text)
-    if not region:
-        return any(
-            re.search(r"\b[A-Za-z][A-Za-z0-9_-]*\s+Agent\b", line)
+    entry_lines: list[str] = []
+    for number, label in enumerate(labels, start=1):
+        expected = (number, label)
+        matches = [
+            line
             for line in text.splitlines()
-        )
-    for line in region.splitlines():
-        if NUMBERED_ENTRY_PATTERN.search(line):
-            continue
-        if re.search(r"\b[A-Za-z][A-Za-z0-9_-]*\s+Agent\b", line):
-            return True
-    return False
+            if expected in _structured_integer_entries(line)
+        ]
+        if len(matches) != 1:
+            return ""
+        entry_lines.append(matches[0])
+    return "\n".join(entry_lines)
+
+
+def _pptx_contract_list_text(slide: object, page_number: int) -> str | None:
+    """Isolate list-entry shapes using only the frozen numbered entries."""
+    labels = _contract_list_labels(page_number)
+    if labels is None:
+        return None
+
+    entry_texts: list[str] = []
+    for number, label in enumerate(labels, start=1):
+        expected = (number, label)
+        matches = [
+            shape.text
+            for shape in _iter_shapes(slide.shapes)
+            if getattr(shape, "has_text_frame", False)
+            and expected in _structured_integer_entries(shape.text)
+        ]
+        if len(matches) != 1:
+            return ""
+        entry_texts.append(matches[0])
+    return "\n".join(entry_texts)
 
 
 def _pdf_positioned_list_text(page: object, page_number: int) -> str:
@@ -513,14 +531,22 @@ def _numbered_contract_errors(
                     f"{page_label} is missing fixed Skill entry: {skill}"
                 )
     if page_number == 15:
-        list_text = text if positioned_list_text is None else positioned_list_text
+        list_text = (
+            _text_contract_list_text(text, page_number)
+            if positioned_list_text is None
+            else positioned_list_text
+        )
         if list_text and _skill_list_residual(list_text):
             errors.append(
                 f"{page_label} contains an unrecognized extra identity/Skill entry"
             )
     elif page_number in (7, 14):
-        identity_text = text if positioned_list_text is None else positioned_list_text
-        if identity_text and _has_unnumbered_identity_card(identity_text):
+        identity_text = (
+            _text_contract_list_text(text, page_number)
+            if positioned_list_text is None
+            else positioned_list_text
+        )
+        if identity_text and _identity_list_residual(identity_text):
             errors.append(
                 f"{page_label} contains an unrecognized extra identity/Skill entry"
             )
@@ -563,7 +589,14 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
                 errors.append(f"PPTX slide {index} contains a media shape")
 
         normalized_text = _normalized(text)
-        errors.extend(_numbered_contract_errors("PPTX slide", index, text))
+        errors.extend(
+            _numbered_contract_errors(
+                "PPTX slide",
+                index,
+                text,
+                _pptx_contract_list_text(slide, index),
+            )
+        )
         if index <= len(EXPECTED_PAGE_TITLES):
             title = EXPECTED_PAGE_TITLES[index - 1]
             if _normalized(title) not in normalized_text:
