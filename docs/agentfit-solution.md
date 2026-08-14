@@ -4,7 +4,7 @@
 >
 > 最近收敛：2026-08-14
 >
-> 当前阶段：唯一初赛提交版本已冻结；真实 AgentFit 运行保持 `NOT_STARTED`，后续是否启动由晋级结果与赛事反馈决定
+> 当前阶段：唯一初赛提交版本已冻结；AgentTeams M0 已获授权并进入 `IN_PROGRESS`，M1–M4 仍为 `NOT_STARTED`
 
 ## 1. 文档地位与当前状态
 
@@ -18,7 +18,7 @@
 | 初赛材料 | `READY` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX/PDF 的结构、内容、可编辑性、几何和视觉检查已完成 | PPT 中的设计图等于运行证据 |
 | AgentTeams 平台试用 | 已有独立 smoke test | Worker、Team、Human、文件同步、定时任务等底座能力曾被单独试用 | 历史平台测试等于 AgentFit 已集成 |
 | retail / airline 探索性 Demo | 有限探索证据 | DeepSeek + OpenCode、本地路径与自建工具/代理评估器可用于发现设计问题 | 官方 τ³-bench 成绩、正式 Candidate、统一候选对照或生产效果 |
-| AgentFit 真实运行 | `NOT_STARTED` | 运行合同和启动条件已定义 | 已经批准或启动 walking skeleton，或已跑通 ProjectCase、候选评测、跨项目学习 |
+| AgentFit 真实运行 | M0 `IN_PROGRESS`；M1–M4 `NOT_STARTED` | 已授权准备固定版本的 AgentTeams 运行基线 | AgentFit 已跑通 ProjectCase、候选评测、闭环或跨项目学习 |
 
 初赛材料以[唯一提交目录](../competition/2026-08-15/submission/)为准；真实 AgentFit 运行状态、AgentTeams 边界和后续启动条件以本文件第 3、7、8、13 节为准。
 
@@ -107,9 +107,10 @@ AgentFit 当前不做：
 | AgentFit | 任务与能力语义、能力对齐、候选生成、架构搜索、统一评测、审计、Human 门禁和交付 | 重造通用 Agent 运行时、IM、容器编排或企业 IAM |
 | Human | 提供材料、确认任务契约、批准预算与高风险动作、处理责任边界、接受或否决交付 | 替 Agent 静默补证据、修改评测结果或承担未记录的兜底 |
 
-后续工程若启动，采用“AgentTeams 原生底座 + AgentFit 能力包”：
+当前获准启动的工程采用“AgentTeams 原生底座 + AgentFit 能力包”：
 
 - 使用 AgentTeams 已有 Dashboard、Manager/聊天入口、Worker、Team、Human、Skill、MCP、共享存储和通信；
+- AgentTeams 固定 `v1.1.2`，使用官方预构建镜像运行，不执行镜像编译；AgentFit、Benchmark 适配器、场景模拟器、评测与诊断服务以源码方式维护和运行；
 - 用元 Agent 配置、Prompt、Skill、Schema、项目档案、评测工具和审计模板表达 AgentFit；
 - 先手动或半自动跑通最小闭环，再根据真实失败点决定哪些约束必须固化为代码；
 - 平台缺口被真实复现后，记录为外部依赖、上游 Issue 或扩展请求，并选择适配、降级或阻塞；AgentFit 不通过修改 AgentTeams 核心吸收该缺口。
@@ -674,7 +675,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 ### 12.3 后续阶段
 
-初赛提交后暂停扩展性开发。是否进入 AgentTeams walking skeleton、复赛工程或跨项目试验，由晋级结果、评审反馈和后续赛程共同决定；在出现新的赛事条件与明确授权前，只保留启动门禁，不把后续设想写成已启动计划。
+初赛提交材料仍与真实运行证据隔离，不把 M0/M1 作为上传前置。2026-08-14，项目所有者已明确授权按第 13 节启动 AgentTeams M0，并在 M0 通过后进入 M1；复赛扩展、M2–M4、跨项目试验和生产部署仍需以晋级结果、评审反馈、运行证据与后续授权为准。
 
 ### 12.4 官方关注点映射
 
@@ -718,7 +719,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 ### 13.2 后续运行启动条件
 
-后续工作不会因初赛提交自动启动。只有晋级结果、评审反馈或新的赛事安排证明值得继续，并得到明确授权后，才在 AgentTeams 上选择一个首个 ProjectCase，执行第 7.4 节的最小 walking skeleton；在此之前不得写成已批准测试项目。
+启动门禁已于 2026-08-14 由项目所有者明确放行。当前采用“AgentTeams `v1.1.2` 官方预构建镜像 + AgentFit 源码 + 外部 Benchmark/评测源码服务 + LiteLLM API”的运行方式；不修改 AgentTeams 核心，不执行镜像编译。当前真实状态为：M0：`IN_PROGRESS`；M1–M4：`NOT_STARTED`。M0 的主机或镜像预检不构成五元团队集成或闭环证据。
 
 可声称“AgentFit 已在 AgentTeams 跑通最小闭环”，必须同时满足：
 
@@ -732,7 +733,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 ### 13.3 后续最小实施顺序与阶段完成定义
 
-以下顺序只在第 13.2 节第一段的外部授权条件满足后生效。每个里程碑必须独立验收；前一阶段未完成时，不得用后一阶段的界面、自动化或演示材料替代缺失证据。
+以下顺序只在第 13.2 节第一段的外部授权条件满足后生效。该条件已于 2026-08-14 满足，因此 M0 已经启动；但每个里程碑仍必须独立验收，前一阶段未完成时，不得用后一阶段的界面、自动化或演示材料替代缺失证据。M0 的唯一操作入口是[`runtime/agentteams/README.md`](../runtime/agentteams/README.md)。
 
 | 里程碑 | 实施内容 | 阶段完成定义 |
 |---|---|---|

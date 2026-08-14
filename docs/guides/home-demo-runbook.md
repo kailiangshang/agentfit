@@ -2,6 +2,8 @@
 
 > 目标：用 2–3 小时取得第一批真实、可回放、不夸大完成度的 Demo 证据。本文只把 [AgentFit 整体方案](../agentfit-solution.md)的 M0/M1 变成操作步骤，不是第二套方案。
 
+> 2026-08-14 执行状态：M0 已获准启动，但仍为 `IN_PROGRESS`；M1 仍为 `NOT_STARTED`。AgentTeams 固定版本、官方预构建镜像、私密配置和安装/回读步骤以唯一的[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为准。本手册从 retail/τ³-bench 样本准备继续，不再维护第二套 AgentTeams 安装方式。
+
 ## 1. 今晚的准确终点
 
 今晚只选择一个 ProjectCase 方向：**retail 客服工具调用方案设计**。样本来自 τ³-bench；OpsPilot 继续作为比赛官方 baseline 与运维场景锚点。**OpsPilot 与 retail 保持两个独立来源、两个独立 ProjectCase，不混入同一个 SampleSet。**
