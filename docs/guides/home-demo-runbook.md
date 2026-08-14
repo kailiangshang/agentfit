@@ -2,7 +2,7 @@
 
 > 目标：用 2–3 小时取得第一批真实、可回放、不夸大完成度的 Demo 证据。本文只把 [AgentFit 整体方案](../agentfit-solution.md)的 M0/M1 变成操作步骤，不是第二套方案。
 
-> 2026-08-14 执行状态：M0 已获准启动，但仍为 `IN_PROGRESS`；M1 仍为 `NOT_STARTED`。AgentTeams 固定版本、官方预构建镜像、私密配置和安装/回读步骤以唯一的[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为准。本手册从 retail/τ³-bench 样本准备继续，不再维护第二套 AgentTeams 安装方式。
+> 2026-08-14 执行状态：M0 已完成并为 `READY`；M1 仍为 `NOT_STARTED`。AgentTeams 固定版本、官方预构建镜像、私密配置、安装/回读步骤和 `.local-demo/agentteams/evidence` 证据以唯一的[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为准。本手册从 retail/τ³-bench 样本准备继续，不再维护第二套 AgentTeams 安装或 M0 证据方式。
 
 ## 1. 今晚的准确终点
 
@@ -86,6 +86,7 @@ test "$(git -C "$AGENTFIT_TAU3_ROOT" rev-parse HEAD)" = 'fc0055dc4e0a316c3f83133
 python3 --version
 uv --version
 UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple uv --directory "$AGENTFIT_TAU3_ROOT" sync
+uv --directory "$AGENTFIT_TAU3_ROOT" run python -c 'import importlib.metadata as m; print(m.version("tau2"))'
 uv --directory "$AGENTFIT_TAU3_ROOT" run tau2 intro
 uv --directory "$AGENTFIT_TAU3_ROOT" run tau2 run --help | tee "$AGENTFIT_RUN_ROOT/baseline/tau2-run-help.txt"
 ```
@@ -103,7 +104,7 @@ jq 'map(select(.id == "0")) | .[0]' "${AGENTFIT_TAU3_ROOT}/data/tau2/domains/ret
 jq -e '.id == "0"' "$AGENTFIT_RUN_ROOT/source/task-0.json"
 ```
 
-## 5. 完成 M0 基线冻结
+## 5. 复核已完成的 M0 基线
 
 ### 5.1 回读 AgentTeams，不猜版本
 
@@ -124,45 +125,27 @@ docker exec "$AGENTTEAMS_CONTROLLER" "$AGENTTEAMS_CLI" status -o json | tee "$AG
 
 如果 `status -o json` 在实际版本不支持，先运行 `... status --help` 并保存帮助，再用该版本支持的格式执行；不要猜参数。版本/状态回读失败时 M0 未完成。
 
-### 5.2 记录授权、入口与边界
+### 5.2 复核授权、入口与边界
 
-用户已明确授权本次回家开发/测试；仍需把授权边界写入项目证据。先生成模板，再补全尖括号内容：
+当前实例不再创建第二套 M0 模板。唯一证据位于 `.local-demo/agentteams/evidence/`：
+
+- `m0-authorization.md`：授权范围、首个 ProjectCase 和禁止项；
+- `baseline.json`：AgentFit/AgentTeams 源码 SHA、v1.1.2 镜像 tag/digest，以及 `known_boundary` 中 CLI 报告 `dev` 的已知边界；
+- `version.txt`、`status.json`、`managers.json`、`workers.json`、`teams.json`、`containers.txt`、`endpoints.json`：平台状态；
+- `litellm-smoke.json`、`manager-smoke.json`：最小模型与 Manager 消息证据；
+- `SHA256SUMS`：完整性清单。
+
+离开 M0 前只做只读复核，不复制、改写或提交这些本地证据：
 
 ```bash
-source .local-demo/retail-m1/session.env
-printf '%s\n' \
-  '# M0 Authorization' \
-  'status: authorized' \
-  'authorized_at: <ISO-8601 time>' \
-  'authorized_by: <owner>' \
-  'scope: retail M0 and M1 preflight only' \
-  'prohibited: production writes, AgentTeams core changes, M2/M3/M4 claims' \
-  > "$AGENTFIT_RUN_ROOT/baseline/m0-authorization.md"
-
-printf '%s\n' \
-  '# M0 Baseline' \
-  'projectcase_direction: retail customer-service tool use' \
-  'runtime_entry: AgentTeams Manager and Team Room' \
-  'verified_now: <fill from agentteams-status.json and tau2 preflight>' \
-  'known_boundaries: public benchmark, no sealed holdout, no frozen Candidate/TrialSpec yet' \
-  'unverified: real retail tool binding from AgentTeams Worker, clean-environment replay' \
-  'status: IN_PROGRESS until all placeholders are replaced' \
-  > "$AGENTFIT_RUN_ROOT/baseline/m0-baseline.md"
-
-git -C "$AGENTFIT_ROOT" rev-parse HEAD > "$AGENTFIT_RUN_ROOT/baseline/agentfit-version.txt"
-{ git -C "$AGENTFIT_TAU3_ROOT" rev-parse HEAD; uv --directory "$AGENTFIT_TAU3_ROOT" run python -c 'import importlib.metadata as m; print(m.version("tau2"))'; python3 --version; uv --version; } \
-  > "$AGENTFIT_RUN_ROOT/baseline/tau3-versions.txt"
+sha256sum -c .local-demo/agentteams/evidence/SHA256SUMS
+jq -e '.kubeMode == "embedded"' .local-demo/agentteams/evidence/status.json
+jq -e '.total == 1 and .managers[0].phase == "Running"' .local-demo/agentteams/evidence/managers.json
+jq -e '.status == "PASS"' .local-demo/agentteams/evidence/litellm-smoke.json
+jq -e '.status == "PASS" and .mutations_requested == false' .local-demo/agentteams/evidence/manager-smoke.json
 ```
 
-只有以下文件都存在、无尖括号占位，并经 owner 查看后，才能把 `m0-baseline.md` 的状态改为 `READY`：
-
-- `m0-authorization.md`
-- `m0-baseline.md`
-- `agentfit-version.txt`
-- `agentteams-version.txt`
-- `agentteams-status.json`
-- `tau3-versions.txt`
-- `tau2-run-help.txt`
+M0 `READY` 只证明 AgentTeams 底座、模型入口和证据边界可用。当前仍无 Worker、Team、Human 或 Candidate，不能把它写成 M1 或闭环证据。
 
 ## 6. 配置模型，不泄漏密钥
 
@@ -346,16 +329,17 @@ runtime_effect: none
 ## 12. 本地产物
 
 ```text
+.local-demo/agentteams/evidence/
+├── m0-authorization.md
+├── baseline.json
+├── version.txt
+├── status.json
+└── SHA256SUMS
+
 .local-demo/retail-m1/
 ├── session.env
 ├── model.env
 ├── baseline/
-│   ├── m0-authorization.md
-│   ├── m0-baseline.md
-│   ├── agentfit-version.txt
-│   ├── agentteams-version.txt
-│   ├── agentteams-status.json
-│   ├── tau3-versions.txt
 │   └── tau2-run-help.txt
 ├── source/{policy.md,tasks.json,split_tasks.json,task-0.json}
 ├── native-runs/
@@ -435,7 +419,7 @@ rg -n '(API_KEY=.+|sk-[A-Za-z0-9]{16,}|Bearer [A-Za-z0-9._-]{20,})' "$AGENTFIT_R
 
 ```text
 status: M1 IN_PROGRESS
-m0_status: READY | IN_PROGRESS
+m0_status: READY
 preflight_sample_ids: [实际 IDs]
 preflight_result_refs: [results.json 路径]
 agentteams_trace_ref: [对话导出路径]

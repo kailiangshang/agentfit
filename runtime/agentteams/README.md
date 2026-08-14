@@ -12,10 +12,12 @@
 
 ## 当前状态
 
-- M0：`IN_PROGRESS`。启动已获授权，主机与镜像可用性正在冻结；完成状态必须来自安装后的版本和状态回读。
+- M0：`READY`。2026-08-14 已完成授权、首个 ProjectCase 选择、官方镜像固定、运行状态回读、LiteLLM/Manager smoke、证据密钥扫描与哈希校验。
 - M1：`NOT_STARTED`。五元团队、Skill、ProjectCase 和真实 Candidate 尚未在 AgentTeams 中执行。
 
 平台预检、历史 smoke 或 Benchmark preflight 都不能替代 M1 证据。
+
+当前固定镜像的 tag 与 digest 均对应 `v1.1.2`；但镜像内 `hiclaw version` 的 Controller CLI 仍报告 `dev`。这是官方镜像构建元数据缺口，已经保存在 ignored 证据中，不把它改写成 CLI 已正确报告 `v1.1.2`。
 
 ## 1. 从 AgentFit 仓库根目录预检
 
@@ -53,6 +55,8 @@ runtime/agentteams/install-prebuilt.sh --check
 runtime/agentteams/install-prebuilt.sh
 ```
 
+上游安装器的完整输出只写入 `.local-demo/agentteams/install.log` 私密安装日志，文件必须被 Git ignore 且权限为 `0600`；终端只显示成功/失败和日志位置，避免管理员密码、API 地址或其他运行配置进入共享输出。
+
 脚本强制：
 
 - `AGENTTEAMS_VERSION=v1.1.2`；
@@ -88,19 +92,22 @@ docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}' \
   > .local-demo/agentteams/evidence/containers.txt
 ```
 
-根据 `status --help` 使用该版本支持的格式读取状态，保存到 `.local-demo/agentteams/evidence/status.txt`。不猜测不存在的选项。
+根据 `status --help` 使用该版本支持的格式读取状态，保存到 `.local-demo/agentteams/evidence/status.json`。不猜测不存在的选项。
 
-只有同时满足以下条件，M0 才能从 `IN_PROGRESS` 变为 `READY`：
+M0 已按以下门禁从 `IN_PROGRESS` 变为 `READY`：
 
-1. AgentTeams 版本回读为固定版本；
+1. Controller 与 Manager 官方镜像的 tag 和 digest 固定为 `v1.1.2`，并保存 CLI 报告 `dev` 的已知边界；
 2. Controller、Manager、Matrix、存储与入口处于可用状态；
 3. LiteLLM 最小调用通过；
-4. 版本、状态、容器和已知边界均已保存；
+4. 授权、首个 ProjectCase、版本、状态、容器和已知边界均已保存；
 5. ignored 证据中不存在密钥；
-6. 没有把平台可用性写成 AgentFit 闭环证据。
+6. `SHA256SUMS` 可验证证据完整性；
+7. 没有把平台可用性写成 AgentFit 闭环证据。
+
+当前实例的唯一 M0 证据目录是 `.local-demo/agentteams/evidence/`。它是本地、ignored、权限为 `0600` 的运行记录，不进入比赛提交目录。
 
 ## 5. M0 之后
 
-M0 通过后才执行 M1：用 AgentTeams 原生 Team、Leader、四个 Worker、Human、Skill 和共享存储实例化五元团队，并运行一个冻结 ProjectCase。Retail/airline 的具体样本与 preflight 操作继续见[回家 Demo 执行手册](../../docs/guides/home-demo-runbook.md)。
+下一步执行 M1：用 AgentTeams 原生 Team、Leader、四个 Worker、Human、Skill 和共享存储实例化五元团队，并运行一个冻结 ProjectCase。Retail/airline 的具体样本与 preflight 操作继续见[回家 Demo 执行手册](../../docs/guides/home-demo-runbook.md)。
 
 在 M1 完成前，准确表述始终是：AgentTeams 底座正在接入，AgentFit 闭环尚未跑通。

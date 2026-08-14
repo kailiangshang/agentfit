@@ -70,6 +70,52 @@ class InstallPrebuiltTest(unittest.TestCase):
         self.assertNotIn("https://litellm.example/v1", combined)
         self.assertNotIn("fixture-model", combined)
 
+    def test_install_output_is_written_only_to_an_ignored_private_log(self):
+        self.write_env()
+        private_log = Path(self.tempdir.name) / "install.log"
+        fake_bin = Path(self.tempdir.name) / "bin"
+        fake_bin.mkdir()
+        fake_bash = fake_bin / "bash"
+        fake_bash.write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n' 'Admin password: fixture-admin-password'\n"
+            "printf '%s\\n' 'Base URL: https://litellm.example/v1'\n",
+            encoding="utf-8",
+        )
+        fake_bash.chmod(0o700)
+
+        environment = os.environ.copy()
+        environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
+        result = subprocess.run(
+            [
+                "/bin/bash",
+                str(WRAPPER),
+                "--env-file",
+                str(self.env_file),
+                "--log-file",
+                str(private_log),
+            ],
+            cwd=REPO_ROOT,
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        combined = result.stdout + result.stderr
+        self.assertNotIn("fixture-admin-password", combined)
+        self.assertNotIn("https://litellm.example/v1", combined)
+        self.assertIn("private install log", combined)
+        self.assertIn("fixture-admin-password", private_log.read_text(encoding="utf-8"))
+        self.assertEqual(0o600, private_log.stat().st_mode & 0o777)
+        ignored = subprocess.run(
+            ["git", "check-ignore", "-q", str(private_log)],
+            cwd=REPO_ROOT,
+            check=False,
+        )
+        self.assertEqual(0, ignored.returncode)
+
     def test_missing_private_file_is_rejected(self):
         result = self.run_wrapper("--check")
 

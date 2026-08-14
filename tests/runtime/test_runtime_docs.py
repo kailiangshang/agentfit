@@ -24,8 +24,11 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
             ".local-demo/agentteams/platform",
             "M0",
             "M1",
-            "IN_PROGRESS",
+            "READY",
             "NOT_STARTED",
+            "tag 与 digest",
+            "CLI 仍报告 `dev`",
+            "私密安装日志",
             "agt",
             "hiclaw",
         )
@@ -36,11 +39,12 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
         self.assertNotIn("docker build", text.lower())
         self.assertNotRegex(text, re.compile(r"(?:sk|key)-[A-Za-z0-9_-]{12,}"))
 
-    def test_canonical_solution_records_authorized_but_not_completed_state(self):
+    def test_canonical_solution_records_m0_ready_but_m1_not_started(self):
         text = SOLUTION.read_text(encoding="utf-8")
 
-        self.assertIn("M0：`IN_PROGRESS`", text)
+        self.assertIn("M0：`READY`", text)
         self.assertIn("M1–M4：`NOT_STARTED`", text)
+        self.assertIn("CLI 版本字段仍报告 `dev`", text)
         self.assertIn("官方预构建镜像", text)
         self.assertIn("不执行镜像编译", text)
         self.assertNotIn("在此之前不得写成已批准测试项目", text)
@@ -49,7 +53,9 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
         text = HOME_DEMO.read_text(encoding="utf-8")
 
         self.assertIn("../../runtime/agentteams/README.md", text)
-        self.assertIn("M0 已获准启动，但仍为 `IN_PROGRESS`", text)
+        self.assertIn("M0 已完成并为 `READY`", text)
+        self.assertIn(".local-demo/agentteams/evidence", text)
+        self.assertIn("M1 仍为 `NOT_STARTED`", text)
         self.assertIn("preflight-only", text)
         self.assertIn("不是 AgentFit Candidate", text)
 
