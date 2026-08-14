@@ -215,6 +215,28 @@ BROADENED_FORBIDDEN_TERMS = (
     "AgentTeams 跑通最小闭环",
 )
 
+FORBIDDEN_DECLARATION_PATTERNS = (
+    (
+        "verified Meta-learning claim",
+        re.compile(
+            r"(?:meta-learning|meta learning)"
+            r"(?:is|was)?(?:verified|validated|confirmed|proven)"
+            r"|(?:verified|validated|confirmed|proven)"
+            r"(?:meta-learning|meta learning)"
+            r"|(?:已验证|验证完成|已证实|验证过)"
+            r"(?:的)?meta-learning"
+            r"|meta-learning(?:已验证|验证完成|已证实|验证过)",
+        ),
+    ),
+)
+
+UNNUMBERED_EXTRA_ENTRY_PATTERNS = (
+    re.compile(r"(?:extra|additional|sixth)\s+(?:meta\s+agent|identity)", re.I),
+    re.compile(r"(?:extra|additional|tenth)\s+skill", re.I),
+    re.compile(r"(?:第六|额外|新增)(?:个)?(?:元\s*)?Agent"),
+    re.compile(r"(?:额外|新增)(?:个)?Skill", re.I),
+)
+
 FORBIDDEN_TERMS = (
     "Agent 方案训练系统",
     "AutoML for Agents",
@@ -236,6 +258,22 @@ FORBIDDEN_TERMS = (
 ) + BROADENED_FORBIDDEN_TERMS
 
 PRESENTATIONML_NAMESPACE = "http://schemas.openxmlformats.org/presentationml/2006/main"
+
+
+def forbidden_declarations(text: str) -> list[str]:
+    """Return normalized literal and regex forbidden declarations in text."""
+    normalized = _normalized(text).casefold()
+    declarations = [
+        term
+        for term in FORBIDDEN_TERMS
+        if _normalized(term).casefold() in normalized
+    ]
+    declarations.extend(
+        label
+        for label, pattern in FORBIDDEN_DECLARATION_PATTERNS
+        if pattern.search(normalized)
+    )
+    return list(dict.fromkeys(declarations))
 
 
 def _shape_text(shape: object) -> list[str]:
@@ -317,6 +355,17 @@ def _package_editability_errors(pptx_path: Path) -> list[str]:
     return errors
 
 
+def _structured_integer_entries(text: str) -> list[tuple[int, str]]:
+    """Extract numbered content entries while ignoring page markers and bullets."""
+    return [
+        (int(number), label)
+        for number, label in re.findall(
+            r"(?<![\w/])(\d+)\s+([^\s/·•]+)", text
+        )
+        if label not in {"/", "·", "•"}
+    ]
+
+
 def _numbered_contract_errors(page_label: str, page_number: int, text: str) -> list[str]:
     errors: list[str] = []
     marker = EXPECTED_PAGE_MARKERS[page_number - 1]
@@ -327,11 +376,14 @@ def _numbered_contract_errors(page_label: str, page_number: int, text: str) -> l
         )
 
     if page_number in (7, 14):
-        identity_markers = re.findall(r"(?m)^\s*(0[1-9])\s+(?!/)", text)
-        if identity_markers != ["01", "02", "03", "04", "05"]:
+        identity_entries = _structured_integer_entries(text)
+        expected_identity_entries = list(
+            enumerate(("交付官", "业务架构师", "方案架构师", "验证工程师", "审计官"), start=1)
+        )
+        if identity_entries != expected_identity_entries:
             errors.append(
-                f"{page_label} must contain exactly five Meta Agent entries 01-05; "
-                f"found {identity_markers}"
+                f"{page_label} must contain exactly five fixed Meta Agent entries 01-05; "
+                f"found {identity_entries}"
             )
         for identity in EXPECTED_META_AGENT_IDENTITIES:
             if identity not in text:
@@ -341,19 +393,24 @@ def _numbered_contract_errors(page_label: str, page_number: int, text: str) -> l
                 )
 
     if page_number == 15:
-        skill_markers = re.findall(
-            r"(?<!\d)([1-9])\s+(?=[\u4e00-\u9fff])", text
-        )
-        if skill_markers != [str(index) for index in range(1, 8)]:
+        skill_entries = _structured_integer_entries(text)
+        expected_skill_entries = list(enumerate(EXPECTED_SKILL_ENTRIES, start=1))
+        if skill_entries != expected_skill_entries:
             errors.append(
-                f"{page_label} must contain exactly seven Skill entries 1-7; "
-                f"found {skill_markers}"
+                f"{page_label} must contain exactly seven fixed Skill entries 1-7; "
+                f"found {skill_entries}"
             )
         for skill in EXPECTED_SKILL_ENTRIES:
             if skill not in text:
                 errors.append(
                     f"{page_label} is missing fixed Skill entry: {skill}"
                 )
+    for pattern in UNNUMBERED_EXTRA_ENTRY_PATTERNS:
+        if pattern.search(text):
+            errors.append(
+                f"{page_label} contains an unrecognized extra identity/Skill entry"
+            )
+            break
     return errors
 
 
@@ -418,9 +475,13 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
     for term in REQUIRED_TERMS:
         if term not in deck_text:
             errors.append(f"PPTX is missing required term: {term}")
-    for term in FORBIDDEN_TERMS:
-        if term in deck_text:
-            errors.append(f"PPTX contains forbidden term: {term}")
+    for declaration in forbidden_declarations(deck_text):
+        if declaration in FORBIDDEN_TERMS:
+            errors.append(f"PPTX contains forbidden term: {declaration}")
+        else:
+            errors.append(
+                f"PPTX contains forbidden declaration pattern: {declaration}"
+            )
 
     if pdf_path is not None:
         if not pdf_path.is_file():
@@ -471,9 +532,14 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
                             )
 
                 pdf_text = "\n".join(pdf_texts)
-                for term in FORBIDDEN_TERMS:
-                    if term in pdf_text:
-                        errors.append(f"PDF contains forbidden term: {term}")
+                for declaration in forbidden_declarations(pdf_text):
+                    if declaration in FORBIDDEN_TERMS:
+                        errors.append(f"PDF contains forbidden term: {declaration}")
+                    else:
+                        errors.append(
+                            "PDF contains forbidden declaration pattern: "
+                            f"{declaration}"
+                        )
 
     return errors
 

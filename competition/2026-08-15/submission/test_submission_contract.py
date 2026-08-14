@@ -573,8 +573,14 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(artifact=label):
                 self.assertEqual(
-                    ["01", "02", "03", "04", "05"],
-                    re.findall(r"(?m)^\s*(0[1-9])\s+(?!/)", text),
+                    [
+                        (1, "交付官"),
+                        (2, "业务架构师"),
+                        (3, "方案架构师"),
+                        (4, "验证工程师"),
+                        (5, "审计官"),
+                    ],
+                    validator._structured_integer_entries(text),
                 )
                 for identity in validator.EXPECTED_META_AGENT_IDENTITIES:
                     self.assertIn(identity, text)
@@ -585,10 +591,8 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(artifact=label):
                 self.assertEqual(
-                    [str(index) for index in range(1, 8)],
-                    re.findall(
-                        r"(?<!\d)([1-9])\s+(?=[\u4e00-\u9fff])", text
-                    ),
+                    list(enumerate(validator.EXPECTED_SKILL_ENTRIES, start=1)),
+                    validator._structured_integer_entries(text),
                 )
                 for skill in validator.EXPECTED_SKILL_ENTRIES:
                     self.assertIn(skill, text)
@@ -631,17 +635,21 @@ class SubmissionContractTest(unittest.TestCase):
             path.read_text(encoding="utf-8")
             for path in sorted(SLIDES_DIR.glob("*.html"))
         )
-        for term in (
-            "Agent 方案训练系统",
-            "AutoML for Agents",
-            "语义反向传播",
-            "proxy 分数是官方结果",
-            "代理分数是官方结果",
-            "proxy score is official",
-            "exploratory proxy scores are official results",
+        self.assertEqual([], validator.forbidden_declarations(source))
+
+    def test_html_sources_reject_normalized_forbidden_claim_mutations(self) -> None:
+        validator = _load_validator()
+        source = (SLIDES_DIR / "17-a5-openness.html").read_text(encoding="utf-8")
+        for claim in (
+            "AutoML",
+            "已验证 Meta-learning",
+            "Meta-learning is verified",
+            "META-LEARNING IS VERIFIED",
+            "AgentTeams end-to-end integration complete",
         ):
-            with self.subTest(forbidden=term):
-                self.assertNotIn(term, source)
+            with self.subTest(claim=claim):
+                declarations = validator.forbidden_declarations(source + claim)
+                self.assertTrue(declarations, claim)
 
     def test_html_sources_use_pptx_safe_solid_colors(self) -> None:
         for path in sorted(SLIDES_DIR.glob("*.html")):
@@ -1075,7 +1083,12 @@ class SubmissionContractTest(unittest.TestCase):
             "formal Candidate execution completed",
             "AgentTeams end-to-end integration complete",
         )
-        payload = "\n".join(mutation_terms)
+        meta_learning_claims = (
+            "Meta-learning is verified",
+            "verified Meta-learning",
+            "已验证 Meta-learning",
+        )
+        payload = "\n".join(mutation_terms + meta_learning_claims)
         with tempfile.TemporaryDirectory(prefix="submission-overclaim-") as temp_dir:
             temp = Path(temp_dir)
 
@@ -1091,7 +1104,7 @@ class SubmissionContractTest(unittest.TestCase):
             overlay_path = temp / "overlay.pdf"
             canvas = Canvas(str(overlay_path), pagesize=(1280, 720))
             canvas.setFont("Helvetica", 10)
-            for line_number, line in enumerate(mutation_terms):
+            for line_number, line in enumerate(mutation_terms + meta_learning_claims[:2]):
                 canvas.drawString(20, 700 - line_number * 16, line)
             canvas.save()
 
@@ -1108,6 +1121,86 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertIn(f"PPTX contains forbidden term: {term}", pptx_errors)
             with self.subTest(artifact="PDF", term=term):
                 self.assertIn(f"PDF contains forbidden term: {term}", pdf_errors)
+        for artifact, errors in (("PPTX", pptx_errors), ("PDF", pdf_errors)):
+            with self.subTest(artifact=artifact, claim="verified Meta-learning"):
+                self.assertIn(
+                    f"{artifact} contains forbidden declaration pattern: "
+                    "verified Meta-learning claim",
+                    errors,
+                )
+
+    def test_validator_rejects_extra_identity_and_skill_mutations(self) -> None:
+        validator = _load_validator()
+        identity_mutation = "6 Extra Meta Agent\nExtra Meta Agent"
+        skill_mutation = "10 Tenth Skill\nExtra Skill"
+        with tempfile.TemporaryDirectory(prefix="submission-entry-count-") as temp_dir:
+            temp = Path(temp_dir)
+
+            identity_pptx = temp / "extra-identity.pptx"
+            presentation = Presentation(PPTX)
+            identity_box = presentation.slides[6].shapes.add_textbox(
+                Inches(0.1), Inches(0.1), Inches(10), Inches(0.8)
+            )
+            identity_box.text = identity_mutation
+            presentation.save(identity_pptx)
+            identity_errors = validator.validate(identity_pptx)
+
+            skill_pptx = temp / "extra-skill.pptx"
+            presentation = Presentation(PPTX)
+            skill_box = presentation.slides[14].shapes.add_textbox(
+                Inches(0.1), Inches(0.1), Inches(10), Inches(0.8)
+            )
+            skill_box.text = skill_mutation
+            presentation.save(skill_pptx)
+            skill_errors = validator.validate(skill_pptx)
+
+            overlay_path = temp / "entry-overlay.pdf"
+            canvas = Canvas(str(overlay_path), pagesize=(1280, 720))
+            canvas.setFont("Helvetica", 10)
+            for page_number in range(17):
+                if page_number == 6:
+                    canvas.drawString(20, 700, "6 Extra Meta Agent")
+                    canvas.drawString(20, 684, "Extra Meta Agent")
+                if page_number == 14:
+                    canvas.drawString(20, 700, "10 Tenth Skill")
+                    canvas.drawString(20, 684, "Extra Skill")
+                if page_number < 16:
+                    canvas.showPage()
+            canvas.save()
+
+            overlay_reader = PdfReader(overlay_path)
+            pdf_path = temp / "extra-entries.pdf"
+            writer = PdfWriter(clone_from=str(PDF))
+            writer.pages[6].merge_page(overlay_reader.pages[6])
+            writer.pages[14].merge_page(overlay_reader.pages[14])
+            with pdf_path.open("wb") as stream:
+                writer.write(stream)
+            pdf_errors = validator.validate(PPTX, pdf_path)
+
+        self.assertTrue(
+            any("exactly five fixed Meta Agent entries" in error for error in identity_errors),
+            identity_errors,
+        )
+        self.assertTrue(
+            any("unrecognized extra identity/Skill entry" in error for error in identity_errors),
+            identity_errors,
+        )
+        self.assertTrue(
+            any("exactly seven fixed Skill entries" in error for error in skill_errors),
+            skill_errors,
+        )
+        self.assertTrue(
+            any("unrecognized extra identity/Skill entry" in error for error in skill_errors),
+            skill_errors,
+        )
+        self.assertTrue(
+            any("exactly five fixed Meta Agent entries" in error for error in pdf_errors),
+            pdf_errors,
+        )
+        self.assertTrue(
+            any("exactly seven fixed Skill entries" in error for error in pdf_errors),
+            pdf_errors,
+        )
 
     def test_validator_rejects_raster_media_and_transitions(self) -> None:
         validator = _load_validator()
