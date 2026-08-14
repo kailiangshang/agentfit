@@ -31,7 +31,7 @@
 |---:|---|---|
 | A1 | 候选四元组 `(G, Π, θ, ρ)`、DAG 主干、局部 SCC 与高层工程类比 | 严格内部表示，不是训练系统 |
 | A2 | 五个 Agent Identity 契约 | 身份、责任与 Trace |
-| A3 | 七个 Skill、HTTP/MCP 等价工具、共享状态与 Trace | Skill、工具与上下文 |
+| A3 | 七个 Skill、Tool 与 MCP/HTTP 契约、Memory 与 Trace。 | Skill、工具、接口与上下文 |
 | A4 | Human 门禁、风险、异常与回滚 | 安全、审批、降级与审计 |
 | A5 | 开放、依赖、许可证、baseline 引用与未实现边界 | 开放、合规与事实披露 |
 

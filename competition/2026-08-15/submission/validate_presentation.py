@@ -55,11 +55,11 @@ EXPECTED_PAGE_TITLES = (
     "AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。",
     "Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。",
     "交付 AgentSolutionPackage 与五种合法结果。",
-    "证据账本：探索性 Demo 已有证据，非官方 evaluator 与正式 AgentFit 候选仍待运行。",
+    "证据账本：OpsPilot 为官方锚点，retail/airline 仅探索性 Demo。",
     "从 OpsPilot 回到通用：Fit 是有证据选对方案。",
     "七层 ML 映射、候选四元组与内外循环。",
     "五个 Agent Identity：判断权、状态边界与责任产物。",
-    "七个 Skill、HTTP/MCP 等价工具、共享状态与 Trace。",
+    "七个 Skill、Tool 与 MCP/HTTP 契约、Memory 与 Trace。",
     "Human 门禁、风险、异常与回滚。",
     "开放、依赖、许可证、baseline 引用与未实现边界。",
 )

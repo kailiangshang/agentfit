@@ -630,6 +630,21 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(page=6, term=term):
                 self.assertIn(term, page_6)
+        self.assertIn(
+            "按失败模式调整完整方案七维，不越过 Human 门禁",
+            page_6,
+        )
+        for term in (
+            "Tool",
+            "Skill",
+            "MCP",
+            "Memory",
+            "模型",
+            "Agent 拓扑",
+            "Human 边界",
+        ):
+            with self.subTest(page=6, complete_solution_dimension=term):
+                self.assertIn(term, page_6)
         validator = _load_validator()
         self.assertIn(validator.SLIDE_11_EVIDENCE_STATEMENT, page_11)
 
@@ -888,6 +903,8 @@ class SubmissionContractTest(unittest.TestCase):
             "业务执行 Agent",
         ):
             self.assertIn(term, meta_team)
+        self.assertIn("共同覆盖闭环", meta_team)
+        self.assertIn("交接责任", meta_team)
 
     def test_compact_pdf_labels_do_not_wrap_orphan_characters(self) -> None:
         page_7 = _pdf_layout_lines(7)
@@ -1028,7 +1045,7 @@ class SubmissionContractTest(unittest.TestCase):
             validator.EXPECTED_PAGE_TITLES[5],
         )
         self.assertEqual(
-            "证据账本：探索性 Demo 已有证据，非官方 evaluator 与正式 AgentFit 候选仍待运行。",
+            "证据账本：OpsPilot 为官方锚点，retail/airline 仅探索性 Demo。",
             validator.EXPECTED_PAGE_TITLES[10],
         )
         for term in (
