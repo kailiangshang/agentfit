@@ -87,6 +87,30 @@ def require_safe_output(path: Path) -> None:
         ) from error
 
 
+SHARED_ROOT_CANDIDATES = (
+    # v1.2.0-beta.1+: worker-managed mirror layout
+    "/root/.copaw-worker/{leader}/shared",
+    # v1.1.2: CoPaw workspace layout
+    "/root/hiclaw-fs/agents/{leader}/.copaw/workspaces/default/shared",
+)
+
+
+def detect_shared_root(container_command: str, container: str, leader_name: str) -> str:
+    for template in SHARED_ROOT_CANDIDATES:
+        root = template.format(leader=leader_name)
+        probe = subprocess.run(
+            [container_command, "exec", container, "test", "-d", root],
+            capture_output=True,
+            check=False,
+        )
+        if probe.returncode == 0:
+            return root
+    raise ValueError(
+        "no shared workspace root found in the leader container; "
+        "checked: " + ", ".join(t.format(leader=leader_name) for t in SHARED_ROOT_CANDIDATES)
+    )
+
+
 def export(args: argparse.Namespace) -> dict[str, Any]:
     require_safe_output(args.output_dir)
     if args.output_dir.exists():
@@ -108,7 +132,7 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
     stage = Path(
         tempfile.mkdtemp(prefix=".agentfit-dossier-export-", dir=output_parent)
     )
-    shared_root = f"/root/hiclaw-fs/agents/{leader_name}/.copaw/workspaces/default/shared"
+    shared_root = detect_shared_root(args.container_command, container, leader_name)
     sources = {
         "project": f"projects/{project_id}",
         "business": f"tasks/{business_task_id}",

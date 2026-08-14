@@ -40,6 +40,7 @@ class ExportDossierTest(unittest.TestCase):
                 "from pathlib import Path\n"
                 "args=sys.argv[1:]\n"
                 "if args[0]=='inspect': raise SystemExit(0)\n"
+                "if args[0]=='exec': raise SystemExit(0)\n"
                 "if args[0]!='cp': raise SystemExit(64)\n"
                 "source=args[1].split(':',1)[1]\n"
                 "rel=source.split('/shared/',1)[1].removesuffix('/.')\n"
