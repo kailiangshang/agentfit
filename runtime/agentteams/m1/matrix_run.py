@@ -430,6 +430,41 @@ def usage_totals(ledger: dict[str, Any]) -> dict[str, int]:
     return totals
 
 
+LEDGER_PATH_CANDIDATES = (
+    # v1.2.0-beta.1+: worker-managed mirror layout
+    "/root/.copaw-worker/{agent}/.copaw/token_usage.json",
+    # v1.1.2: hiclaw-fs layout
+    "/root/hiclaw-fs/agents/{agent}/.copaw/token_usage.json",
+)
+
+
+def read_token_ledger(container_command: str, agent: str) -> dict[str, Any]:
+    for template in LEDGER_PATH_CANDIDATES:
+        path = template.format(agent=agent)
+        ledger_result = subprocess.run(
+            [
+                container_command,
+                "exec",
+                f"agentteams-worker-{agent}",
+                "cat",
+                path,
+            ],
+            input="",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if ledger_result.returncode == 0:
+            return json.loads(ledger_result.stdout)
+        if "no such file" not in ledger_result.stderr.lower():
+            raise RuntimeError(
+                f"failed to read token ledger for {agent}: {ledger_result.stderr.strip()}"
+            )
+    # A freshly provisioned agent that has made no LLM calls yet has no ledger
+    # file under any known layout; that is a valid zero-usage state.
+    return {}
+
+
 def usage_snapshot(args: argparse.Namespace) -> int:
     team = load_json_file(args.team_file)
     leader_name, _, _ = require_team_fields(team)
@@ -442,29 +477,7 @@ def usage_snapshot(args: argparse.Namespace) -> int:
     find_controller(args.container_command)
     per_agent: dict[str, dict[str, int]] = {}
     for agent in agents:
-        ledger_result = subprocess.run(
-            [
-                args.container_command,
-                "exec",
-                f"agentteams-worker-{agent}",
-                "cat",
-                f"/root/hiclaw-fs/agents/{agent}/.copaw/token_usage.json",
-            ],
-            input="",
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if ledger_result.returncode != 0 and "no such file" in ledger_result.stderr.lower():
-            # A freshly provisioned agent that has made no LLM calls yet has
-            # no ledger file; that is a valid zero-usage state, not an error.
-            ledger = {}
-        elif ledger_result.returncode != 0:
-            raise RuntimeError(
-                f"failed to read token ledger for {agent}: {ledger_result.stderr.strip()}"
-            )
-        else:
-            ledger = json.loads(ledger_result.stdout)
+        ledger = read_token_ledger(args.container_command, agent)
         if not isinstance(ledger, dict):
             raise RuntimeError(f"token ledger for {agent} is not a JSON object")
         per_agent[agent] = usage_totals(ledger)
