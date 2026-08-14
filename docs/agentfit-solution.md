@@ -4,7 +4,7 @@
 >
 > 最近收敛：2026-08-14
 >
-> 当前阶段：唯一初赛提交版本已冻结；AgentTeams M0 已完成并为 `READY`，M1–M4 仍为 `NOT_STARTED`
+> 当前阶段：唯一初赛提交版本已冻结；AgentTeams M0 已完成并为 `READY`，M1 已进入 `IN_PROGRESS`，M2–M4 仍为 `NOT_STARTED`
 
 ## 1. 文档地位与当前状态
 
@@ -18,7 +18,7 @@
 | 初赛材料 | `READY` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX/PDF 的结构、内容、可编辑性、几何和视觉检查已完成 | PPT 中的设计图等于运行证据 |
 | AgentTeams 平台试用 | 已有独立 smoke test | Worker、Team、Human、文件同步、定时任务等底座能力曾被单独试用 | 历史平台测试等于 AgentFit 已集成 |
 | retail / airline 探索性 Demo | 有限探索证据 | DeepSeek + OpenCode、本地路径与自建工具/代理评估器可用于发现设计问题 | 官方 τ³-bench 成绩、正式 Candidate、统一候选对照或生产效果 |
-| AgentFit 真实运行 | M0 `READY`；M1–M4 `NOT_STARTED` | 已固定 AgentTeams v1.1.2 官方镜像、运行入口、首个 ProjectCase 与 M0 证据边界 | AgentFit 已跑通 ProjectCase、候选评测、闭环或跨项目学习 |
+| AgentFit 真实运行 | M0 `READY`；M1 `IN_PROGRESS`；M2–M4 `NOT_STARTED` | 已固定 AgentTeams v1.1.2 官方镜像；原生 Team `Active`、1 个 Leader 和 4 个 Worker 均运行、Human `Active` | AgentFit 已跑通 ProjectCase、候选评测、闭环或跨项目学习 |
 
 初赛材料以[唯一提交目录](../competition/2026-08-15/submission/)为准；真实 AgentFit 运行状态、AgentTeams 边界和后续启动条件以本文件第 3、7、8、13 节为准。
 
@@ -675,7 +675,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 ### 12.3 后续阶段
 
-初赛提交材料仍与真实运行证据隔离，不把 M0/M1 作为上传前置。2026-08-14，项目所有者已明确授权按第 13 节启动 AgentTeams M0，并在 M0 通过后进入 M1；复赛扩展、M2–M4、跨项目试验和生产部署仍需以晋级结果、评审反馈、运行证据与后续授权为准。
+初赛提交材料仍与真实运行证据隔离，不把 M0/M1 作为上传前置。2026-08-14，项目所有者已明确授权按第 13 节启动 AgentTeams M0，并在 M0 通过后进入 M1；当前 M0 已完成、M1 已实例化五元 Team 并进入 `IN_PROGRESS`。复赛扩展、M2–M4、跨项目试验和生产部署仍需以晋级结果、评审反馈、运行证据与后续授权为准。
 
 ### 12.4 官方关注点映射
 
@@ -713,13 +713,13 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 - Agentize 必要性、复杂度代价和自动候选搜索；
 - ProjectAsset/MetaAsset 正式存储、晋升和回归系统；
 - 任一完整、冻结的真实 ProjectCase；
-- AgentFit 五元团队、Skill、MCP、共享状态和 Trace 的真实 AgentTeams 集成；
+- AgentFit 五元 Team 已真实实例化，但 Skill/工具、Project Dossier 共享状态、ProjectCase 流转和 Trace 集成尚未完成；
 - 统一预算下的 Agentless、单 Agent和多 Agent真实对照；
 - 跨项目迁移收益、Meta-learning、生产部署或真实业务效果。
 
 ### 13.2 后续运行启动条件
 
-启动门禁已于 2026-08-14 由项目所有者明确放行。当前采用“AgentTeams `v1.1.2` 官方预构建镜像 + AgentFit 源码 + 外部 Benchmark/评测源码服务 + LiteLLM API”的运行方式；不修改 AgentTeams 核心，不执行镜像编译。当前真实状态为：M0：`READY`；M1–M4：`NOT_STARTED`。M0 已固定官方镜像 tag 与 digest、运行入口、首个 ProjectCase、LiteLLM/Manager smoke 和本地证据完整性；镜像内 CLI 版本字段仍报告 `dev`，作为官方构建元数据缺口保留。M0 的平台可用性不构成五元团队集成或闭环证据。
+启动门禁已于 2026-08-14 由项目所有者明确放行。当前采用“AgentTeams `v1.1.2` 官方预构建镜像 + AgentFit 源码 + 外部 Benchmark/评测源码服务 + LiteLLM API”的运行方式；不修改 AgentTeams 核心，不执行镜像编译。当前真实状态为：M0：`READY`；M1：`IN_PROGRESS`；M2–M4：`NOT_STARTED`。M0 已固定官方镜像 tag 与 digest、运行入口、首个 ProjectCase、LiteLLM/Manager smoke 和本地证据完整性；镜像内 CLI 版本字段仍报告 `dev`，作为官方构建元数据缺口保留。M1 已取得 Team `Active`、1 个 Leader 和 4 个 Worker `Running`、Human `Active` 与五份 SOUL 合同证据，但尚未流转 ProjectCase 或运行 Candidate，不能写成闭环证据。
 
 可声称“AgentFit 已在 AgentTeams 跑通最小闭环”，必须同时满足：
 
@@ -733,7 +733,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 ### 13.3 后续最小实施顺序与阶段完成定义
 
-以下顺序只在第 13.2 节第一段的外部授权条件满足后生效。该条件已于 2026-08-14 满足，M0 已独立验收为 `READY`，M1 尚未启动；每个后续里程碑仍必须独立验收，不得用后一阶段的界面、自动化或演示材料替代缺失证据。M0 的唯一操作入口是[`runtime/agentteams/README.md`](../runtime/agentteams/README.md)。
+以下顺序只在第 13.2 节第一段的外部授权条件满足后生效。该条件已于 2026-08-14 满足，M0 已独立验收为 `READY`，M1 已进入 `IN_PROGRESS`；每个后续里程碑仍必须独立验收，不得用后一阶段的界面、自动化或演示材料替代缺失证据。M0/M1 的唯一运行入口是[`runtime/agentteams/README.md`](../runtime/agentteams/README.md)。
 
 | 里程碑 | 实施内容 | 阶段完成定义 |
 |---|---|---|

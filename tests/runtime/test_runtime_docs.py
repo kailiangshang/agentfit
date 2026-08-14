@@ -10,9 +10,13 @@ HOME_DEMO = REPO_ROOT / "docs" / "guides" / "home-demo-runbook.md"
 
 
 class RuntimeDocumentationContractTest(unittest.TestCase):
-    def test_runtime_guide_is_the_single_m0_entrypoint(self):
+    def test_runtime_guide_is_the_single_m0_m1_entrypoint(self):
         text = RUNTIME_GUIDE.read_text(encoding="utf-8")
 
+        self.assertIn(
+            "本目录是 AgentFit 在 AgentTeams 上启动 M0/M1 的唯一运行入口",
+            text,
+        )
         required = (
             "AgentTeams 官方预构建镜像",
             "AgentFit 源码",
@@ -25,10 +29,12 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
             "M0",
             "M1",
             "READY",
-            "NOT_STARTED",
+            "IN_PROGRESS",
             "tag 与 digest",
             "CLI 仍报告 `dev`",
             "私密安装日志",
+            "runtime/agentteams/m1/agentfit-retail-m1.yaml",
+            "runtime/agentteams/apply-manifest.sh",
             "agt",
             "hiclaw",
         )
@@ -39,11 +45,13 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
         self.assertNotIn("docker build", text.lower())
         self.assertNotRegex(text, re.compile(r"(?:sk|key)-[A-Za-z0-9_-]{12,}"))
 
-    def test_canonical_solution_records_m0_ready_but_m1_not_started(self):
+    def test_canonical_solution_records_m0_ready_and_m1_in_progress(self):
         text = SOLUTION.read_text(encoding="utf-8")
 
         self.assertIn("M0：`READY`", text)
-        self.assertIn("M1–M4：`NOT_STARTED`", text)
+        self.assertIn("M1：`IN_PROGRESS`", text)
+        self.assertIn("M2–M4：`NOT_STARTED`", text)
+        self.assertIn("Team `Active`、1 个 Leader 和 4 个 Worker", text)
         self.assertIn("CLI 版本字段仍报告 `dev`", text)
         self.assertIn("官方预构建镜像", text)
         self.assertIn("不执行镜像编译", text)
@@ -55,7 +63,8 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
         self.assertIn("../../runtime/agentteams/README.md", text)
         self.assertIn("M0 已完成并为 `READY`", text)
         self.assertIn(".local-demo/agentteams/evidence", text)
-        self.assertIn("M1 仍为 `NOT_STARTED`", text)
+        self.assertIn("M1 已进入 `IN_PROGRESS`", text)
+        self.assertIn("runtime/agentteams/m1/agentfit-retail-m1.yaml", text)
         self.assertIn("preflight-only", text)
         self.assertIn("不是 AgentFit Candidate", text)
 

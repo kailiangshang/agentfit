@@ -1,6 +1,6 @@
-# AgentFit × AgentTeams M0 运行入口
+# AgentFit × AgentTeams M0/M1 运行入口
 
-本目录是 AgentFit 在 AgentTeams 上启动 M0 的唯一操作入口。当前采用：
+本目录是 AgentFit 在 AgentTeams 上启动 M0/M1 的唯一运行入口。当前采用：
 
 - AgentTeams 官方预构建镜像运行控制面、Manager 和 Worker；
 - AgentFit 源码承载 Identity、Skill、Schema、适配器和后续试验逻辑；
@@ -13,7 +13,7 @@
 ## 当前状态
 
 - M0：`READY`。2026-08-14 已完成授权、首个 ProjectCase 选择、官方镜像固定、运行状态回读、LiteLLM/Manager smoke、证据密钥扫描与哈希校验。
-- M1：`NOT_STARTED`。五元团队、Skill、ProjectCase 和真实 Candidate 尚未在 AgentTeams 中执行。
+- M1：`IN_PROGRESS`。`agentfit-retail-m1` Team 已为 `Active`，Team-scoped Human 已为 `Active`，1 个 Leader 和 4 个 Worker 均为 `Running`；ProjectCase、Skill/工具绑定和真实 Candidate 尚未执行。
 
 平台预检、历史 smoke 或 Benchmark preflight 都不能替代 M1 证据。
 
@@ -106,8 +106,24 @@ M0 已按以下门禁从 `IN_PROGRESS` 变为 `READY`：
 
 当前实例的唯一 M0 证据目录是 `.local-demo/agentteams/evidence/`。它是本地、ignored、权限为 `0600` 的运行记录，不进入比赛提交目录。
 
-## 5. M0 之后
+## 5. M1 原生声明与当前边界
 
-下一步执行 M1：用 AgentTeams 原生 Team、Leader、四个 Worker、Human、Skill 和共享存储实例化五元团队，并运行一个冻结 ProjectCase。Retail/airline 的具体样本与 preflight 操作继续见[回家 Demo 执行手册](../../docs/guides/home-demo-runbook.md)。
+当前实例使用 AgentTeams `v1.1.2` 原生 Team-inline 合同：Team 自己声明 1 个 Leader 和 4 个 Worker，再声明一个 team-scoped Human。唯一版本化入口是：
+
+- `runtime/agentteams/m1/agentfit-retail-m1.yaml`
+- `runtime/agentteams/apply-manifest.sh`
+
+```bash
+python3 -m unittest tests.runtime.test_m1_manifest -v
+runtime/agentteams/apply-manifest.sh \
+  --file runtime/agentteams/m1/agentfit-retail-m1.yaml \
+  --log-file .local-demo/agentteams/m1/apply-v112.log
+```
+
+包装器只调用 Controller 内原生 `agt` 或 `hiclaw apply`，完整输出进入 ignored、`0600` 私密日志，避免 Human 初始密码进入终端。固定 v1.1.2 镜像只提供 `hiclaw`，其 Team Schema 是 `hiclaw.io/v1beta1` 下的 `leader + workers`；当前 AgentTeams `main` 的宿主脚本改用 `agt`，Team Schema 也改成引用独立 Worker CR，不能拿来直接操作本实例。
+
+当前脱敏证据位于 `.local-demo/agentteams/m1/evidence/`，已回读 Team `Active`、Leader ready、4/4 Worker ready、5 个成员的模型/runtime/role、Human `Active`、五份根 SOUL 合同和 SHA-256 完整性。v1.1.2 的 Human 查询不会回显 permissionLevel/accessibleTeams，因此 Human scope 只能由已应用 manifest 与 Active 状态共同证明，不能声称完成了生产级 IAM 验证。
+
+下一步才是向 Team Leader 投递 retail ProjectCase preparation，产生语义草案和预期的治理阻断；Retail/airline 的具体样本与 preflight 操作继续见[回家 Demo 执行手册](../../docs/guides/home-demo-runbook.md)。
 
 在 M1 完成前，准确表述始终是：AgentTeams 底座正在接入，AgentFit 闭环尚未跑通。

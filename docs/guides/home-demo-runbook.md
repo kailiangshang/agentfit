@@ -2,7 +2,7 @@
 
 > 目标：用 2–3 小时取得第一批真实、可回放、不夸大完成度的 Demo 证据。本文只把 [AgentFit 整体方案](../agentfit-solution.md)的 M0/M1 变成操作步骤，不是第二套方案。
 
-> 2026-08-14 执行状态：M0 已完成并为 `READY`；M1 仍为 `NOT_STARTED`。AgentTeams 固定版本、官方预构建镜像、私密配置、安装/回读步骤和 `.local-demo/agentteams/evidence` 证据以唯一的[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为准。本手册从 retail/τ³-bench 样本准备继续，不再维护第二套 AgentTeams 安装或 M0 证据方式。
+> 2026-08-14 执行状态：M0 已完成并为 `READY`；M1 已进入 `IN_PROGRESS`。AgentTeams 固定版本、官方预构建镜像、私密配置、安装/回读步骤、`.local-demo/agentteams/evidence` 和 M1 原生声明以唯一的[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)为准。本手册从 retail/τ³-bench 样本准备与 ProjectCase 投递继续，不再维护第二套 AgentTeams 安装或资源创建方式。
 
 ## 1. 今晚的准确终点
 
@@ -257,25 +257,25 @@ cp -a "$AGENTFIT_TAU3_ROOT/data/simulations/agentfit-retail-preflight-20" "$AGEN
 
 12/20 只是探索规模，不是统计显著性、正式 adaptation/validation 或 holdout 声明。若只完成 1 或 3 个，也保留真实结果，不补造数据。
 
-## 8. 在 AgentTeams 建立五元元团队
+## 8. 复用已建立的 AgentTeams 五元团队
 
-在 AgentTeams Manager 对话中粘贴下面的请求。完整合同见 [`agent-identity.md`](../../competition/2026-08-15/submission/agent-identity.md)。
+五元团队已由版本化的 `runtime/agentteams/m1/agentfit-retail-m1.yaml` 实例化，不再向 Manager 粘贴临时创建消息。完整身份合同见 [`agent-identity.md`](../../competition/2026-08-15/submission/agent-identity.md)。从 AgentFit 根目录只读验证：
 
-```text
-请创建 AgentFit retail M1 元团队，不修改 AgentTeams 核心：
-
-Team: agentfit-retail-m1
-Team Leader identity: EngagementLead
-Workers:
-1. BusinessEngineer：把来源材料编译为 SampleSemanticSpec、TaskSemanticSpec 和边界清单；不得生成候选。
-2. AgentArchitect：只消费已批准且冻结的 Sample/Task/四份 manifest，生成 Candidate；缺任一项必须 BLOCKED。
-3. ValidationEngineer：只按已批准 TrialSpec 执行正式 Candidate；preflight 只能作为工具链证据，不得转成 EvaluationRun。
-4. GovernanceAuditor：独立检查来源、版本、权限、失败分支和声明边界；post-freeze sealed-holdout outcome consumer = GovernanceAuditor only。
-
-EngagementLead 负责 Intake、阶段推进、Human 门禁与 DeliveryDecision，不代写其他 Worker 责任产物。任何预算扩张、越权读取、高风险动作或合同变化必须由 Human 明确审批。创建完成后只回复 Team/Leader/Worker 状态和房间 ID，不宣称 ProjectCase 已运行。
+```bash
+python3 -m unittest tests.runtime.test_m1_manifest -v
+docker exec agentteams-controller hiclaw get teams agentfit-retail-m1 -o json \
+  | jq -e '.phase == "Active" and .leaderReady == true and .readyWorkers == 4 and .totalWorkers == 4'
+docker exec agentteams-controller hiclaw get workers --team agentfit-retail-m1 -o json \
+  | jq -e '.total == 5 and all(.workers[]; .phase == "Running")'
+docker exec agentteams-controller hiclaw get humans agentfit-owner -o json \
+  | jq -e '.phase == "Active"'
 ```
 
-把 Manager 回复、room id 和实际 Worker 状态保存到 `$AGENTFIT_RUN_ROOT/agentteams/`。确认 Team Leader 与四个 Worker 均可见、房间可投递后，再发任务。
+创建/更新时使用 `runtime/agentteams/apply-manifest.sh`，不要直接运行当前 AgentTeams `main` 的宿主 apply 脚本：固定 v1.1.2 镜像只提供 `hiclaw`，并使用 Team 内联 `leader + workers` 合同；上游 main 已切换为 `agt + workerMembers`。完整 apply 输出可能包含 Human 初始密码，只允许进入 ignored、`0600` 私密日志。
+
+当前 Team/Leader/Worker/Human 和根 SOUL 已通过回读，但 ProjectCase、Skill/工具绑定、共享 Dossier 和 Candidate 都尚未运行。因此状态只能是 `M1: IN_PROGRESS`。把后续 Leader 消息、room id 和实际 Worker Trace 保存到 `$AGENTFIT_RUN_ROOT/agentteams/`。
+
+治理边界不因 Team 已运行而变化：post-freeze sealed-holdout outcome consumer = GovernanceAuditor only。
 
 ## 9. 发起今晚的语义编译与门禁 Demo
 
@@ -334,6 +334,13 @@ runtime_effect: none
 ├── baseline.json
 ├── version.txt
 ├── status.json
+└── SHA256SUMS
+
+.local-demo/agentteams/m1/evidence/
+├── team.json
+├── members.json
+├── human.json
+├── soul-contracts.json
 └── SHA256SUMS
 
 .local-demo/retail-m1/
