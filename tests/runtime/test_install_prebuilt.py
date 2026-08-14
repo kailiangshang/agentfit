@@ -62,6 +62,7 @@ class InstallPrebuiltTest(unittest.TestCase):
         combined = result.stdout + result.stderr
         self.assertIn("version=v1.1.2", combined)
         self.assertIn("image_source=official-prebuilt", combined)
+        self.assertIn("data_volume=agentfit-agentteams-data", combined)
         self.assertIn("api_key=configured", combined)
         self.assertNotIn("fixture-secret-key", combined)
         self.assertNotIn("https://litellm.example/v1", combined)

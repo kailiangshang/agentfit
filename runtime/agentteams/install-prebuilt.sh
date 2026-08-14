@@ -96,6 +96,7 @@ export AGENTTEAMS_VERSION="${PINNED_VERSION}"
 export AGENTTEAMS_LLM_PROVIDER="openai-compat"
 export AGENTTEAMS_LOCAL_ONLY=1
 export AGENTTEAMS_ROOT_DIR="${AGENTFIT_ROOT}/.local-demo/agentteams/platform"
+export AGENTTEAMS_DATA_DIR="agentfit-agentteams-data"
 
 if ((CHECK_ONLY)); then
   printf '%s\n' \
@@ -103,6 +104,7 @@ if ((CHECK_ONLY)); then
     "version=${AGENTTEAMS_VERSION}" \
     'mode=local-only' \
     "root_dir=${AGENTTEAMS_ROOT_DIR}" \
+    "data_volume=${AGENTTEAMS_DATA_DIR}" \
     'image_source=official-prebuilt' \
     'api_key=configured' \
     'base_url=configured' \
