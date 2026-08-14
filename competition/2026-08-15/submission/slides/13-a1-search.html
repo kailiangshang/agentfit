@@ -3,7 +3,7 @@
 <body class="slide appendix">
   <p class="eyebrow">A1 / 05 · 技术映射</p>
   <h1 class="title" style="font-size:30px;">七层 ML 映射、候选四元组与内外循环。</h1>
-  <p class="subtitle">主线是方案选择；这里的 ML 语义只是后台手段。Meta-learning 是未来方向，当前未实现。</p><div class="top-rule"></div>
+  <p class="subtitle">这是高层 ML 开发流程的工程类比，不是已实现的优化器；主线仍是可审计的方案构建、比较与停止。</p><div class="top-rule"></div>
 
   <div class="panel panel-dark" style="left:72px;top:206px;width:560px;height:340px;border-color:#0b2236;"></div>
   <p class="label" style="left:96px;top:220px;width:520px;color:#74d0c7;">SEVEN-LAYER MAPPING · 七层 ML 映射</p>
@@ -11,10 +11,10 @@
   <p class="small-copy" style="left:96px;top:282px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L2 任务语义 → 分布、输出、指标、损失与权衡</p>
   <p class="small-copy" style="left:96px;top:314px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L3 能力语义 → 算子集、契约、权限与适用域</p>
   <p class="small-copy" style="left:96px;top:346px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L4 候选表示 → 结构、分区、参数与共享范围</p>
-  <p class="small-copy" style="left:96px;top:378px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L5 内循环（inner loop）→ adaptation samples 上优化局部参数</p>
-  <p class="small-copy" style="left:96px;top:410px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L6 外循环（outer loop）→ validation samples 上比较候选架构</p>
-  <p class="small-copy" style="left:96px;top:442px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L7 跨项目学习 → 未见项目验证后更新搜索先验</p>
-  <p class="small-copy" style="left:96px;top:492px;width:510px;color:#d6a43b;font-size:13px;">L7 是未来方向：单项目样本优化不能证明跨项目学习。</p>
+  <p class="small-copy" style="left:96px;top:378px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L5 内循环（inner loop）→ 固定候选内的局部调整类比</p>
+  <p class="small-copy" style="left:96px;top:410px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L6 外循环（outer loop）→ 新案例上的候选比较类比</p>
+  <p class="small-copy" style="left:96px;top:442px;width:510px;color:#ffffff;font-size:14px;line-height:1.5;">L7 跨项目学习 → 多项目验证后才可能更新先验</p>
+  <p class="small-copy" style="left:96px;top:492px;width:510px;color:#d6a43b;font-size:13px;">七层是解释框架，不声明自动搜索、参数学习或 Meta-learning 已实现。</p>
 
   <div class="panel" style="left:648px;top:206px;width:560px;height:282px;background:#ffffff;border-color:#1a8d85;"></div>
   <p class="label" style="left:672px;top:220px;color:#1a8d85;">候选四元组</p>
@@ -46,20 +46,20 @@
   <p class="small-copy" style="left:672px;top:468px;width:510px;font-size:13px;line-height:1.3;color:#53697c;">θ = Prompt / 阈值 / 重试 · ρ = 仓库 / 记忆 / 通信的共享边界</p>
 
   <div class="panel soft-teal" style="left:648px;top:502px;width:270px;height:178px;"></div>
-  <p class="label" style="left:672px;top:516px;width:226px;color:#1a8d85;font-size:11px;">INNER LOOP · 一个 epoch 内</p>
-  <p class="section-title" style="left:672px;top:540px;width:226px;font-size:15px;">让局部 Agent 变好</p>
-  <p class="small-copy" style="left:672px;top:566px;width:226px;font-size:14px;line-height:1.35;">固定 G / Π / ρ；只更新 θ 与分区内状态；遍历 adaptation samples。</p>
-  <p class="small-copy" style="left:672px;top:638px;width:226px;color:#1a8d85;font-size:13px;font-weight:700;">inner loop 服务于方案选择</p>
+  <p class="label" style="left:672px;top:516px;width:226px;color:#1a8d85;font-size:13px;">INNER LOOP · 高层工程类比</p>
+  <p class="section-title" style="left:672px;top:540px;width:226px;font-size:15px;">固定候选内局部调整</p>
+  <p class="small-copy" style="left:672px;top:566px;width:226px;font-size:14px;line-height:1.35;">固定 G / Π / ρ；只更新 θ 与分区内状态；记录 adaptation cases。</p>
+  <p class="small-copy" style="left:672px;top:638px;width:226px;color:#1a8d85;font-size:13px;font-weight:700;">不是已实现的优化器</p>
 
   <div class="panel soft-coral" style="left:938px;top:502px;width:270px;height:178px;"></div>
-  <p class="label" style="left:962px;top:516px;width:226px;color:#c64c32;font-size:11px;">OUTER LOOP · 架构 epoch</p>
-  <p class="section-title" style="left:962px;top:540px;width:226px;font-size:15px;">让整体任务结果变好</p>
+  <p class="label" style="left:962px;top:516px;width:226px;color:#c64c32;font-size:13px;">OUTER LOOP · 高层工程类比</p>
+  <p class="section-title" style="left:962px;top:540px;width:226px;font-size:15px;">比较完整候选</p>
   <p class="small-copy" style="left:962px;top:566px;width:226px;font-size:14px;line-height:1.35;">更新 G / Π / ρ；比较 validation samples；保留合格候选。</p>
   <p class="small-copy" style="left:962px;top:638px;width:226px;color:#c64c32;font-size:13px;font-weight:700;">不预设多 Agent 胜出</p>
 
   <div class="panel" style="left:72px;top:562px;width:560px;height:118px;background:#eef1f5;border-color:#d6ddd9;"></div>
-  <p class="label" style="left:96px;top:576px;width:520px;color:#53697c;">META-LEARNING 未来边界</p>
-  <p class="small-copy" style="left:96px;top:602px;width:520px;font-size:14px;line-height:1.35;">多项目轨迹更新先验，并在未见项目上稳定改善，才构成 Meta-learning 证据。</p>
-  <p class="tiny-copy" style="left:96px;top:640px;width:520px;font-size:13px;line-height:1.3;">Schema、自动候选搜索、跨项目 Meta-learning 均未实现；此处为设计契约，非运行证据。</p>
+  <p class="label" style="left:96px;top:576px;width:520px;color:#53697c;">类比边界 · 非实现声明</p>
+  <p class="small-copy" style="left:96px;top:602px;width:520px;font-size:14px;line-height:1.35;">多项目轨迹在未见项目上稳定改善，才可能构成 Meta-learning 证据。</p>
+  <p class="tiny-copy" style="left:96px;top:640px;width:520px;font-size:13px;line-height:1.3;">Schema、自动候选搜索、跨项目 Meta-learning 均未实现；设计契约，非运行证据。</p>
   <p class="footer-left">AGENTFIT · SAMPLE × TASK × CAPABILITY × SEARCH</p><p class="footer-right">技术附录 · A1</p>
 </body></html>

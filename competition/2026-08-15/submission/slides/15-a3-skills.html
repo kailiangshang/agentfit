@@ -3,7 +3,7 @@
 <body class="slide appendix">
   <p class="eyebrow">A3 / 05 · SKILL / MCP / CONTEXT</p>
   <h1 class="title" style="font-size:30px;">七个 Skill、HTTP/MCP 等价工具、共享状态与 Trace。</h1>
-  <p class="subtitle">Skill 表达可复用方法，HTTP/MCP 连接工具；Dossier 与 Trace 构成可审计上下文。均为设计契约。</p><div class="top-rule"></div>
+  <p class="subtitle">Tool、Skill、MCP、Memory 各有边界；验证门只把有新案例证据的版本提升为可复用资产。</p><div class="top-rule"></div>
 
   <div class="panel" style="left:72px;top:206px;width:1136px;height:96px;background:#ffffff;border-color:#1a8d85;"></div>
   <p class="label" style="left:96px;top:222px;color:#1a8d85;">SEVEN SKILLS</p>
@@ -15,25 +15,33 @@
   <div class="chip" style="left:816px;top:252px;width:136px;height:32px;border-color:#d6a43b;"><p style="color:#d6a43b;">6 人工门禁</p></div>
   <div class="chip" style="left:960px;top:252px;width:200px;height:32px;border-color:#1a8d85;"><p style="color:#1a8d85;">7 经验沉淀</p></div>
 
-  <div class="panel soft-teal" style="left:72px;top:320px;width:368px;height:312px;"></div>
-  <p class="label" style="left:96px;top:336px;color:#1a8d85;">SKILL · 可复用方法</p>
-  <p class="small-copy" style="left:96px;top:372px;width:324px;line-height:1.55;">承载任务编译、建图、评测、审计、门禁等“如何做”。每项含输入、输出、触发、失败处理、安全边界、复用契约。</p>
-  <p class="small-copy" style="left:96px;top:548px;width:324px;color:#53697c;">完整字段见 skill-catalog.md</p>
+  <div class="panel soft-blue" style="left:72px;top:320px;width:260px;height:230px;"></div>
+  <p class="label" style="left:92px;top:336px;color:#426b86;">TOOL</p>
+  <p class="section-title" style="left:92px;top:370px;width:220px;font-size:19px;">一个原子动作</p>
+  <p class="small-copy" style="left:92px;top:410px;width:220px;font-size:14px;line-height:1.5;">最小权限；明确输入输出；不承载跨步骤方法。</p>
+  <p class="code-tag" style="left:92px;top:516px;color:#426b86;">读 / 写 / 查询</p>
 
-  <div class="panel soft-blue" style="left:456px;top:320px;width:368px;height:312px;"></div>
-  <p class="label" style="left:480px;top:336px;color:#426b86;">MCP / HTTP · 等价工具契约</p>
-  <p class="small-copy" style="left:480px;top:372px;width:324px;line-height:1.55;">需要外部系统、明确 Schema、鉴权、幂等键、错误码与审计时才用。MCP、REST、适配器走同一契约。</p>
-  <p class="small-copy" style="left:480px;top:476px;width:324px;line-height:1.55;">纯推理与文档契约优先 Skill；真实 MCP 绑定当前未实现。</p>
-  <p class="small-copy" style="left:480px;top:548px;width:324px;color:#426b86;">契约即上下文，工具不散调</p>
+  <div class="panel soft-teal" style="left:348px;top:320px;width:260px;height:230px;"></div>
+  <p class="label" style="left:368px;top:336px;color:#1a8d85;">SKILL</p>
+  <p class="section-title" style="left:368px;top:370px;width:220px;font-size:19px;">版本化方法</p>
+  <p class="small-copy" style="left:368px;top:410px;width:220px;font-size:14px;line-height:1.5;">组织 Tool 与判断步骤；含失败处理、安全边界和回归案例。</p>
+  <p class="code-tag" style="left:368px;top:516px;">验证前不得晋升</p>
 
-  <div class="panel soft-amber" style="left:840px;top:320px;width:368px;height:312px;"></div>
-  <p class="label" style="left:864px;top:336px;color:#d6a43b;">上下文机制 · 双事实源</p>
-  <p class="small-copy" style="left:864px;top:372px;width:324px;line-height:1.55;color:#102a43;font-weight:700;">选择 1 · 共享状态</p>
-  <p class="small-copy" style="left:864px;top:400px;width:324px;line-height:1.55;">Project Dossier 作事实源。</p>
-  <p class="small-copy" style="left:864px;top:448px;width:324px;line-height:1.55;color:#102a43;font-weight:700;">选择 2 · 轨迹可观测</p>
-  <p class="small-copy" style="left:864px;top:476px;width:324px;line-height:1.55;">Step / Episode 级 Trace。</p>
-  <p class="small-copy" style="left:864px;top:548px;width:324px;color:#d6a43b;">不以 RAG 作为主上下文机制</p>
+  <div class="panel soft-blue" style="left:624px;top:320px;width:260px;height:230px;"></div>
+  <p class="label" style="left:644px;top:336px;color:#426b86;">MCP / HTTP</p>
+  <p class="section-title" style="left:644px;top:370px;width:220px;font-size:19px;">外部系统契约</p>
+  <p class="small-copy" style="left:644px;top:410px;width:220px;font-size:14px;line-height:1.5;">Schema、鉴权、幂等、错误码、审计字段齐备才接入。</p>
+  <p class="code-tag" style="left:644px;top:516px;color:#426b86;">真实绑定未实现</p>
 
-  <p class="small-copy" style="left:72px;top:652px;width:1136px;text-align:center;color:#53697c;">设计契约，非运行证据 · 能力、接口、状态与轨迹各有明确边界</p>
+  <div class="panel soft-amber" style="left:900px;top:320px;width:308px;height:230px;"></div>
+  <p class="label" style="left:920px;top:336px;color:#d6a43b;">MEMORY</p>
+  <p class="section-title" style="left:920px;top:370px;width:268px;font-size:19px;">已验证经验资产</p>
+  <p class="small-copy" style="left:920px;top:410px;width:268px;font-size:14px;line-height:1.5;">保存适用边界、失败模式、Skill 版本和证据引用；不把原始猜测当记忆。</p>
+  <p class="code-tag" style="left:920px;top:516px;color:#a5781c;">Dossier + Trace</p>
+
+  <div class="panel" style="left:72px;top:568px;width:1136px;height:74px;background:#ffffff;border-color:#1a8d85;"></div>
+  <p class="label" style="left:96px;top:580px;color:#1a8d85;">资产晋升门</p>
+  <p class="small-copy" style="left:224px;top:578px;width:960px;font-size:14px;line-height:1.5;color:#102a43;">失败模式 → 候选 Skill 版本 → 新案例独立验证 → Human / Governance 审批 → 已验证 Skill + Memory + 证据引用</p>
+  <p class="small-copy" style="left:72px;top:652px;width:1136px;text-align:center;color:#53697c;">设计契约，非运行证据 · Project Dossier 保存共享状态，Step / Episode 级 Trace 保存轨迹</p>
   <p class="footer-left">AGENTFIT · Skill / MCP / 上下文</p><p class="footer-right">技术附录 · A3</p>
 </body></html>

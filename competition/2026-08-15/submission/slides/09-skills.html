@@ -3,38 +3,50 @@
 <body class="slide">
   <p class="eyebrow">09 / 12 · 工程支撑</p>
   <h1 class="title" style="font-size:30px;line-height:1.1;">Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。</h1>
-  <p class="subtitle" style="top:168px;">Skill 承载方法，HTTP 与 MCP 是等价的工具契约，Project Dossier 是事实源，风险门禁守边界。</p><div class="top-rule" style="top:210px;"></div>
+  <p class="subtitle" style="top:168px;">四类能力各守自己的边界；只有经过案例验证的方法与经验，才进入可复用资产库。</p><div class="top-rule" style="top:210px;"></div>
 
-  <div class="panel" style="left:72px;top:230px;width:1136px;height:140px;background:#ffffff;border-color:#1a8d85;"></div>
-  <p class="label" style="left:96px;top:248px;color:#1a8d85;">SEVEN SKILLS · 可复用方法</p>
-  <div class="chip" style="left:96px;top:282px;width:140px;height:34px;border-color:#1a8d85;"><p style="color:#1a8d85;">1 任务编译</p></div>
-  <div class="chip" style="left:246px;top:282px;width:140px;height:34px;border-color:#1a8d85;"><p style="color:#1a8d85;">2 能力对齐</p></div>
-  <div class="chip" style="left:396px;top:282px;width:140px;height:34px;border-color:#1a8d85;"><p style="color:#1a8d85;">3 候选建图</p></div>
-  <div class="chip" style="left:546px;top:282px;width:140px;height:34px;border-color:#1a8d85;"><p style="color:#1a8d85;">4 统一试验</p></div>
-  <div class="chip" style="left:696px;top:282px;width:140px;height:34px;border-color:#1a8d85;"><p style="color:#1a8d85;">5 独立审计</p></div>
-  <div class="chip" style="left:846px;top:282px;width:140px;height:34px;border-color:#d6a43b;"><p style="color:#d6a43b;">6 人工门禁</p></div>
-  <div class="chip" style="left:996px;top:282px;width:180px;height:34px;border-color:#1a8d85;"><p style="color:#1a8d85;">7 经验沉淀</p></div>
-  <p class="small-copy" style="left:96px;top:328px;width:1086px;">每项含输入、输出、触发、失败处理、安全边界与复用契约；真实 MCP 绑定当前未实现。</p>
+  <div class="panel soft-blue" style="left:72px;top:230px;width:260px;height:180px;"></div>
+  <p class="label" style="left:92px;top:246px;color:#426b86;">TOOL · 工具</p>
+  <p class="section-title" style="left:92px;top:282px;width:220px;font-size:20px;">执行一个原子动作</p>
+  <p class="small-copy" style="left:92px;top:322px;width:220px;font-size:14px;line-height:1.45;">读配置、列变更、写回滚；最小权限、明确输入输出。</p>
+  <p class="code-tag" style="left:92px;top:382px;color:#426b86;">动作，不承载方法</p>
 
-  <div class="panel soft-blue" style="left:72px;top:386px;width:368px;height:220px;"></div>
-  <p class="label" style="left:96px;top:404px;width:324px;color:#426b86;">工具契约 · HTTP / MCP 等价</p>
-  <p class="small-copy" style="left:96px;top:436px;width:324px;line-height:1.5;">同一 Schema 描述入参、出参、鉴权、幂等键、错误码与审计字段。</p>
-  <p class="small-copy" style="left:96px;top:504px;width:324px;line-height:1.5;">MCP、REST、内部适配器都走同一契约；契约即上下文。</p>
-  <p class="code-tag" style="left:96px;top:572px;width:324px;color:#426b86;">示例：读配置 · 列变更 · 写回滚</p>
+  <div class="panel soft-teal" style="left:348px;top:230px;width:260px;height:180px;"></div>
+  <p class="label" style="left:368px;top:246px;color:#1a8d85;">SKILL · 方法</p>
+  <p class="section-title" style="left:368px;top:282px;width:220px;font-size:20px;">组织一套可复用做法</p>
+  <p class="small-copy" style="left:368px;top:322px;width:220px;font-size:14px;line-height:1.45;">输入、输出、触发、失败处理与安全边界均版本化。</p>
+  <p class="code-tag" style="left:368px;top:382px;">七个核心 Skill</p>
 
-  <div class="panel soft-teal" style="left:456px;top:386px;width:368px;height:220px;"></div>
-  <p class="label" style="left:480px;top:404px;width:324px;color:#1a8d85;">共享状态 · 项目事实源</p>
-  <p class="small-copy" style="left:480px;top:436px;width:324px;line-height:1.5;color:#102a43;font-weight:700;">选择 1 · 共享状态</p>
-  <p class="small-copy" style="left:480px;top:460px;width:324px;line-height:1.5;">Project Dossier 作事实源，含样本、候选、Trace、审批。</p>
-  <p class="small-copy" style="left:480px;top:508px;width:324px;line-height:1.5;color:#102a43;font-weight:700;">选择 2 · 轨迹可观测</p>
-  <p class="small-copy" style="left:480px;top:532px;width:324px;line-height:1.5;">Step / Episode 级 Trace 可回放，保留来源与版本。</p>
+  <div class="panel soft-blue" style="left:624px;top:230px;width:260px;height:180px;"></div>
+  <p class="label" style="left:644px;top:246px;color:#426b86;">MCP / HTTP · 外部契约</p>
+  <p class="section-title" style="left:644px;top:282px;width:220px;font-size:20px;">连接外部系统</p>
+  <p class="small-copy" style="left:644px;top:322px;width:220px;font-size:14px;line-height:1.45;">Schema、鉴权、幂等键、错误码与审计字段齐备才接入。</p>
+  <p class="code-tag" style="left:644px;top:382px;color:#426b86;">真实绑定未实现</p>
 
-  <div class="panel soft-coral" style="left:840px;top:386px;width:368px;height:220px;"></div>
-  <p class="label" style="left:864px;top:404px;width:324px;color:#f26b4b;">风险门禁</p>
-  <p class="small-copy" style="left:864px;top:436px;width:324px;line-height:1.5;">外部写入、真实发布、责任转移必须 Human 批准。</p>
-  <p class="small-copy" style="left:864px;top:496px;width:324px;line-height:1.5;">无批准 = 拒绝执行 + 保留证据；不可逆操作默认拒绝。</p>
-  <p class="small-copy" style="left:864px;top:556px;width:324px;color:#f26b4b;font-weight:700;">成功与失败使用同一 Trace 语义</p>
+  <div class="panel soft-amber" style="left:900px;top:230px;width:308px;height:180px;"></div>
+  <p class="label" style="left:920px;top:246px;color:#d6a43b;">MEMORY · 已验证经验</p>
+  <p class="section-title" style="left:920px;top:282px;width:268px;font-size:20px;">只保留可追溯结论</p>
+  <p class="small-copy" style="left:920px;top:322px;width:268px;font-size:14px;line-height:1.45;">失败模式、适用边界、Skill 版本与证据引用进入 Memory。</p>
+  <p class="code-tag" style="left:920px;top:382px;color:#a5781c;">未经验证不沉淀</p>
 
-  <p class="body-copy" style="left:72px;top:622px;width:1136px;text-align:center;font-size:18px;font-weight:700;color:#102a43;">契约先行：Skill 定义方法，HTTP/MCP 连接工具，Dossier 与 Trace 保存状态和证据。</p>
+  <p class="label" style="left:72px;top:434px;color:#53697c;">验证资产如何累积</p>
+  <div class="panel soft-coral" style="left:72px;top:466px;width:224px;height:110px;"></div>
+  <p class="section-title" style="left:92px;top:484px;width:184px;font-size:18px;">失败模式</p>
+  <p class="small-copy" style="left:92px;top:518px;width:184px;font-size:14px;">Trace + 适用边界</p>
+  <p style="position:absolute;left:306px;top:494px;margin:0;font-size:30px;color:#1a8d85;">→</p>
+  <div class="panel soft-teal" style="left:348px;top:466px;width:224px;height:110px;"></div>
+  <p class="section-title" style="left:368px;top:484px;width:184px;font-size:18px;">候选 Skill</p>
+  <p class="small-copy" style="left:368px;top:518px;width:184px;font-size:14px;">新版本 + 回归案例</p>
+  <p style="position:absolute;left:582px;top:494px;margin:0;font-size:30px;color:#1a8d85;">→</p>
+  <div class="panel soft-amber" style="left:624px;top:466px;width:224px;height:110px;"></div>
+  <p class="section-title" style="left:644px;top:484px;width:184px;font-size:18px;">独立验证门</p>
+  <p class="small-copy" style="left:644px;top:518px;width:184px;font-size:14px;">新案例通过 + Human 边界</p>
+  <p style="position:absolute;left:858px;top:494px;margin:0;font-size:30px;color:#1a8d85;">→</p>
+  <div class="panel soft-teal" style="left:900px;top:466px;width:308px;height:110px;border-width:3px;"></div>
+  <p class="section-title" style="left:920px;top:484px;width:268px;font-size:18px;">已验证资产</p>
+  <p class="small-copy" style="left:920px;top:518px;width:268px;font-size:14px;">Skill 版本 + Memory + 证据引用</p>
+
+  <div class="panel" style="left:72px;top:594px;width:1136px;height:58px;background:#ffffff;border-color:#1a8d85;"></div>
+  <p class="body-copy" style="left:96px;top:606px;width:1090px;font-size:16px;color:#102a43;"><b>Project Dossier</b> 保存共享状态；Step / Episode 级 <b>Trace</b> 记录成功与失败；风险动作由 Human 门禁截断。</p>
   <p class="footer-left">AGENTFIT · Skill / 工具 / 上下文</p><p class="footer-right">设计契约 · 09</p>
 </body></html>

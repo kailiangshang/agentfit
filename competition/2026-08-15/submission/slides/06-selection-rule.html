@@ -1,38 +1,51 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
-  <p class="eyebrow">06 / 12 · 选择规则</p>
-  <h1 class="title" style="font-size:32px;line-height:1.1;">同一冻结样本、预算与门禁下，最简合格候选胜出。</h1>
-  <p class="subtitle" style="top:170px;">公平比较的规则写在候选生成之前；不预设多 Agent 胜出，不预设保留人工。</p><div class="top-rule" style="top:212px;"></div>
+  <p class="eyebrow">06 / 12 · SIMPLE FIRST · EVIDENCE LOOP</p>
+  <h1 class="title" style="font-size:28px;line-height:1.1;">五阶段闭环：定义案例与验收、构建最小候选、运行并测量、分析并调整、验证并停止。</h1>
+  <p class="subtitle" style="top:164px;">同一预算与门禁下由简入繁；未通过才调整，通过新案例且无新增价值就停止。</p><div class="top-rule" style="top:206px;"></div>
 
-  <div class="panel" style="left:72px;top:234px;width:556px;height:284px;background:#ffffff;border-color:#1a8d85;"></div>
-  <p class="label" style="left:96px;top:248px;color:#1a8d85;">公平比较 · 冻结在候选生成之前</p>
-  <p class="section-title" style="left:96px;top:276px;width:510px;font-size:18px;">同一冻结样本集</p>
-  <p class="small-copy" style="left:96px;top:302px;width:510px;font-size:13px;line-height:1.4;">同一版本化 TaskSample，候选生成后不得再调整样本。</p>
-  <p class="section-title" style="left:96px;top:340px;width:510px;font-size:18px;">同一模型与工具边界</p>
-  <p class="small-copy" style="left:96px;top:366px;width:510px;font-size:13px;line-height:1.4;">所有候选使用同一能力、工具与接口契约。</p>
-  <p class="section-title" style="left:96px;top:404px;width:510px;font-size:18px;">同一预算 · 指标 · 安全门禁</p>
-  <p class="small-copy" style="left:96px;top:430px;width:510px;font-size:13px;line-height:1.4;">调用次数、时延、成本上限一致；Human 门禁触发条件一致。</p>
-  <p class="small-copy" style="left:96px;top:478px;width:510px;font-size:12px;color:#f26b4b;font-weight:700;">sealed holdout 仅 GovernanceAuditor 在候选冻结后读取。</p>
+  <div class="line" style="left:176px;top:260px;width:928px;background:#1a8d85;"></div>
+  <div class="panel soft-blue" style="left:72px;top:230px;width:208px;height:242px;"></div>
+  <p class="big-number" style="left:92px;top:244px;color:#426b86;font-size:34px;">01</p>
+  <p class="section-title" style="left:92px;top:296px;width:168px;font-size:19px;">定义案例与验收</p>
+  <p class="small-copy" style="left:92px;top:342px;width:168px;font-size:14px;line-height:1.45;">冻结代表性案例、优先级、预算和 Human 门禁。</p>
+  <p class="code-tag" style="left:92px;top:432px;color:#426b86;">先定义“通过”</p>
 
-  <div class="panel soft-teal" style="left:652px;top:234px;width:556px;height:284px;"></div>
-  <p class="label" style="left:676px;top:248px;width:510px;color:#1a8d85;">最简合格者（JUST ENOUGH）</p>
-  <p class="section-title" style="left:676px;top:276px;width:510px;font-size:18px;">从最简候选开始</p>
-  <p class="small-copy" style="left:676px;top:302px;width:510px;font-size:13px;line-height:1.4;">先让 Agentless / 单 Agent 覆盖核心契约。</p>
-  <p class="section-title" style="left:676px;top:340px;width:510px;font-size:18px;">局部不足才加反馈循环</p>
-  <p class="small-copy" style="left:676px;top:366px;width:510px;font-size:13px;line-height:1.4;">只有出现独立决策或边界需求才 Agentize。</p>
-  <p class="section-title" style="left:676px;top:404px;width:510px;font-size:18px;">过门槛者中取最小复杂度</p>
-  <p class="small-copy" style="left:676px;top:430px;width:510px;font-size:13px;line-height:1.4;">满足验收、成本、安全与责任边界的最小充分候选胜出。</p>
-  <p class="small-copy" style="left:676px;top:478px;width:510px;font-size:12px;color:#d6a43b;font-weight:700;">诚实拒绝 / 保留人工也是合法结论。</p>
+  <div class="panel soft-teal" style="left:300px;top:230px;width:208px;height:242px;"></div>
+  <p class="big-number" style="left:320px;top:244px;font-size:34px;">02</p>
+  <p class="section-title" style="left:320px;top:296px;width:168px;font-size:19px;">构建最小候选</p>
+  <p class="small-copy" style="left:320px;top:342px;width:168px;font-size:14px;line-height:1.45;">从 Agentless 或单 Agent 起步，不预设复杂方案胜出。</p>
+  <p class="code-tag" style="left:320px;top:432px;">SIMPLE FIRST</p>
 
-  <div class="panel" style="left:72px;top:530px;width:1136px;height:98px;background:#ffffff;border-color:#d6ddd9;"></div>
-  <p class="label" style="left:96px;top:542px;width:520px;color:#53697c;">候选搜索顺序 · 设计契约（非运行结果）</p>
+  <div class="panel soft-teal" style="left:528px;top:230px;width:208px;height:242px;"></div>
+  <p class="big-number" style="left:548px;top:244px;font-size:34px;">03</p>
+  <p class="section-title" style="left:548px;top:296px;width:168px;font-size:19px;">运行并测量</p>
+  <p class="small-copy" style="left:548px;top:342px;width:168px;font-size:14px;line-height:1.45;">同一案例、工具边界、预算和 Trace 语义。</p>
+  <p class="code-tag" style="left:548px;top:432px;">MEASURE</p>
 
-  <div class="chip" style="left:96px;top:570px;width:252px;height:36px;border-color:#426b86;background:#dfeaf2;"><p style="margin-top:7px;color:#426b86;font-size:13px;">C0 · Agentless · 待真实试验</p></div>
-  <div class="chip" style="left:360px;top:570px;width:252px;height:36px;border-color:#1a8d85;background:#dceeea;"><p style="margin-top:7px;color:#1a8d85;font-size:13px;">C1 · 单 Agent · 待真实试验</p></div>
-  <div class="chip" style="left:624px;top:570px;width:252px;height:36px;border-color:#f26b4b;background:#f8ddd4;"><p style="margin-top:7px;color:#c64c32;font-size:13px;">C2 · 多 Agent · 待真实试验</p></div>
-  <div class="chip" style="left:888px;top:570px;width:252px;height:36px;border-color:#d6a43b;background:#f3e5b8;"><p style="margin-top:7px;color:#a5781c;font-size:13px;">C3 · Human 混合 · 待真实试验</p></div>
+  <div class="panel soft-coral" style="left:756px;top:230px;width:208px;height:242px;"></div>
+  <p class="big-number" style="left:776px;top:244px;color:#f26b4b;font-size:34px;">04</p>
+  <p class="section-title" style="left:776px;top:296px;width:168px;font-size:19px;">分析并调整</p>
+  <p class="small-copy" style="left:776px;top:342px;width:168px;font-size:14px;line-height:1.45;">只针对失败模式调整 Tool、Skill、Memory 或拓扑。</p>
+  <p class="code-tag" style="left:776px;top:432px;color:#c64c32;">EVIDENCE ONLY</p>
 
-  <p class="body-copy" style="left:72px;top:640px;width:1136px;text-align:center;font-size:16px;font-weight:700;color:#102a43;">规则写在候选生成之前；当前候选对照仍待真实运行，本轮结论 requires_runtime_trial（需进入真实受控试验）。</p>
-  <p class="footer-left">AGENTFIT · 选择规则</p><p class="footer-right">最简合格者 · 06</p>
+  <div class="panel soft-amber" style="left:984px;top:230px;width:224px;height:242px;"></div>
+  <p class="big-number" style="left:1004px;top:244px;color:#d6a43b;font-size:34px;">05</p>
+  <p class="section-title" style="left:1004px;top:296px;width:184px;font-size:19px;">验证并停止</p>
+  <p class="small-copy" style="left:1004px;top:342px;width:184px;font-size:14px;line-height:1.45;">用新案例验证；满足验收且复杂度不再带来价值即停止。</p>
+  <p class="code-tag" style="left:1004px;top:432px;color:#a5781c;">STOP / CONTINUE</p>
+
+  <div class="panel" style="left:72px;top:490px;width:1136px;height:66px;background:#ffffff;border-color:#1a8d85;"></div>
+  <p class="body-copy" style="left:96px;top:504px;width:1090px;font-size:16px;line-height:1.4;color:#102a43;"><b>停止逻辑：</b>新案例通过 + 安全/成本达标 + 更复杂方案无显著边际价值 → 交付最小充分方案；否则返回“分析并调整”。</p>
+
+  <div class="panel" style="left:72px;top:568px;width:1136px;height:74px;background:#eef1f5;border-color:#d6ddd9;"></div>
+  <p class="label" style="left:96px;top:576px;width:520px;color:#53697c;">候选搜索顺序 · 设计契约（非运行结果）</p>
+  <div class="chip" style="left:96px;top:602px;width:252px;height:32px;border-color:#426b86;background:#dfeaf2;"><p style="margin-top:5px;color:#426b86;font-size:13px;">C0 · Agentless · 待真实试验</p></div>
+  <div class="chip" style="left:360px;top:602px;width:252px;height:32px;border-color:#1a8d85;background:#dceeea;"><p style="margin-top:5px;color:#1a8d85;font-size:13px;">C1 · 单 Agent · 待真实试验</p></div>
+  <div class="chip" style="left:624px;top:602px;width:252px;height:32px;border-color:#f26b4b;background:#f8ddd4;"><p style="margin-top:5px;color:#c64c32;font-size:13px;">C2 · 多 Agent · 待真实试验</p></div>
+  <div class="chip" style="left:888px;top:602px;width:252px;height:32px;border-color:#d6a43b;background:#f3e5b8;"><p style="margin-top:5px;color:#a5781c;font-size:13px;">C3 · Human 混合 · 待真实试验</p></div>
+
+  <p class="small-copy" style="left:72px;top:652px;width:1136px;text-align:center;color:#53697c;">当前候选对照仍待真实运行 · requires_runtime_trial</p>
+  <p class="footer-left">AGENTFIT · 五阶段闭环</p><p class="footer-right">最简合格者 · 06</p>
 </body></html>

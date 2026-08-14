@@ -2,32 +2,32 @@
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
   <p class="eyebrow">11 / 12 · 当前进展</p>
-  <h1 class="title">证据账本：baseline 已代码级审计，候选对照仍待运行。</h1>
-  <p class="subtitle">把已完成、已 smoke 和仍待运行分开；不让设计模拟冒充运行证据。</p><div class="top-rule"></div>
+  <h1 class="title" style="font-size:28px;line-height:1.1;">证据账本：探索性 Demo 已有证据，非官方 evaluator 与正式 AgentFit 候选仍待运行。</h1>
+  <p class="subtitle" style="top:164px;">每一层只回答它能证明的问题：官方案例、探索性可行性、正式候选验证绝不混写。</p><div class="top-rule" style="top:206px;"></div>
 
-  <div class="panel soft-teal" style="left:72px;top:226px;width:368px;height:368px;"></div>
-  <p class="label" style="left:96px;top:244px;width:250px;font-size:13px;color:#1a8d85;">READY · 已完成</p>
-  <p class="section-title" style="left:96px;top:276px;width:324px;font-size:19px;">baseline 已代码级审计</p>
-  <p class="small-copy" style="left:96px;top:320px;width:324px;line-height:1.5;">OpsPilot Zero 的结构、业务执行 Agent、事故样本与工具契约已逐项核验。</p>
-  <p class="small-copy" style="left:96px;top:412px;width:324px;line-height:1.5;">AgentFit 方法、五元 Identity、七个 Skill、风险门禁契约已收敛。</p>
-  <p class="small-copy" style="left:96px;top:484px;width:324px;color:#1a8d85;font-weight:700;">证据：仓库文档与本套生成链</p>
+  <div class="panel soft-blue" style="left:72px;top:226px;width:352px;height:320px;"></div>
+  <p class="label" style="left:96px;top:244px;color:#426b86;">OFFICIAL ANCHOR · 官方案例锚点</p>
+  <p class="section-title" style="left:96px;top:282px;width:304px;font-size:22px;">OpsPilot Zero</p>
+  <p class="small-copy" style="left:96px;top:326px;width:304px;font-size:15px;line-height:1.5;">官方发布示例；结构、业务执行 Agent、事故样本与工具契约已代码级核验。</p>
+  <div class="panel" style="left:96px;top:424px;width:304px;height:78px;background:#ffffff;border-color:#426b86;"></div>
+  <p class="small-copy" style="left:112px;top:438px;width:272px;font-size:14px;line-height:1.45;color:#102a43;"><b>证明：</b>案例与设计输入<br><b>不证明：</b>AgentFit 已运行</p>
 
-  <div class="panel soft-amber" style="left:456px;top:226px;width:368px;height:368px;"></div>
-  <p class="label" style="left:480px;top:244px;width:300px;font-size:13px;color:#d6a43b;">SMOKE · 平台已单独试用</p>
-  <p class="section-title" style="left:480px;top:276px;width:324px;font-size:19px;">AgentTeams 底座能力</p>
-  <p class="small-copy" style="left:480px;top:320px;width:324px;line-height:1.5;">Worker、Team、Human、文件同步、定时任务等曾被单独 smoke。</p>
-  <p class="small-copy" style="left:480px;top:396px;width:324px;line-height:1.5;">只证明平台能力，不等于 AgentFit 已集成或已跑通。</p>
-  <p class="small-copy" style="left:480px;top:484px;width:324px;color:#d6a43b;font-weight:700;">非 AgentFit 运行证据</p>
+  <div class="panel soft-amber" style="left:440px;top:226px;width:400px;height:320px;"></div>
+  <p class="label" style="left:464px;top:244px;color:#d6a43b;">EXPLORATORY DEMO · 探索性证据</p>
+  <p class="section-title" style="left:464px;top:282px;width:352px;font-size:22px;">retail / airline overnight</p>
+  <p class="small-copy" style="left:464px;top:326px;width:352px;font-size:15px;line-height:1.5;">使用 DeepSeek、OpenCode、本地路径、自建工具与代理评估器，留下可追溯运行记录。</p>
+  <div class="panel" style="left:464px;top:424px;width:352px;height:78px;background:#ffffff;border-color:#d6a43b;"></div>
+  <p class="small-copy" style="left:480px;top:438px;width:320px;font-size:14px;line-height:1.45;color:#102a43;"><b>证明：</b>探索路径与失败线索<br><b>不证明：</b>官方 evaluator / Candidate / 官方分数</p>
 
-  <div class="panel soft-coral" style="left:840px;top:226px;width:368px;height:368px;"></div>
-  <p class="label" style="left:864px;top:244px;width:310px;font-size:13px;color:#f26b4b;">NOT STARTED · 仍待运行</p>
-  <p class="section-title" style="left:864px;top:276px;width:324px;font-size:19px;">AgentFit 运行闭环</p>
-  <p class="small-copy" style="left:864px;top:320px;width:324px;line-height:1.5;">冻结首个 ProjectCase。</p>
-  <p class="small-copy" style="left:864px;top:352px;width:324px;line-height:1.5;">五元 Agent 在 AgentTeams 实例化。</p>
-  <p class="small-copy" style="left:864px;top:384px;width:324px;line-height:1.5;">统一预算下的 C0/C1/C2/C3 对照。</p>
-  <p class="small-copy" style="left:864px;top:416px;width:324px;line-height:1.5;">真实 Episode（CandidateVersion × SampleVersion × RunIndex）、Trace 与失败/降级证据。</p>
-  <p class="small-copy" style="left:864px;top:484px;width:324px;color:#f26b4b;font-weight:700;">证据待补 · 不伪装完成</p>
+  <div class="panel soft-coral" style="left:856px;top:226px;width:352px;height:320px;"></div>
+  <p class="label" style="left:880px;top:244px;color:#f26b4b;">NOT_STARTED · 正式候选</p>
+  <p class="section-title" style="left:880px;top:282px;width:304px;font-size:22px;">AgentFit runtime</p>
+  <p class="small-copy" style="left:880px;top:326px;width:304px;font-size:15px;line-height:1.5;">ProjectCase 冻结、五元团队实例化、统一 C0–C3 对照仍未完成。</p>
+  <div class="panel" style="left:880px;top:424px;width:304px;height:78px;background:#ffffff;border-color:#f26b4b;"></div>
+  <p class="small-copy" style="left:896px;top:438px;width:272px;font-size:14px;line-height:1.45;color:#102a43;">待补：真实 Episode<br>CandidateVersion × SampleVersion × RunIndex</p>
 
-  <p class="body-copy" style="left:72px;top:616px;width:1136px;text-align:center;font-size:18px;font-weight:700;color:#102a43;">若获准，下一门禁：冻结首个 ProjectCase → 在 AgentTeams 跑真实候选 → 审计并替换本页。</p>
+  <div class="panel" style="left:72px;top:566px;width:1136px;height:62px;background:#ffffff;border-color:#1a8d85;"></div>
+  <p class="small-copy" style="left:96px;top:578px;width:1090px;text-align:center;font-size:15px;line-height:1.35;color:#102a43;font-weight:700;">OpsPilot 是官方案例锚点；retail / airline 仅为探索性 Demo，使用非官方 evaluator，不是正式 Candidate，也不是官方分数。</p>
+  <p class="small-copy" style="left:72px;top:642px;width:1136px;text-align:center;color:#53697c;">若获准，下一门禁：冻结 ProjectCase → 在 AgentTeams 跑真实候选 → 由 GovernanceAuditor 审计</p>
   <p class="footer-left">AGENTFIT · 证据账本</p><p class="footer-right">候选对照仍待运行 · 11</p>
 </body></html>
