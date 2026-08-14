@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PINNED_VERSION="v1.1.2"
+PINNED_VERSION="v1.2.0-beta.1"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 AGENTFIT_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel)"
 AGENTTEAMS_REPO="${AGENTFIT_ROOT}/../AgentTeams"
@@ -18,7 +18,7 @@ usage() {
   printf '%s\n' \
     'Usage: runtime/agentteams/install-prebuilt.sh [--check] [--env-file PATH] [--log-file PATH]' \
     '' \
-    'Uses AgentTeams v1.1.2 official prebuilt images. It never builds images.' \
+    'Uses AgentTeams v1.2.0-beta.1 official prebuilt images. It never builds images.' \
     'Full installer output is written to an ignored, mode-0600 private log.'
 }
 

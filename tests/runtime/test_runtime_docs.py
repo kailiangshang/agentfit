@@ -21,7 +21,7 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
         required = (
             "AgentTeams 官方预构建镜像",
             "AgentFit 源码",
-            "v1.1.2",
+            "v1.2.0-beta.1",
             "runtime/agentteams/preflight.py",
             "runtime/agentteams/install-prebuilt.sh --check",
             "runtime/agentteams/install-prebuilt.sh",
@@ -32,7 +32,7 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
             "READY",
             "IN_PROGRESS",
             "tag 与 digest",
-            "CLI 仍报告 `dev`",
+            "CLI 报告 `dev`",
             "私密安装日志",
             "runtime/agentteams/m1/agentfit-retail-m1.yaml",
             "runtime/agentteams/apply-manifest.sh",

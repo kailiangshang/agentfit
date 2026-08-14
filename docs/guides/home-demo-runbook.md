@@ -10,7 +10,7 @@
 
 办公室已经完成两轮真实 ProjectCase preparation，但这两轮早于最终 provenance、terminal identity 和结构化 mention 加固。家庭环境也拿不到办公室 `.local-demo`、Matrix 房间和容器状态。因此回家后的第一目标不是继续增加方案复杂度，而是用 DeepSeek 建立全新实例并完成一次**最终加固包重放**：
 
-1. `git pull --ff-only` 后按第 3–6 节固定 AgentTeams v1.1.2、τ³-bench v1.0.1 和 DeepSeek 配置；
+1. `git pull --ff-only` 后按第 3–6 节固定 AgentTeams v1.2.0-beta.1、τ³-bench v1.0.1 和 DeepSeek 配置；
 2. 渲染并 apply 家庭 DeepSeek manifest，确保 apply 与 ProjectCase provenance 使用同一个 `AGENTFIT_TEAM_MANIFEST`；
 3. 按[`runtime/agentteams/README.md`](../../runtime/agentteams/README.md)第 6 节，从 Leader DM 重放 task 0、2、13；
 4. 保存 usage-before/after、合并 Trace、结构化 Dossier、package/export hashes 和 validation；
@@ -131,7 +131,7 @@ docker exec "$AGENTTEAMS_CONTROLLER" "$AGENTTEAMS_CLI" status -o json | tee "$AG
 当前实例不再创建第二套 M0 模板。唯一证据位于 `.local-demo/agentteams/evidence/`：
 
 - `m0-authorization.md`：授权范围、首个 ProjectCase 和禁止项；
-- `baseline.json`：AgentFit/AgentTeams 源码 SHA、v1.1.2 镜像 tag/digest，以及 `known_boundary` 中 CLI 报告 `dev` 的已知边界；
+- `baseline.json`：AgentFit/AgentTeams 源码 SHA、v1.2.0-beta.1 镜像 tag/digest，以及 `known_boundary`（v1.1.2 时代 CLI 报告 `dev` 的已知边界需在新版本重新验证）；
 - `version.txt`、`status.json`、`managers.json`、`workers.json`、`teams.json`、`containers.txt`、`endpoints.json`：平台状态；
 - `litellm-smoke.json`、`manager-smoke.json`：最小模型与 Manager 消息证据；
 - `SHA256SUMS`：完整性清单。
@@ -317,7 +317,7 @@ docker exec agentteams-controller hiclaw get humans agentfit-owner -o json \
   | jq -e '.phase == "Active"'
 ```
 
-创建/更新时使用 `runtime/agentteams/apply-manifest.sh`，不要直接运行当前 AgentTeams `main` 的宿主 apply 脚本：固定 v1.1.2 镜像只提供 `hiclaw`，并使用 Team 内联 `leader + workers` 合同；上游 main 已切换为 `agt + workerMembers`。完整 apply 输出可能包含 Human 初始密码，只允许进入 ignored、`0600` 私密日志。
+创建/更新时使用 `runtime/agentteams/apply-manifest.sh`，不要直接运行当前 AgentTeams `main` 的宿主 apply 脚本：固定 v1.2.0-beta.1 镜像自动检测 `agt`/`hiclaw`，并使用 Team 内联 `leader + workers` legacy 合同（上游 main 已切换为 `agt + workerMembers`，迁移是后续工作）。完整 apply 输出可能包含 Human 初始密码，只允许进入 ignored、`0600` 私密日志。
 
 当前 Team/Leader/Worker/Human 和运行合同已通过回读，并已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13）。第二轮真实路径为 Leader → BusinessEngineer → Leader verification → GovernanceAuditor，已导出结构化 Dossier 和合并后的 Team/Leader-DM Trace，结构化验证为 `PASS`；但四份正式 manifest 尚未实例化并经 Human freeze，Skill/工具尚未绑定运行，尚未运行 Candidate。因此状态仍只能是 `M1: IN_PROGRESS`。脱敏结论见[多情景实测报告](../research/home-demo/retail-m1/dossier/15-agentteams-m1-multiscenario-run.md)，原始消息、room id、工件与使用量证据继续保存在 ignored 的 `$AGENTFIT_RUN_ROOT/agentteams/` 和 `$AGENTFIT_RUN_ROOT/dossier/`。
 

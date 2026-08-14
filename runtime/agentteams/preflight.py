@@ -24,7 +24,7 @@ OFFICIAL_IMAGES = {
     "manager": f"{OFFICIAL_REGISTRY}/agentteams/agentteams-manager",
     "worker": f"{OFFICIAL_REGISTRY}/agentteams/agentteams-worker",
 }
-PINNED_VERSION = "v1.1.2"
+PINNED_VERSION = "v1.2.0-beta.1"
 
 MIN_CPU_COUNT = 4
 MIN_MEMORY_BYTES = 8 * 1024**3

@@ -141,7 +141,7 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         manifest = {
             "schema_version": "agentfit.agentteams-dossier-export/v1",
             "captured_at_ms": int(time.time() * 1000),
-            "agentteams_version": "v1.1.2",
+            "agentteams_version": "v1.2.0-beta.1",
             "leader_name": leader_name,
             "project_id": project_id,
             "business_task_id": business_task_id,

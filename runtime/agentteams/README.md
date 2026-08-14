@@ -8,7 +8,9 @@
 - OpenAI-compatible API 提供执行、用户模拟、评测和诊断模型；可接内部 LiteLLM，也可直连 DeepSeek；
 - 不进行镜像编译，不修改 AgentTeams 核心，不开发独立 UI。
 
-固定版本为 AgentTeams `v1.1.2`。仓库源码用于审计与固定安装脚本，实际运行使用该版本官方镜像。
+固定版本为 AgentTeams `v1.2.0-beta.1`。仓库源码用于审计与固定安装脚本，实际运行使用该版本官方镜像。
+
+版本基线变更记录：办公室 M0/M1 最初固定在 `v1.1.2`；2026-08-14 家庭实例在 `v1.1.2` 上复现出确定性的 Team 房间配置缺陷（controller 在 reconcile leader DM membership 时以 Leader token 列成员得到 Matrix `M_FORBIDDEN`，Team 进入 `Failed`，全部 Worker 被 Stop；两次删除重建 Team 均同样失败，失败日志保存在 ignored 证据 `.local-demo/agentteams/v112-failure-evidence/`）。经项目所有者决定改用最新官方镜像 `v1.2.0-beta.1`；该版本仍兼容本仓库使用的 Team 内联 `leader + workers` legacy 合同（上游标记为 deprecated，迁移到 `workerMembers` 是后续工作）。`v1.2.0-beta.1` 上的 CLI 名称、Human update 行为与 Human 查询回显范围需要在本实例重新回读验证，不沿用 `v1.1.2` 的结论。
 
 ## 当前状态
 
@@ -17,14 +19,14 @@
 
 平台预检、历史 smoke 或 Benchmark preflight 都不能替代 M1 证据。
 
-当前固定镜像的 tag 与 digest 均对应 `v1.1.2`；但镜像内 `hiclaw version` 的 Controller CLI 仍报告 `dev`。这是官方镜像构建元数据缺口，已经保存在 ignored 证据中，不把它改写成 CLI 已正确报告 `v1.1.2`。
+`v1.1.2` 时代镜像内 `hiclaw version` 的 Controller CLI 曾报告 `dev`，这是官方镜像构建元数据缺口，已保存在 ignored 证据中；`v1.2.0-beta.1` 实例的版本回读必须重新执行并重新存证。
 
 ## 1. 从 AgentFit 仓库根目录预检
 
 ```bash
 python3 runtime/agentteams/preflight.py \
   --agentteams-repo ../AgentTeams \
-  --version v1.1.2 \
+  --version v1.2.0-beta.1 \
   --output .local-demo/agentteams/preflight.json
 ```
 
@@ -87,7 +89,7 @@ runtime/agentteams/install-prebuilt.sh
 
 脚本强制：
 
-- `AGENTTEAMS_VERSION=v1.1.2`；
+- `AGENTTEAMS_VERSION=v1.2.0-beta.1`；
 - local-only 网络模式；
 - `.local-demo/agentteams/platform` 持久化根目录；
 - 独立的 `agentfit-agentteams-data` Docker volume，避免复用其他 AgentTeams smoke 数据；
@@ -124,7 +126,7 @@ docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}' \
 
 M0 已按以下门禁从 `IN_PROGRESS` 变为 `READY`：
 
-1. Controller 与 Manager 官方镜像的 tag 和 digest 固定为 `v1.1.2`，并保存 CLI 报告 `dev` 的已知边界；
+1. Controller 与 Manager 官方镜像的 tag 和 digest 固定为当时基线（办公室为 `v1.1.2`，并保存 CLI 报告 `dev` 的已知边界；家庭实例按 `v1.2.0-beta.1` 的 tag 与 digest 重新满足同一门禁）；
 2. Controller、Manager、Matrix、存储与入口处于可用状态；
 3. LiteLLM 最小调用通过；
 4. 授权、首个 ProjectCase、版本、状态、容器和已知边界均已保存；
@@ -136,7 +138,7 @@ M0 已按以下门禁从 `IN_PROGRESS` 变为 `READY`：
 
 ## 5. M1 原生声明与当前边界
 
-当前实例使用 AgentTeams `v1.1.2` 原生 Team-inline 合同：Team 自己声明 1 个 Leader 和 4 个 Worker，再声明一个 team-scoped Human。唯一版本化入口是：
+当前实例使用 AgentTeams `v1.2.0-beta.1` 仍兼容的 Team-inline legacy 合同（上游已标记 deprecated）：Team 自己声明 1 个 Leader 和 4 个 Worker，再声明一个 team-scoped Human。唯一版本化入口是：
 
 - `runtime/agentteams/m1/agentfit-retail-m1.yaml`
 - `runtime/agentteams/apply-manifest.sh`
@@ -166,9 +168,9 @@ runtime/agentteams/apply-manifest.sh \
 
 全新实例不要附加 `--reuse-existing-human`；只有确认该 Human 是此前由同一 manifest 建立、并核对本地 scope 证据后，重跑才显式附加 `--reuse-existing-human`。Git 只同步代码和脱敏结论，不同步办公室机器的 ignored 容器数据、Matrix 房间或 `.local-demo` 证据；家庭实例必须重新安装、apply 和回读状态。
 
-包装器只调用 Controller 内原生 `agt` 或 `hiclaw apply`，完整输出进入 ignored、`0600` 私密日志，避免 Human 初始密码进入终端。固定 v1.1.2 对已有 Human 不支持 update，GET 又不回显 scope；因此检测到已有 Human 时默认失败，只有操作者先核对原 manifest 和本地证据后显式传入 `--reuse-existing-human`，才会仅更新 Team 并记录复用确认。该确认不是生产 IAM 验证。固定 v1.1.2 镜像只提供 `hiclaw`，其 Team Schema 是 `hiclaw.io/v1beta1` 下的 `leader + workers`；当前 AgentTeams `main` 的宿主脚本改用 `agt`，Team Schema 也改成引用独立 Worker CR，不能拿来直接操作本实例。
+包装器只调用 Controller 内原生 `agt` 或 `hiclaw apply`（自动检测），完整输出进入 ignored、`0600` 私密日志，避免 Human 初始密码进入终端。`v1.1.2` 对已有 Human 不支持 update 且 GET 不回显 scope，包装器因此保持 fail-closed：检测到已有 Human 时默认失败，只有操作者先核对原 manifest 和本地证据后显式传入 `--reuse-existing-human`，才会仅更新 Team 并记录复用确认；该确认不是生产 IAM 验证。`v1.2.0-beta.1` 上 Human update/回显行为需重新回读验证，验证前沿用同一 fail-closed 策略。Team 合同使用 `hiclaw.io/v1beta1` 下的内联 `leader + workers`（`v1.2.0-beta.1` 保留该 legacy 合同但标记 deprecated）；上游 `main` 已切换为 `agt + workerMembers` 引用独立 Worker CR，迁移是后续工作，当前 manifest 不使用。
 
-当前脱敏证据位于 `.local-demo/agentteams/m1/evidence/`，已回读 Team `Active`、Leader ready、4/4 Worker ready、5 个成员的模型/runtime/role、Human `Active` 和五份根 SOUL 合同。目录内 `SHA256SUMS` 保护的是初始实例化快照；其 manifest 指针对应修改前的版本化文件，不能绑定到 Round 1/2，也不能证明当前 post-run 加固包就是当时执行的字节。新一轮运行前必须由 `prepare_projectcase.py` 重新生成 source/policy/manifest/script provenance。v1.1.2 的 Human 查询不会回显 permissionLevel/accessibleTeams，因此 Human scope 只能由已应用 manifest 与 Active 状态共同证明，不能声称完成了生产级 IAM 验证。
+当前脱敏证据位于 `.local-demo/agentteams/m1/evidence/`，已回读 Team `Active`、Leader ready、4/4 Worker ready、5 个成员的模型/runtime/role、Human `Active` 和五份根 SOUL 合同。目录内 `SHA256SUMS` 保护的是初始实例化快照；其 manifest 指针对应修改前的版本化文件，不能绑定到 Round 1/2，也不能证明当前 post-run 加固包就是当时执行的字节。新一轮运行前必须由 `prepare_projectcase.py` 重新生成 source/policy/manifest/script provenance。`v1.1.2` 的 Human 查询不会回显 permissionLevel/accessibleTeams，因此 Human scope 只能由已应用 manifest 与 Active 状态共同证明，不能声称完成了生产级 IAM 验证；`v1.2.0-beta.1` 上的回显范围待重新验证。
 
 ## 6. M1 ProjectCase 可部署运行包
 
@@ -214,7 +216,7 @@ python3 runtime/agentteams/m1/matrix_run.py export-once \
   --output-dir "$ROUND_DIR"
 ```
 
-完成后使用版本限定的导出器从 Leader 的 v1.1.2 shared workspace 复制 Project、Business task 和 Governance task 工件。三个 ID 必须来自本轮 Matrix/taskflow Trace，不得沿用旧轮次；目标目录必须尚不存在：
+完成后使用版本限定的导出器从 Leader 的 shared workspace 复制 Project、Business task 和 Governance task 工件。三个 ID 必须来自本轮 Matrix/taskflow Trace，不得沿用旧轮次；目标目录必须尚不存在：
 
 ```bash
 PROJECT_ID=retail-next-actual-project-id

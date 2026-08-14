@@ -60,7 +60,7 @@ class InstallPrebuiltTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         combined = result.stdout + result.stderr
-        self.assertIn("version=v1.1.2", combined)
+        self.assertIn("version=v1.2.0-beta.1", combined)
         self.assertIn("image_source=official-prebuilt", combined)
         self.assertIn("data_volume=agentfit-agentteams-data", combined)
         self.assertIn("dashboard=disabled", combined)
@@ -161,11 +161,11 @@ class InstallPrebuiltTest(unittest.TestCase):
         self.write_env()
 
         result = self.run_wrapper(
-            "--check", extra_env={"AGENTTEAMS_VERSION": "v1.2.0-beta.1"}
+            "--check", extra_env={"AGENTTEAMS_VERSION": "v1.1.2"}
         )
 
         self.assertNotEqual(0, result.returncode)
-        self.assertIn("only v1.1.2 is allowed", result.stderr)
+        self.assertIn("only v1.2.0-beta.1 is allowed", result.stderr)
 
 
 if __name__ == "__main__":

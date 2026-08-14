@@ -30,7 +30,7 @@ class AgentTeamsPreflightTest(unittest.TestCase):
         self.repo = Path(self.tempdir.name) / "AgentTeams"
         self.repo.mkdir()
         (self.repo / ".git").mkdir()
-        self.version = "v1.1.2"
+        self.version = "v1.2.0-beta.1"
         self.resources = HostResources(
             cpu_count=8,
             memory_bytes=16 * 1024**3,
@@ -126,7 +126,7 @@ class AgentTeamsPreflightTest(unittest.TestCase):
         )
 
         self.assertFalse(report.by_name("agentteams.tag").ok)
-        self.assertEqual("missing v1.1.2", report.by_name("agentteams.tag").detail)
+        self.assertEqual("missing v1.2.0-beta.1", report.by_name("agentteams.tag").detail)
 
     def test_insufficient_resources_report_each_failed_gate(self):
         report = run_preflight(

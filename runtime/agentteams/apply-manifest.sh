@@ -97,7 +97,7 @@ done
 
 if ((${#existing_humans[@]})); then
   [[ "${REUSE_EXISTING_HUMAN}" == true ]] || die \
-    'existing Human scope cannot be verified or updated on AgentTeams v1.1.2; inspect the applied manifest and rerun with --reuse-existing-human to acknowledge reuse'
+    'existing Human scope cannot be verified or updated on the pinned AgentTeams version; inspect the applied manifest and rerun with --reuse-existing-human to acknowledge reuse'
   filtered_manifest="$(mktemp "${TMPDIR:-/tmp}/agentfit-manifest.XXXXXX.yaml")"
   chmod -- 600 "${filtered_manifest}"
   python3 -c \
