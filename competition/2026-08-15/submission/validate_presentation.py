@@ -17,6 +17,33 @@ from pypdf import PdfReader
 
 EXPECTED_SLIDES = 17
 
+EXPECTED_PAGE_MARKERS = tuple(
+    f"{index:02d} / 12" for index in range(1, 13)
+) + tuple(f"A{index} / 05" for index in range(1, 6))
+
+EXPECTED_META_AGENT_IDENTITIES = (
+    "EngagementLead",
+    "BusinessEngineer",
+    "AgentArchitect",
+    "ValidationEngineer",
+    "GovernanceAuditor",
+)
+
+EXPECTED_SKILL_ENTRIES = (
+    "任务编译",
+    "能力对齐",
+    "候选建图",
+    "统一试验",
+    "独立审计",
+    "人工门禁",
+    "经验沉淀",
+)
+
+SLIDE_11_EVIDENCE_STATEMENT = (
+    "OpsPilot 是官方案例锚点；retail / airline 仅为探索性 Demo，"
+    "使用非官方 evaluator，不是正式 Candidate，也不是官方分数。"
+)
+
 EXPECTED_PAGE_TITLES = (
     "企业真正缺少的，是选对 Agent 方案。",
     "OpsPilot 官方示例：4 个 Worker 加 1 个 Leader，仍未回答该用哪种。",
@@ -67,11 +94,7 @@ SLIDE_REQUIRED_TERMS = {
     9: ("Skill", "MCP", "HTTP"),
     10: ("AgentSolutionPackage",),
     11: (
-        "探索性 Demo 证据",
-        "retail",
-        "airline",
-        "非官方 evaluator",
-        "不代表正式 Candidate",
+        SLIDE_11_EVIDENCE_STATEMENT,
     ),
     13: (
         "七层 ML 映射",
@@ -148,6 +171,50 @@ REQUIRED_TERMS = (
     "业务执行 Agent",
 )
 
+BROADENED_FORBIDDEN_TERMS = (
+    "AutoML",
+    "automl",
+    "Auto ML",
+    "自动机器学习",
+    "semantic gradient",
+    "semantic gradients",
+    "semantic backpropagation",
+    "语义梯度",
+    "backpropagation",
+    "back propagation",
+    "back-propagation",
+    "反向传播",
+    "official benchmark accuracy",
+    "official benchmark score",
+    "official benchmark results",
+    "官方 benchmark 准确率",
+    "官方 benchmark accuracy",
+    "官方 benchmark 分数",
+    "官方 benchmark score",
+    "官方 benchmark 结果",
+    "官方基准准确率",
+    "官方评测准确率",
+    "正式 Candidate 已完成",
+    "正式 Candidate 执行完成",
+    "正式 Candidate 运行完成",
+    "正式 Candidate 已跑通",
+    "Candidate execution completed",
+    "formal Candidate completed",
+    "formal Candidate execution completed",
+    "正式候选已完成",
+    "正式候选执行完成",
+    "正式候选运行完成",
+    "正式候选已跑通",
+    "AgentTeams 端到端集成完成",
+    "AgentTeams 端到端集成已完成",
+    "AgentTeams 已端到端集成",
+    "AgentTeams 已完成端到端集成",
+    "AgentTeams end-to-end integration complete",
+    "AgentTeams end-to-end integration completed",
+    "AgentTeams end-to-end integrated",
+    "AgentTeams 跑通最小闭环",
+)
+
 FORBIDDEN_TERMS = (
     "Agent 方案训练系统",
     "AutoML for Agents",
@@ -166,7 +233,7 @@ FORBIDDEN_TERMS = (
     "代理分数是官方结果",
     "proxy score is official",
     "exploratory proxy scores are official results",
-)
+) + BROADENED_FORBIDDEN_TERMS
 
 PRESENTATIONML_NAMESPACE = "http://schemas.openxmlformats.org/presentationml/2006/main"
 
@@ -250,6 +317,46 @@ def _package_editability_errors(pptx_path: Path) -> list[str]:
     return errors
 
 
+def _numbered_contract_errors(page_label: str, page_number: int, text: str) -> list[str]:
+    errors: list[str] = []
+    marker = EXPECTED_PAGE_MARKERS[page_number - 1]
+    marker_count = _normalized(text).count(_normalized(marker))
+    if marker_count != 1:
+        errors.append(
+            f"{page_label} must contain exactly one page marker {marker}; found {marker_count}"
+        )
+
+    if page_number in (7, 14):
+        identity_markers = re.findall(r"(?m)^\s*(0[1-9])\s+(?!/)", text)
+        if identity_markers != ["01", "02", "03", "04", "05"]:
+            errors.append(
+                f"{page_label} must contain exactly five Meta Agent entries 01-05; "
+                f"found {identity_markers}"
+            )
+        for identity in EXPECTED_META_AGENT_IDENTITIES:
+            if identity not in text:
+                errors.append(
+                    f"{page_label} is missing fixed Meta Agent identity: "
+                    f"{identity}"
+                )
+
+    if page_number == 15:
+        skill_markers = re.findall(
+            r"(?<!\d)([1-9])\s+(?=[\u4e00-\u9fff])", text
+        )
+        if skill_markers != [str(index) for index in range(1, 8)]:
+            errors.append(
+                f"{page_label} must contain exactly seven Skill entries 1-7; "
+                f"found {skill_markers}"
+            )
+        for skill in EXPECTED_SKILL_ENTRIES:
+            if skill not in text:
+                errors.append(
+                    f"{page_label} is missing fixed Skill entry: {skill}"
+                )
+    return errors
+
+
 def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
     """Return human-readable validation errors; an empty list means success."""
     errors: list[str] = []
@@ -286,6 +393,7 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
                 errors.append(f"PPTX slide {index} contains a media shape")
 
         normalized_text = _normalized(text)
+        errors.extend(_numbered_contract_errors("PPTX slide", index, text))
         if index <= len(EXPECTED_PAGE_TITLES):
             title = EXPECTED_PAGE_TITLES[index - 1]
             if _normalized(title) not in normalized_text:
@@ -337,6 +445,7 @@ def validate(pptx_path: Path, pdf_path: Path | None = None) -> list[str]:
                         continue
                     pdf_texts.append(page_text)
                     normalized_page = _normalized(page_text)
+                    errors.extend(_numbered_contract_errors("PDF page", index, page_text))
                     if index <= len(EXPECTED_PAGE_TITLES):
                         title = EXPECTED_PAGE_TITLES[index - 1]
                         if _normalized(title) not in normalized_page:

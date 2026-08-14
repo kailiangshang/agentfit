@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+import html
 import importlib.util
 import re
 import subprocess
@@ -100,6 +101,18 @@ def _forward_arrows_between(slide: object, source: object, target: object) -> li
         and source.left + source.width <= shape.left
         and shape.left + shape.width <= target.left
     ]
+
+
+def _html_title(text: str) -> str:
+    match = re.search(
+        r'<h1\s+class="title"[^>]*>(?P<title>.*?)</h1>',
+        text,
+        flags=re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("missing h1.title")
+    title = re.sub(r"<[^>]+>", "", match.group("title"))
+    return re.sub(r"\s+", "", html.unescape(title))
 
 
 class SubmissionContractTest(unittest.TestCase):
@@ -519,8 +532,6 @@ class SubmissionContractTest(unittest.TestCase):
         )
 
     def test_submission_page_and_contract_counts_are_exact(self) -> None:
-        slides = sorted(SLIDES_DIR.glob("[0-9][0-9]-*.html"))
-        self.assertEqual(17, len(slides))
         self.assertEqual(17, len(Presentation(PPTX).slides))
         self.assertEqual(17, len(PdfReader(PDF).pages))
 
@@ -535,6 +546,52 @@ class SubmissionContractTest(unittest.TestCase):
             r"^### (S\d+)\.\s", skills, flags=re.MULTILINE
         )
         self.assertEqual([f"S{index}" for index in range(1, 8)], skill_headings)
+
+    def test_html_sources_have_exact_markers_and_titles(self) -> None:
+        validator = _load_validator()
+        slides = sorted(SLIDES_DIR.glob("[0-9][0-9]-*.html"))
+        for index, path in enumerate(slides, start=1):
+            source = path.read_text(encoding="utf-8")
+            marker = validator.EXPECTED_PAGE_MARKERS[index - 1]
+            with self.subTest(page=index, marker=marker):
+                self.assertEqual(1, source.count(marker))
+            with self.subTest(page=index, title=validator.EXPECTED_PAGE_TITLES[index - 1]):
+                self.assertEqual(
+                    re.sub(r"\s+", "", validator.EXPECTED_PAGE_TITLES[index - 1]),
+                    _html_title(source),
+                )
+
+    def test_delivered_artifacts_have_exact_identity_and_skill_entries(self) -> None:
+        validator = _load_validator()
+        presentation = Presentation(PPTX)
+        pdf_reader = PdfReader(PDF)
+        for label, text in (
+            ("PPTX slide 7", validator._slide_text(presentation.slides[6])),
+            ("PPTX slide 14", validator._slide_text(presentation.slides[13])),
+            ("PDF page 7", pdf_reader.pages[6].extract_text() or ""),
+            ("PDF page 14", pdf_reader.pages[13].extract_text() or ""),
+        ):
+            with self.subTest(artifact=label):
+                self.assertEqual(
+                    ["01", "02", "03", "04", "05"],
+                    re.findall(r"(?m)^\s*(0[1-9])\s+(?!/)", text),
+                )
+                for identity in validator.EXPECTED_META_AGENT_IDENTITIES:
+                    self.assertIn(identity, text)
+
+        for label, text in (
+            ("PPTX slide 15", validator._slide_text(presentation.slides[14])),
+            ("PDF page 15", pdf_reader.pages[14].extract_text() or ""),
+        ):
+            with self.subTest(artifact=label):
+                self.assertEqual(
+                    [str(index) for index in range(1, 8)],
+                    re.findall(
+                        r"(?<!\d)([1-9])\s+(?=[\u4e00-\u9fff])", text
+                    ),
+                )
+                for skill in validator.EXPECTED_SKILL_ENTRIES:
+                    self.assertIn(skill, text)
 
     def test_revised_narrative_and_evidence_boundaries_are_frozen(self) -> None:
         page_5 = (SLIDES_DIR / "05-search-space.html").read_text(encoding="utf-8")
@@ -567,15 +624,8 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(page=6, term=term):
                 self.assertIn(term, page_6)
-        for term in (
-            "探索性 Demo 证据",
-            "retail",
-            "airline",
-            "非官方 evaluator",
-            "不代表正式 Candidate",
-        ):
-            with self.subTest(page=11, term=term):
-                self.assertIn(term, page_11)
+        validator = _load_validator()
+        self.assertIn(validator.SLIDE_11_EVIDENCE_STATEMENT, page_11)
 
         source = "\n".join(
             path.read_text(encoding="utf-8")
@@ -912,6 +962,29 @@ class SubmissionContractTest(unittest.TestCase):
         self.assertEqual(17, validator.EXPECTED_SLIDES)
         self.assertTrue(hasattr(validator, "EXPECTED_PAGE_TITLES"))
         self.assertEqual(17, len(validator.EXPECTED_PAGE_TITLES))
+        self.assertEqual(17, len(validator.EXPECTED_PAGE_MARKERS))
+        self.assertEqual(
+            [f"{index:02d} / 12" for index in range(1, 13)]
+            + [f"A{index} / 05" for index in range(1, 6)],
+            list(validator.EXPECTED_PAGE_MARKERS),
+        )
+        self.assertEqual(
+            (
+                "EngagementLead",
+                "BusinessEngineer",
+                "AgentArchitect",
+                "ValidationEngineer",
+                "GovernanceAuditor",
+            ),
+            validator.EXPECTED_META_AGENT_IDENTITIES,
+        )
+        self.assertEqual(
+            ("任务编译", "能力对齐", "候选建图", "统一试验", "独立审计", "人工门禁", "经验沉淀"),
+            validator.EXPECTED_SKILL_ENTRIES,
+        )
+        self.assertIn("OpsPilot", validator.SLIDE_11_EVIDENCE_STATEMENT)
+        self.assertIn("官方案例锚点", validator.SLIDE_11_EVIDENCE_STATEMENT)
+        self.assertIn("retail / airline", validator.SLIDE_11_EVIDENCE_STATEMENT)
         self.assertTrue(hasattr(validator, "SLIDE_REQUIRED_TERMS"))
         self.assertTrue(hasattr(validator, "FIRST_PAGE_ML_BAN"))
         for term in (
@@ -947,8 +1020,7 @@ class SubmissionContractTest(unittest.TestCase):
         for term in (
             "完整方案空间",
             "五阶段闭环",
-            "探索性 Demo 证据",
-            "非官方 evaluator",
+            validator.SLIDE_11_EVIDENCE_STATEMENT,
         ):
             with self.subTest(term=term):
                 self.assertTrue(
@@ -977,6 +1049,65 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(term=term):
                 self.assertIn(term, validator.FORBIDDEN_TERMS)
+        for term in (
+            "AutoML",
+            "semantic gradient",
+            "语义梯度",
+            "backpropagation",
+            "反向传播",
+            "official benchmark accuracy",
+            "官方基准准确率",
+            "正式 Candidate 执行完成",
+            "formal Candidate execution completed",
+            "AgentTeams 端到端集成完成",
+            "AgentTeams end-to-end integration complete",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, validator.FORBIDDEN_TERMS)
+
+    def test_validator_rejects_broadened_claim_mutations_in_pptx_and_pdf(self) -> None:
+        validator = _load_validator()
+        mutation_terms = (
+            "AutoML",
+            "semantic gradient",
+            "backpropagation",
+            "official benchmark accuracy",
+            "formal Candidate execution completed",
+            "AgentTeams end-to-end integration complete",
+        )
+        payload = "\n".join(mutation_terms)
+        with tempfile.TemporaryDirectory(prefix="submission-overclaim-") as temp_dir:
+            temp = Path(temp_dir)
+
+            pptx_path = temp / "overclaim.pptx"
+            presentation = Presentation(PPTX)
+            textbox = presentation.slides[16].shapes.add_textbox(
+                Inches(0.1), Inches(0.1), Inches(10), Inches(1.5)
+            )
+            textbox.text = payload
+            presentation.save(pptx_path)
+            pptx_errors = validator.validate(pptx_path)
+
+            overlay_path = temp / "overlay.pdf"
+            canvas = Canvas(str(overlay_path), pagesize=(1280, 720))
+            canvas.setFont("Helvetica", 10)
+            for line_number, line in enumerate(mutation_terms):
+                canvas.drawString(20, 700 - line_number * 16, line)
+            canvas.save()
+
+            pdf_path = temp / "overclaim.pdf"
+            overlay_reader = PdfReader(overlay_path)
+            writer = PdfWriter(clone_from=str(PDF))
+            writer.pages[0].merge_page(overlay_reader.pages[0])
+            with pdf_path.open("wb") as stream:
+                writer.write(stream)
+            pdf_errors = validator.validate(PPTX, pdf_path)
+
+        for term in mutation_terms:
+            with self.subTest(artifact="PPTX", term=term):
+                self.assertIn(f"PPTX contains forbidden term: {term}", pptx_errors)
+            with self.subTest(artifact="PDF", term=term):
+                self.assertIn(f"PDF contains forbidden term: {term}", pdf_errors)
 
     def test_validator_rejects_raster_media_and_transitions(self) -> None:
         validator = _load_validator()
