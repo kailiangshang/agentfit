@@ -133,6 +133,41 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         tempfile.mkdtemp(prefix=".agentfit-dossier-export-", dir=output_parent)
     )
     shared_root = detect_shared_root(args.container_command, container, leader_name)
+
+    # Collection sources, per artifact, in priority order. The leader mirror is
+    # preferred; worker-local mirrors are the fallback because platform filesync
+    # has repeatedly failed to propagate task artifacts to the leader (R3/R4).
+    worker_names = [
+        require_identifier("worker name", name)
+        for name in team.get("workerNames", [])
+        if isinstance(name, str) and name
+    ]
+    business_worker = next(
+        (name for name in worker_names if "business" in name), None
+    )
+    governance_worker = next(
+        (name for name in worker_names if "governance" in name), None
+    )
+
+    def candidates(label: str, relative: str) -> list[tuple[str, str]]:
+        options = [(container, f"{shared_root}/{relative}")]
+        worker_local = "/root/.copaw-worker/{agent}/.copaw/workspaces/default/shared"
+        if label == "business" and business_worker:
+            options.append(
+                (
+                    f"agentteams-worker-{business_worker}",
+                    worker_local.format(agent=business_worker) + f"/{relative}",
+                )
+            )
+        if label == "governance" and governance_worker:
+            options.append(
+                (
+                    f"agentteams-worker-{governance_worker}",
+                    worker_local.format(agent=governance_worker) + f"/{relative}",
+                )
+            )
+        return options
+
     sources = {
         "project": f"projects/{project_id}",
         "business": f"tasks/{business_task_id}",
@@ -142,14 +177,46 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
         for label, relative in sources.items():
             destination = stage / label
             destination.mkdir(mode=0o700)
-            run_checked(
-                [
-                    args.container_command,
-                    "cp",
-                    f"{container}:{shared_root}/{relative}/.",
-                    str(destination),
-                ]
-            )
+            copied = False
+            errors: list[str] = []
+            for source_container, source_path in candidates(label, relative):
+                probe = subprocess.run(
+                    [
+                        args.container_command,
+                        "exec",
+                        source_container,
+                        "test",
+                        "-d",
+                        source_path,
+                    ],
+                    capture_output=True,
+                    check=False,
+                )
+                if probe.returncode != 0:
+                    errors.append(f"{source_container}:{source_path} absent")
+                    continue
+                result = subprocess.run(
+                    [
+                        args.container_command,
+                        "cp",
+                        f"{source_container}:{source_path}/.",
+                        str(destination),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    copied = True
+                    break
+                errors.append(
+                    f"{source_container}:{source_path} copy failed: {result.stderr.strip()}"
+                )
+            if not copied:
+                raise ValueError(
+                    f"could not collect {label} artifacts from any candidate: "
+                    + "; ".join(errors)
+                )
         missing = [relative for relative in REQUIRED_FILES if not (stage / relative).is_file()]
         if missing:
             raise ValueError(f"shared dossier is incomplete: {', '.join(missing)}")
