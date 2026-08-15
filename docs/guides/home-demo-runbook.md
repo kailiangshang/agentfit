@@ -319,7 +319,7 @@ docker exec agentteams-controller hiclaw get humans agentfit-owner -o json \
 
 创建/更新时使用 `runtime/agentteams/apply-manifest.sh`，不要直接运行当前 AgentTeams `main` 的宿主 apply 脚本：固定 v1.2.0-beta.1 镜像自动检测 `agt`/`hiclaw`，并使用 Team 内联 `leader + workers` legacy 合同（上游 main 已切换为 `agt + workerMembers`，迁移是后续工作）。完整 apply 输出可能包含 Human 初始密码，只允许进入 ignored、`0600` 私密日志。
 
-当前 Team/Leader/Worker/Human 和运行合同已通过回读，并已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13）。第二轮真实路径为 Leader → BusinessEngineer → Leader verification → GovernanceAuditor，已导出结构化 Dossier 和合并后的 Team/Leader-DM Trace，结构化验证为 `PASS`；但四份正式 manifest 尚未实例化并经 Human freeze，Skill/工具尚未绑定运行，尚未运行 Candidate。因此状态仍只能是 `M1: IN_PROGRESS`。脱敏结论见[多情景实测报告](../research/home-demo/retail-m1/dossier/15-agentteams-m1-multiscenario-run.md)，原始消息、room id、工件与使用量证据继续保存在 ignored 的 `$AGENTFIT_RUN_ROOT/agentteams/` 和 `$AGENTFIT_RUN_ROOT/dossier/`。
+当前 Team/Leader/Worker/Human 和运行合同已通过回读，并已完成三轮 ProjectCase preparation（办公室 R1：task 0；R2：task 0、2、13；家庭 R3：task 0、2、13，终态完整、治理审查 SUCCESS 有条件）。第二轮真实路径为 Leader → BusinessEngineer → Leader verification → GovernanceAuditor，已导出结构化 Dossier 和合并后的 Team/Leader-DM Trace，结构化验证为 `PASS`；但四份正式 manifest 尚未实例化并经 Human freeze，Skill/工具尚未绑定运行，尚未运行 Candidate。因此状态仍只能是 `M1: IN_PROGRESS`。脱敏结论见[多情景实测报告](../research/home-demo/retail-m1/dossier/15-agentteams-m1-multiscenario-run.md)，原始消息、room id、工件与使用量证据继续保存在 ignored 的 `$AGENTFIT_RUN_ROOT/agentteams/` 和 `$AGENTFIT_RUN_ROOT/dossier/`。
 
 治理边界不因 Team 已运行而变化：post-freeze sealed-holdout outcome consumer = GovernanceAuditor only。
 

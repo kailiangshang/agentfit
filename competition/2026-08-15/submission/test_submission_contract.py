@@ -263,7 +263,7 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(field=field):
                 self.assertIn(f"| {field} |", text)
-        self.assertIn("真实实例 `NOT_STARTED`", text)
+        self.assertIn("真实实例 `IN_PROGRESS`", text)
         self.assertIn("sealed_holdout_outcome_consumer: GovernanceAuditor only", text)
 
     def test_detailed_skill_contract_is_complete(self) -> None:
@@ -285,7 +285,7 @@ class SubmissionContractTest(unittest.TestCase):
         ):
             with self.subTest(field=field):
                 self.assertGreaterEqual(text.count(f"| {field} |"), 7)
-        self.assertIn("真实绑定 `NOT_STARTED`", text)
+        self.assertIn("Skill/工具真实绑定 `NOT_STARTED`", text)
 
     def test_detailed_risk_and_human_gate_contract_is_complete(self) -> None:
         text = RISK_GATES.read_text(encoding="utf-8")
@@ -296,7 +296,7 @@ class SubmissionContractTest(unittest.TestCase):
             "回滚路径",
             "Trace 要求",
             "高风险动作无批准",
-            "真实运行状态为 `NOT_STARTED`",
+            "真实运行状态为 `IN_PROGRESS`",
         ):
             with self.subTest(term=term):
                 self.assertIn(term, text)

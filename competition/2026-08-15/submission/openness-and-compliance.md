@@ -41,7 +41,7 @@
 
 - 原始客户数据、密钥、凭证、内部业务系统访问权;
 - 被显式标注为内部材料的 docs/internal/ 下证据研究卡(含第三方 benchmark 的事实摘要,遵循各自 license);
-- 未脱敏的 ProjectAsset。
+- 未脱敏的 ScenarioAsset。
 
 ### 1.4 当前仓库与许可事实
 
@@ -79,7 +79,7 @@ AgentFit 不绑定特定模型。任务说明书、能力库、执行轨迹、�
 | 自建工具、代理评估器 | 检查局部流程与失败模式 | 官方 evaluator、官方 benchmark 成绩或生产效果 |
 | 本地路径与原始记录 | 可追溯的本地探索线索 | 可移植、可公开或可复现实验包 |
 
-retail/airline 的 overnight 运行只属于探索性 Demo 证据。其原始记录可能含环境、路径或未脱敏材料，不能因存在于仓库或本机而自动成为可发布的复现实验资产。正式 AgentFit runtime 仍为 `NOT_STARTED`；只有按冻结 ProjectCase、Candidate、TrialSpec、权限、预算和独立审计门禁重新运行，才可形成正式证据。
+retail/airline 的 overnight 运行只属于探索性 Demo 证据。其原始记录可能含环境、路径或未脱敏材料，不能因存在于仓库或本机而自动成为可发布的复现实验资产。正式 AgentFit runtime 为 `IN_PROGRESS`(五元团队已实例化,完成三轮 preparation)；只有按冻结 ProjectCase、Candidate、TrialSpec、权限、预算和独立审计门禁运行，才可形成正式候选证据。
 
 ### 2.4 第三方库与工具
 
@@ -117,7 +117,7 @@ AgentFit 的真实运行预期使用商业 LLM API。相关依赖、成本和替
 - 无 Agent/单 Agent/多 Agent/人工混合统一对照试验设计;
 - 独立审计与 holdout 完整性校验;
 - 人工门禁与责任契约模板;
-- ProjectAsset/MetaAsset 沉淀与晋升门禁。
+- RegressionPool/ScenarioLedger 与资产版本化门禁。
 
 ## 4. 可复现方式
 
@@ -160,7 +160,7 @@ AgentFit 的真实运行预期使用商业 LLM API。相关依赖、成本和替
 - 不把 AgentTeams 名称当作集成证据;
 - 不隐瞒既有仓库、第三方贡献、商业 API 或闭源模型(本文件 §2.6 明确披露);
 - 明确披露数据授权、许可证、密钥、权限和依赖的当前状态;
-- 设计契约要求高风险动作具备审批、拒绝、回滚和审计;真实链路为 `NOT_STARTED`(见 [risk-and-human-gates.md](risk-and-human-gates.md));
+- 设计契约要求高风险动作具备审批、拒绝、回滚和审计;真实链路为 `IN_PROGRESS`(见 [risk-and-human-gates.md](risk-and-human-gates.md));
 - 不只展示成功,失败、降级、否决证据同等保留;
 - 对外材料与内部证据状态一致。
 
@@ -170,7 +170,7 @@ AgentFit 的真实运行预期使用商业 LLM API。相关依赖、成本和替
 
 - SampleSemanticSpec、Sample、SampleSetManifest、SampleEvaluation、SplitLeakagePolicy、SplitLeakageReport、TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema;
 - 自动候选生成、内外循环搜索、Pareto 选择;
-- ProjectAsset/MetaAsset 的正式存储、晋升、回归系统;
+- RegressionPool、ScenarioLedger、资产版本与回滚系统的正式存储;
 - 任一完整 ProjectCase;
 - 真实 AgentTeams 元团队、Skill、MCP、共享状态、Trace;
 - 统一预算下的无 Agent/单 Agent/多 Agent 真实对照;

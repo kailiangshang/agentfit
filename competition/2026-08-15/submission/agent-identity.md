@@ -1,6 +1,6 @@
 # AgentFit 元 Agent Identity 清单
 
-> 状态:设计契约 `READY`,真实实例 `NOT_STARTED`。方案包含 5 个不同职能 Agent,每个具有独立身份、目标、决策、状态、权限和责任产物。
+> 状态:设计契约 `READY`,真实实例 `IN_PROGRESS`(五元团队已在 AgentTeams 官方镜像实例化,完成三轮 ProjectCase preparation)。方案包含 5 个不同职能 Agent,每个具有独立身份、目标、决策、状态、权限和责任产物。
 >
 > 真实 AgentTeams 实例化待完成。在 [AgentFit 整体方案](../../../docs/agentfit-solution.md) 第 13 节门禁全部满足前,本清单描述的是设计身份,不是已运行实例。
 
@@ -114,7 +114,7 @@ sealed_holdout_access_timing: after_candidate_freeze
   → 验证工程师(在 adaptation/validation/failure 上生成 SampleEvaluation、Episode 与 Step Trace)
   → 审计官(候选冻结后独立解析 sealed holdout)
   → 交付官(输出 DeliveryDecision)
-  → 经验沉淀(ProjectAsset)
+  → 经验沉淀(BatchAsset/ScenarioAsset,经回归池验证)
 ```
 
 每次交接必须产生结构化产物并写入项目档案;聊天内容只有被结构化写入后才能改变正式状态。
@@ -131,7 +131,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 6. AgentTeams 版本、配置、已验证能力和未验证边界被记录;
 7. 运行结果可由仓库说明和非敏感配置重复执行。
 
-**当前状态:设计契约 `READY`,真实实例 `NOT_STARTED`。** 既有 AgentTeams smoke test 仅证明平台能力,不构成 AgentFit 闭环证据。
+**当前状态:设计契约 `READY`,真实实例 `IN_PROGRESS`。** 五元团队已实例化(Team `Active`)并完成三轮 ProjectCase preparation;Skill/工具绑定与统一候选对照尚未运行,不构成 AgentFit 闭环证据。
 
 ## 设计摘要
 

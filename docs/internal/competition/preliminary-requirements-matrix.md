@@ -49,7 +49,7 @@
 | 5. 结果验证 | 验证执行或分析结果 | Trial、留出评测和人工复核 |
 | 6. 执行证据沉淀 | 保存日志、Trace、Metrics、报告或截图 | `ExecutionTrace` 与 Evidence Bundle |
 | 7. 审批与回滚 | 高风险动作可确认、审批、回滚和审计 | Approval Record、Rollback Record |
-| 8. 经验沉淀 | 把结果和复盘转为可复用能力 | ProjectAsset、经晋升的 MetaAsset |
+| 8. 经验沉淀 | 把结果和复盘转为可复用能力 | BatchAsset/ScenarioAsset(场景内持续学习,经回归池验证) |
 
 ## 4. 评分矩阵
 

@@ -109,6 +109,15 @@ class RuntimeDocumentationContractTest(unittest.TestCase):
         self.assertIn("M0：`READY`", text)
         self.assertIn("M1：`IN_PROGRESS`", text)
         self.assertIn("M2–M4：`NOT_STARTED`", text)
+        for v4_term in (
+            "强层级映射纪律",
+            "场景内持续学习",
+            "RegressionPool",
+            "实体污染与语义复用",
+            "四层资产",
+        ):
+            with self.subTest(v4_term=v4_term):
+                self.assertIn(v4_term, text)
         self.assertIn("Team `Active`、1 个 Leader 和 4 个 Worker", text)
         self.assertIn("CLI 版本字段仍报告 `dev`", text)
         self.assertIn("官方预构建镜像", text)

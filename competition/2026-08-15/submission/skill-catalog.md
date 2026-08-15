@@ -1,6 +1,6 @@
 # AgentFit 核心 Skill 清单
 
-> 状态:设计契约 `READY`,真实绑定 `NOT_STARTED`。当前定义 7 个核心 Skill。
+> 状态:设计契约 `READY`,Skill/工具真实绑定 `NOT_STARTED`(五元团队实例化与三轮 preparation 已完成)。当前定义 7 个核心 Skill。
 >
 > 真实 AgentTeams Skill 绑定待完成。在 [AgentFit 整体方案](../../../docs/agentfit-solution.md) §13 门禁满足前,本清单描述的是设计契约,不是已运行的 Skill 实例。
 
@@ -65,7 +65,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 依赖工具系统 | 能力注册表、Schema 校验器 |
 | 失败处理 | 缺口无法补齐时请求材料、缩小范围或停止搜索;不得虚构 Agent 名称掩盖缺口 |
 | 权限安全 | 只读能力定义;不调用能力本身 |
-| 复用价值 | 能力库可跨项目复用;缺口模式是 MetaAsset 候选 |
+| 复用价值 | 能力库可跨批次复用;缺口模式是 ScenarioAsset 候选 |
 
 ### S3. 候选建图 Skill
 
@@ -80,7 +80,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 依赖工具系统 | 图构建器、Agentize 必要性判定器、复杂度核算器 |
 | 失败处理 | 禁止组合或权限冲突表示为搜索约束;复杂度代价无收益时停止增加 Agent |
 | 权限安全 | 候选与 AgentArchitect 不得读取 sealed holdout 内容、标签或结果；只使用已批准的 Sample 合同与分布摘要，不执行候选 |
-| 复用价值 | Agentize 条件、成功候选拓扑是 MetaAsset 候选 |
+| 复用价值 | Agentize 条件、成功候选拓扑是 ScenarioAsset 候选 |
 
 ### S4. 统一试验 Skill
 
@@ -95,7 +95,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 依赖工具系统 | 沙箱容器、预算计量器、Trace 采集器、故障注入器 |
 | 失败处理 | 预算耗尽即停止，不自动提高预算；工具超时、权限拒绝、环境故障或循环失控按预定义路径回滚；任何 sealed holdout 暴露均使本轮无效 |
 | 权限安全 | ValidationEngineer is adaptation/validation/failure only；不能读取或解析 sealed holdout；在沙箱内执行，密钥由基础设施持有，外部写入需 Human 审批 |
-| 复用价值 | 评测协议、Trace Schema、故障集是 MetaAsset 候选 |
+| 复用价值 | 评测协议、Trace Schema、故障集是 ScenarioAsset 候选 |
 
 ### S5. 独立审计 Skill
 
@@ -110,7 +110,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 | 依赖工具系统 | 只读证据访问、隔离校验器、污染检测器 |
 | 失败处理 | sealed holdout 内容或结果反馈候选、发生泄漏或审计隔离失效时判该轮无效；证据不足时不出选择结论 |
 | 权限安全 | sealed holdout 只由 GovernanceAuditor 在候选冻结后解析；只读、独立权限与上下文，不修改候选或评测结果 |
-| 复用价值 | 审计模板、检查项、污染检测规则是 MetaAsset 候选 |
+| 复用价值 | 审计模板、检查项、污染检测规则是 ScenarioAsset 候选 |
 
 ### S6. 人工门禁 Skill
 
@@ -133,14 +133,14 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 |---|---|
 | 名称 | 经验沉淀(asset-consolidation) |
 | 类型 | 治理 Skill(脱敏 + 参数化 + 版本化) |
-| 使用场景 | 把单项目经验转为 ProjectAsset;跨项目复验后晋升为 MetaAsset |
+| 使用场景 | 把批次经验转为 BatchAsset 并累积为 ScenarioAsset;经回归池验证后版本化沉淀 |
 | 输入参数 | SampleEvaluation、ExecutionTrace、决策账本、复盘条目、成功与失败 Episode |
-| 输出结果 | ProjectAsset(项目作用域);MetaAsset 候选(脱敏 + 参数化 + 适用域 + 失败边界) |
-| 调用条件 | 交付阶段后触发;MetaAsset 晋升必须经过跨项目复验与独立审计 |
+| 输出结果 | BatchAsset/ScenarioAsset(场景作用域);更新必须绑定证据引用与回归结果 |
+| 调用条件 | 交付阶段后触发;任何 L2/L3/L4 资产更新必须先过 RegressionPool 回归与独立审计 |
 | 依赖工具系统 | 版本化存储、脱敏器、回归测试器 |
-| 失败处理 | 未见项目 holdout 退化、数据污染、适用边界不清或证据被推翻时不得晋升或必须冻结；失败模式可提出新版本 Skill，但必须经新案例验证后才可晋升 |
+| 失败处理 | 回归池退化、实体污染、适用边界不清或证据被推翻时必须回滚或冻结；失败模式可提出新版本 Skill，但必须经新案例验证后才可晋升 |
 | 权限安全 | 共享资产晋升前必须脱敏;不携带密钥或敏感数据 |
-| 复用价值 | MetaAsset 是跨项目学习载体;但**未见项目验证前不宣称 Meta-learning** |
+| 复用价值 | ScenarioAsset 是场景内持续学习载体;跨场景迁移为远期方向,**未见场景验证前不宣称跨场景学习** |
 
 ---
 
@@ -158,7 +158,7 @@ AgentFit 按必要性而非数量评审官方 Skills。原则:
 
 ## 结构化上下文设计
 
-AgentFit 以共享状态与轨迹可观测作为两项主上下文机制,真实实现状态仍为 `NOT_STARTED`:
+AgentFit 以共享状态与轨迹可观测作为两项主上下文机制,真实实现状态为绑定前夜(团队已实例化,绑定属 M1 后续):
 
 1. **共享状态**:计划以项目档案(Project Dossier)作为版本化状态事实源,承载阶段产物、执行轨迹和交付决定;
 2. **轨迹可观测**:计划由执行轨迹(ExecutionTrace)记录 Step/Episode 级决策、工具调用、权限审批、成本、重试和回滚。
