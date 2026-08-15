@@ -9,7 +9,23 @@
 1. **代码执政**：凡可由 schema/checker/状态机拒绝的，不依赖 prompt 自觉；
 2. **产物即接口**：组件间只通过本蓝图注册的中间产物通信，每个产物有 schema、生产者、消费者与内容哈希；
 3. **训练日志级导出**：任何一轮运行可导出为自包含 bundle（结构化数据 + 可视化报告），断链即不可审计；
-4. **最小充分**：不引入蓝图之外的系统；平台缺陷只记录不吸收。
+4. **最小充分**：不引入蓝图之外的系统；平台缺陷只记录不吸收；
+5. **双平面分离**：控制平面（SOUL + Skill + 生命周期门禁，可阻断）与观测平面（采集/校验/账本/报告，只读 sidecar）严格分离。观测平面永不阻塞主进程、永不要求被观测者配合——**被观测者不得持有自己审计轨迹的写权**；观测失败不毁运行，独立开发独立演进。唯一阻断式检查（freeze/审批门禁）属控制平面，与事后验证（观测平面）不得混淆；
+6. **阶段完成以结构化产物为准**：九个生命周期阶段各有结构化产物合同（§5.1）；阶段完成的唯一定义是对应产物通过 schema 校验——聊天声明、消息数、任务状态都不构成完成（R3 实证：聊天完成而 plan 节点未回写）。
+
+## 0.1 可复用轮子（借格式与库，不借系统）
+
+| 轮子 | 用法 | 不造的理由 |
+|---|---|---|
+| Matrix 事件流 / MinIO 工件 / token 账本 | 观测平面唯一的原始源，只读采集 | 不给 Agent 加埋点；事件天然带 event_id/sender/ts/mentions |
+| OpenTelemetry GenAI 语义约定 | Trace/RoundRecord 字段命名对齐 `gen_ai.*` 概念 | 借 schema 不借后端，未来可导出任意生态 |
+| `jsonschema` 库 | 全部阶段产物校验 | 声明式 schema 免手写解析 |
+| Chart.js / mermaid.js（内嵌） | 报告图表 | 纯前端轮子 |
+| CoPaw skill 安装机制 | S1–S7 以 SKILL.md+脚本包发布 | 分发渠道用平台的，我们只写内容 |
+| 自家已验证资产 | `matrix_run`/`validate_run`、R4 即兴脚本（S1/S5 种子）、实体分组函数 | 实战验证过 |
+| 明确不引入 | MLflow/Langfuse 服务端、消息队列、区块链库、状态机库 | JSON 哈希链约 50 行；显式状态表约 100 行；服务器化违反最小充分 |
+
+自己写的只有三样：哈希链账本、生命周期状态机、checker 逻辑——这三样是 AgentFit 的核心资产，不是轮子。
 
 ## 1. 总体架构
 
@@ -55,6 +71,8 @@ graph TB
     SEND --> RR --> SL --> VIZ --> BUNDLE
     V --> DOSSIER
 ```
+
+双平面标注：L1–L3 = **控制平面**（可阻断，含 lifecycle 门禁）；L0 的只读源（Matrix 事件/MinIO 工件/账本）+ L4 + L5 = **观测平面**（sidecar，只读、不阻塞、不要求被观测者配合）。工具层按此一分为二：`prepare/send` 属分发（控制侧），`export/snapshot/validate/报告` 属观测侧。
 
 要点：能力层是当前最大空白（R4 实证：GA 与 BE 在任务现场即兴手写 `verify_hashes.py` / `compute_hashes.py`——Skill 未落地时 Agent 会自己造工具）。Skill 层的种子代码就来自这些被实战验证过的即兴产物。
 
@@ -130,6 +148,26 @@ skills/
 原则：Skill 只含**确定性代码与 schema**，判断类步骤仍在 Agent（SOUL 定义何时调用）；Skill 的每次调用记入 Trace（输入哈希、版本、输出哈希）。
 
 ## 5. 中间产物注册表（产物即接口）
+
+### 5.1 九阶段结构化产物合同（AgentFit 自身每阶段的产出）
+
+每个阶段一个 JSON 产物（schema 版本化，`agentfit.<stage-artifact>/v1`）；**产物通过 schema 校验即阶段完成，否则阶段未完成**——由 lifecycle 状态机消费。
+
+| 阶段 | 结构化产物 | 关键字段（机器可查） | 生产者 | 进入下一阶段的门禁 |
+|---|---|---|---|---|
+| Intake | `intake_record.json` | run_id、requester、材料引用+哈希、范围、优先级 | 操作官工具 | 材料引用齐全 |
+| Discover | `semantic-specs.json` | sample/task/capability 三规格；样本单位、实体分组键、验收指标 | BE via S1 | 三规格 schema PASS |
+| Freeze | `sample-set-manifest.*.json` ×4 + `freeze_record.json` | 成员+内容哈希、set_model_sha256、访问策略；批准人/时间/范围 | BE via S1；Human 签 freeze | 实体泄漏检查 PASS + Human 批准 |
+| Architect | `candidate-graph-set.json` | 候选 (G,Π,θ,ρ)；节点 layer 标签、边触达关系 | AgentArchitect via S3 | 层级触达检查 PASS |
+| Approve | `trial-spec.json` | 权限、预算、回滚、并发、种子 | 操作官+Human | Human 批准记录 |
+| Trial | `sample-evaluation.json[]` + `execution-trace.json[]` | EvaluationUnit=候选×样本×run；Step 级事件、成本、失败类 | VE via S4 | 预算/权限未越界 |
+| Audit | `evaluation-report.json` + `audit-decision.json` | holdout 结果、**minimum_next_action / freeze_permitted / candidate_generation_permitted**（机器字段，Leader 只能逐字引用） | GA via S5 | 审计输入可追溯 |
+| Deliver | `delivery-decision.json` | 五种合法结果之一 + 证据引用 + 重新评估条件 | EngagementLead | 决策引用的工件哈希全部存在 |
+| Learn | `round-record.json` + `asset-versions.json` | 见 §5.2；资产增量（池/知识/版本回滚指针） | 操作官工具 + S7 | 哈希链连续 |
+
+演进约束：阶段产物 schema 变更 = 新版本号 + lifecycle 同步评审；`not_instantiated` 仍是显式合法值（缺什么写什么，不虚构）。
+
+### 5.2 运行级产物（一轮运行的管线工件）
 
 | 产物 | 格式 | 生产者 | 消费者 | 存储 |
 |---|---|---|---|---|
