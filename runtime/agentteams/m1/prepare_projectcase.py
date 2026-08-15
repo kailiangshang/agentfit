@@ -56,6 +56,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest-file", type=Path, required=True)
     parser.add_argument("--source-version", required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--phase",
+        choices=("contracts", "instantiate"),
+        default="contracts",
+        help="contracts: draft the four manifest contracts; "
+        "instantiate: fill entity-group-aware memberships, versions and hashes",
+    )
     return parser.parse_args()
 
 
@@ -178,29 +185,98 @@ def select_samples(
     }
 
 
+PHASE_GOALS = {
+    "contracts": (
+        "Goal: compile the supplied {source_version} retail batch into an "
+        "auditable cross-sample semantic draft, define the missing manifest "
+        "contracts in the correct lifecycle order, and decide whether Candidate "
+        "generation is permitted."
+    ),
+    "instantiate": (
+        "Goal: instantiate the four SampleSetManifest contracts from the "
+        "supplied {source_version} retail batch with entity-group-aware "
+        "membership assignments, per-manifest version and content-hash fields, "
+        "access policies, and isolation rules; then obtain an independent "
+        "governance review of membership states and decide whether Human freeze "
+        "approval may be requested."
+    ),
+}
+
+PHASE_STEP_2 = {
+    "contracts": (
+        "2. BusinessEngineer must publish batch-level `SampleSemanticSpec`, "
+        "`TaskSemanticSpec`, and `CapabilitySemanticSpec` drafts, plus all four "
+        "SampleSetManifest contracts: {manifests}."
+    ),
+    "instantiate": (
+        "2. BusinessEngineer must instantiate all four SampleSetManifest "
+        "contracts ({manifests}) with entity-group-aware membership: no entity "
+        "group may span evaluation splits, and near-duplicate entity groups must "
+        "stay inside one manifest. Members not assignable from this batch remain "
+        "literally `not_instantiated` with an explicit unresolved reason."
+    ),
+}
+
+PHASE_STEP_3 = {
+    "contracts": (
+        "3. Every contract or artifact that does not exist must use the literal "
+        "`not_instantiated` in the relevant field. Define all four "
+        "SampleSetManifest contracts, membership state, version/hash fields, "
+        "access policy, and isolation rules before any Human freeze request."
+    ),
+    "instantiate": (
+        "3. Every membership entry must carry its sample reference and a "
+        "computed content hash — computed from the supplied batch, never "
+        "invented. Version and hash fields must be filled for instantiated "
+        "manifests. `sealed_holdout` may stay `not_instantiated` only with an "
+        "explicit entity-supply justification and re-supply conditions."
+    ),
+}
+
+PHASE_STEP_5 = {
+    "contracts": (
+        "5. GovernanceAuditor must report the earliest missing predecessor as "
+        "the minimum next action. It must never recommend Human freeze before "
+        "all four manifest contracts and membership states exist."
+    ),
+    "instantiate": (
+        "5. GovernanceAuditor must report the earliest missing predecessor as "
+        "the minimum next action, and must audit entity leakage explicitly: a "
+        "recommendation of Human freeze is permitted only when all four "
+        "manifests have instantiated memberships or justified "
+        "`not_instantiated` states, with no entity group spanning splits."
+    ),
+}
+
+
 def render_request(
     run_id: str,
     terminal_prefix: str,
     source_version: str,
     batch: dict[str, Any],
     policy: str,
+    phase: str = "contracts",
 ) -> str:
     manifests = ", ".join(f"`{name}`" for name in MANIFEST_NAMES)
     batch_json = json.dumps(batch, ensure_ascii=False, indent=2)
     sample_count = len(batch["samples"])
+    goal = PHASE_GOALS[phase].format(source_version=source_version)
+    step2 = PHASE_STEP_2[phase].format(manifests=manifests)
+    step3 = PHASE_STEP_3[phase]
+    step5 = PHASE_STEP_5[phase]
     return f"""# AgentFit runtime experiment: {run_id}
 
 This is a real M1 ProjectCase-preparation run on {sample_count} public source sample(s). It is not a Candidate run, Trial, EvaluationRun, or closed-loop result.
 
-Goal: compile the supplied {source_version} retail batch into an auditable cross-sample semantic draft, define the missing manifest contracts in the correct lifecycle order, and decide whether Candidate generation is permitted.
+{goal}
 
 ## Required collaboration chain
 
 1. You are EngagementLead. Create a Project and delegate semantic compilation only to BusinessEngineer in the Team Room. Keep AgentArchitect and ValidationEngineer unassigned.
-2. BusinessEngineer must publish batch-level `SampleSemanticSpec`, `TaskSemanticSpec`, and `CapabilitySemanticSpec` drafts, plus all four SampleSetManifest contracts: {manifests}.
-3. Every contract or artifact that does not exist must use the literal `not_instantiated` in the relevant field. Define all four SampleSetManifest contracts, membership state, version/hash fields, access policy, and isolation rules before any Human freeze request.
+{step2}
+{step3}
 4. After BusinessEngineer completes, delegate an independent dependency-order review only to GovernanceAuditor.
-5. GovernanceAuditor must report the earliest missing predecessor as the minimum next action. It must never recommend Human freeze before all four manifest contracts and membership states exist.
+{step5}
 6. Finish in the Leader DM with a human-facing message whose normalized first line begins `{terminal_prefix}`. Preserve the auditor decision.
 
 ## Binding evidence and access boundaries
@@ -211,6 +287,7 @@ Goal: compile the supplied {source_version} retail batch into an auditable cross
 - No Sample/Task contract or SampleSetManifest has Human freeze approval.
 - No CandidateVersion, TrialSpec, EvaluationUnit, or ExecutionTrace has been instantiated.
 - Do not invent hashes, approvals, tool results, benchmark outcomes, or sealed members.
+- Entity pollution discipline: the same entity (person, order, ticket) appearing across tasks is dataset pollution, not reuse evidence. Entity keys are for leakage-control grouping only; all reuse signals must be computed from task semantics.
 - Keep M1 `IN_PROGRESS`; M2/M3/M4 are not started.
 
 ## Cross-sample questions
@@ -299,6 +376,7 @@ def main() -> int:
             args.source_version,
             batch,
             policy,
+            phase=args.phase,
         )
         if "evaluation_criteria" in json.dumps(batch, ensure_ascii=False):
             raise ValueError("sanitized batch still contains evaluation criteria")

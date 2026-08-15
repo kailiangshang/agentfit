@@ -156,3 +156,23 @@ class PrepareProjectCaseTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class InstantiatePhaseTest(unittest.TestCase):
+    def test_instantiate_request_pins_entity_grouping_and_hashes(self) -> None:
+        from runtime.agentteams.m1.prepare_projectcase import render_request
+
+        batch = {"samples": [{"sample_id": "0"}, {"sample_id": "5"}]}
+        request = render_request(
+            "retail-r4", "AGENTFIT-x", "tau2-bench/v1.0.1", batch, "policy",
+            phase="instantiate",
+        )
+        for term in (
+            "instantiate the four SampleSetManifest contracts",
+            "no entity group may span evaluation splits",
+            "computed from the supplied batch, never invented",
+            "must audit entity leakage explicitly",
+            "Entity pollution discipline",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, request)
