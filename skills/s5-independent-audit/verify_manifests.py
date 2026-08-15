@@ -30,6 +30,8 @@ def main() -> int:
     parser.add_argument("--batch", type=Path, required=True)
     parser.add_argument("--manifests", type=Path, required=True)
     parser.add_argument("--entity-groups", type=Path, default=None)
+    parser.add_argument("--split-axis", choices=("entity", "root-cause"), default="entity",
+                        help="entity: check entity spanning; root-cause: skip entity checks (single-entity domains)")
     args = parser.parse_args()
 
     batch_doc = json.loads(args.batch.read_text(encoding="utf-8"))
@@ -100,7 +102,7 @@ def main() -> int:
             else:
                 sample_owner[sid] = name
             entity = m.get("entity_group")
-            if entity:
+            if entity and args.split_axis == "entity":
                 if entity in group_owner and group_owner[entity] != name:
                     ok &= record(
                         f"{name}.no_entity_span",

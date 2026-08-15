@@ -386,7 +386,15 @@ def main() -> int:
     args = parse_args()
     try:
         tasks = load_tasks(args.tasks_file)
-        if args.count and not args.task_id:
+        if args.count and not args.task_id and args.split_axis == "root-cause":
+            # root-cause mode: take N tasks directly (no entity constraint)
+            import random as _random
+            _random.seed(42)
+            _random.shuffle(tasks)
+            args.task_id = [str(t["id"]) for t in tasks[:args.count]]
+            if len(args.task_id) < args.count:
+                raise SystemExit(f"only {len(args.task_id)} tasks available, requested {args.count}")
+        elif args.count and not args.task_id:
             import random as _random
             _random.seed(42)
             _random.shuffle(tasks)
