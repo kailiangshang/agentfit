@@ -57,6 +57,20 @@ def _load_validator():
     return module
 
 
+def _mutation_font_path() -> str:
+    candidates = (
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+        str(REPO_ROOT / ".local-demo/fonts/DroidSansFallbackFull.ttf"),
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    )
+    for candidate in candidates:
+        if Path(candidate).is_file():
+            return candidate
+    raise AssertionError(
+        "no CJK mutation font available; checked: " + ", ".join(candidates)
+    )
+
+
 def _load_builder():
     spec = importlib.util.spec_from_file_location("build_presentation", BUILDER)
     if spec is None or spec.loader is None:
@@ -122,6 +136,10 @@ def _html_title(text: str) -> str:
 def _compile_html_sources(*sources: Path) -> dict[str, object]:
     """Compile HTML sources to the native-shape patch used by the deck builder."""
     builder = _load_builder()
+    if not builder.HTML2PATCH.is_file():
+        raise unittest.SkipTest(
+            f"hands-on-deck toolchain not installed on this machine: {builder.HTML2PATCH}"
+        )
     with tempfile.TemporaryDirectory(prefix="submission-html-contract-") as temp_dir:
         temp = Path(temp_dir)
         base = temp / "base.pptx"
@@ -855,7 +873,7 @@ class SubmissionContractTest(unittest.TestCase):
             11: (
                 "OFFICIAL ANCHOR · 官方案例锚点",
                 "EXPLORATORY DEMO · 探索性证据",
-                "NOT_STARTED · 正式候选",
+                "IN_PROGRESS · 正式候选",
             ),
             16: (
                 "异常与恢复 · 同一 Trace 语义",
@@ -1626,7 +1644,8 @@ class SubmissionContractTest(unittest.TestCase):
             pdfmetrics.registerFont(
                 TTFont(
                     "DroidSansFallback",
-                    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+                    _mutation_font_path(),
+                    subfontIndex=0,
                 )
             )
 

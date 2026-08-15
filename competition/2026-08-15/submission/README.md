@@ -6,11 +6,11 @@
 
 AgentFit 是面向 AgentTeams 构建的 Agent 方案建筑师。企业提供业务材料、代表性案例和用户优先级；它先定义案例与验收，从简单方案开始运行，再依据证据调整完整方案，并以新案例验证后交付最小充分的已验证方案包，也允许保留人工或拒绝自动化。
 
-主线借鉴机器学习中“样本构建、批量试验、误差分析和验证停止”的工程范式：用户定义目标与边界，AgentFit 在案例上比较完整 Agent Solution；调整的不是模型权重，也不把产品包装成训练系统或 AutoML。
+主线借鉴机器学习中“样本构建、批量试验、误差分析和验证停止”的工程范式，并将其硬映射化：方案空间按四层资产（原子接口、工具封装、可复用知识、DAG 组合）离散组织，更新按层内算子白名单执行，场景演化以持续学习语义治理（回归池防遗忘、漂移探针防漂移）；调整的不是模型权重，也不把产品包装成训练系统或 AutoML。
 
 内部候选严格表示为 `Candidate = (G, Π, θ, ρ)`：能力图、Agent 分区、参数与共享范围。Tool、Skill、MCP、Memory、Model、Agent 拓扑和 Human 边界都是方案变量；这不是以 Agent 数量或 ML 术语命名的产品。
 
-OpsPilot 是官方案例锚点，作为材料和设计参考，不是 AgentFit 运行证据。retail/airline 的 overnight 记录是 DeepSeek + OpenCode、本地路径与自建工具/代理评估器产生的探索性 Demo，非官方 evaluator、非 Candidate、非正式分数。真实 AgentFit 运行保持 `NOT_STARTED`。
+OpsPilot 是官方案例锚点，作为材料和设计参考，不是 AgentFit 运行证据。retail/airline 的 overnight 记录是 DeepSeek + OpenCode、本地路径与自建工具/代理评估器产生的探索性 Demo，非官方 evaluator、非 Candidate、非正式分数。真实 AgentFit 运行为 `IN_PROGRESS`：五元团队已在 AgentTeams 官方镜像实例化（Team `Active`），完成三轮 ProjectCase preparation（Round 3 终态完整、治理审查 SUCCESS 有条件）；Candidate、统一候选对照与闭环尚未运行。
 
 阶段边界：2026-08-15 初赛提交阶段只完成本目录材料、验证和上传；是否进入后续 AgentTeams walking skeleton、复赛工程或跨项目试验，由晋级结果、评审反馈、后续赛程和明确授权决定。AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。
 
