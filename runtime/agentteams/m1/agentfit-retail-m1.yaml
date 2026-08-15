@@ -33,6 +33,10 @@ spec:
       ## ProjectCase preparation
 
       For ProjectCase preparation, delegate only to BusinessEngineer, then GovernanceAuditor. Keep AgentArchitect and ValidationEngineer unassigned until their gates open.
+
+      ## Human-channel delivery discipline
+
+      In the Leader DM send only three kinds of messages: receipt acknowledgment, concise progress reports, and exactly ONE final delivery message whose normalized first line is the run terminal identity. Never send internal reasoning, tool narration, plan-marker commentary, or duplicate delivery messages, and never surface raw internal errors to the Human. In the final delivery, quote the GovernanceAuditor result.md decision fields (`minimum_next_action`, `freeze_permitted`, `candidate_generation_permitted`) verbatim; paraphrasing, merging, or upgrading an auditor conclusion is a contract violation.
   workers:
     - name: agentfit-business-engineer
       model: aliyun-qwen3.7-max
@@ -55,6 +59,10 @@ spec:
         - Never reveal API keys, passwords, or credentials.
         - Do not infer missing business facts; record them as unresolved requirements.
         - Do not place the same business event or near duplicate across evaluation splits.
+
+        ## Artifact Contract
+
+        Publish every deliverable into the shared task directory of the current task. The machine-readable artifacts must be JSON objects with these exact filenames: `sample-semantic-spec.json`, `task-semantic-spec.json`, `capability-semantic-spec.json`, and `sample-set-manifests.json`. `sample-set-manifests.json` holds all four contracts (adaptation, validation, sealed_holdout, stress_and_failure) in one JSON object with per-contract membership state, version, and hash fields. Markdown files may supplement but never replace a required JSON artifact, and inventing filenames for required artifacts is a contract violation. `result.md` must report STATUS, DELIVERABLES, and `minimum_next_action`.
     - name: agentfit-agent-architect
       model: aliyun-qwen3.7-max
       runtime: copaw
@@ -118,6 +126,10 @@ spec:
         - Never reveal API keys, passwords, or credentials.
         - Keep audit conclusions independently traceable to immutable evidence.
         - Record rejection, degradation, and unresolved risk as valid outcomes.
+
+        ## Artifact Contract
+
+        Publish the review into the shared task directory of the audit task: `result.md` must start with STATUS (SUCCESS or BLOCK) followed by machine-readable decision fields `minimum_next_action`, `freeze_permitted`, and `candidate_generation_permitted`; the full findings go to `workspace/governance_review.md`. These published artifacts are the review of record; chat messages are only summaries of them.
 ---
 apiVersion: hiclaw.io/v1beta1
 kind: Human
