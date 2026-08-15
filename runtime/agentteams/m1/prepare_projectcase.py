@@ -55,6 +55,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--task-id", action="append", default=[])
     parser.add_argument("--count", type=int, default=0,
                         help="select N entity-distinct tasks instead of --task-id")
+    parser.add_argument("--split-axis", choices=("entity", "root-cause"), default="entity",
+                        help="manifest split criterion: entity (retail) or root-cause (telecom)")
+    parser.add_argument("--domain", default="retail",
+                        help="benchmark domain name (retail/airline/telecom/banking_knowledge)")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--manifest-file", type=Path, required=True)
     parser.add_argument("--source-version", required=True)
@@ -149,7 +153,7 @@ def select_samples(
         if not isinstance(source, dict):
             raise ValueError(f"task {task_id} must be a JSON object")
         validate_source_schema(source)
-        sanitized = {key: source[key] for key in sorted(VISIBLE_SOURCE_FIELDS)}
+        sanitized = {key: source[key] for key in sorted(VISIBLE_SOURCE_FIELDS) if key in source}
         samples.append(
             {
                 "sample_id": task_id,
@@ -193,14 +197,14 @@ def select_samples(
 
 PHASE_GOALS = {
     "contracts": (
-        "Goal: compile the supplied {source_version} retail batch into an "
+        "Goal: compile the supplied {source_version} {domain} batch into an "
         "auditable cross-sample semantic draft, define the missing manifest "
         "contracts in the correct lifecycle order, and decide whether Candidate "
         "generation is permitted."
     ),
     "instantiate": (
         "Goal: instantiate the four SampleSetManifest contracts from the "
-        "supplied {source_version} retail batch with entity-group-aware "
+        "supplied {source_version} {domain} batch with entity-group-aware "
         "membership assignments, per-manifest version and content-hash fields, "
         "access policies, and isolation rules; then obtain an independent "
         "governance review of membership states and decide whether Human freeze "
@@ -262,11 +266,13 @@ def render_request(
     batch: dict[str, Any],
     policy: str,
     phase: str = "contracts",
+    domain: str = "retail",
+    split_axis: str = "entity",
 ) -> str:
     manifests = ", ".join(f"`{name}`" for name in MANIFEST_NAMES)
     batch_json = json.dumps(batch, ensure_ascii=False, indent=2)
     sample_count = len(batch["samples"])
-    goal = PHASE_GOALS[phase].format(source_version=source_version)
+    goal = PHASE_GOALS[phase].format(source_version=source_version, domain=domain)
     step2 = PHASE_STEP_2[phase].format(manifests=manifests)
     step3 = PHASE_STEP_3[phase]
     step5 = PHASE_STEP_5[phase]
@@ -321,7 +327,7 @@ This is a real M1 ProjectCase-preparation run on {sample_count} public source sa
 {batch_json}
 ```
 
-## Official retail policy
+## Official {domain} policy
 
 {policy.rstrip()}
 """
@@ -387,12 +393,26 @@ def main() -> int:
             _groups = {}
             for task in tasks:
                 _ents = set()
-                for _a in (task.get("evaluation_criteria") or {}).get("actions", []):
-                    _g = _a.get("arguments", {})
-                    if "first_name" in _g:
-                        _ents.add((_g["first_name"], _g.get("last_name",""), _g.get("zip","")))
+                if args.domain in ("telecom",):
+                    # telecom: entity is in ticket (name + phone)
+                    import re as _re
+                    _m = _re.search(r'Customer name:\s*(.+?),\s*phone number:\s*([\d-]+)',
+                                    str(task.get("ticket", "")))
+                    if _m:
+                        _ents.add((_m.group(1).strip(), _m.group(2)))
+                else:
+                    # retail/airline: entity is in evaluation actions (name + zip)
+                    for _a in (task.get("evaluation_criteria") or {}).get("actions", []):
+                        _g = _a.get("arguments", {})
+                        if "first_name" in _g:
+                            _ents.add((_g["first_name"], _g.get("last_name",""), _g.get("zip","")))
                 _key = frozenset(_ents) or frozenset((f"anon-{task['id']}",))
                 _groups.setdefault(_key, []).append(task)
+            if len(_groups) == 1 and args.count > 1:
+                import sys as _sys
+                print(f"WARNING: all {args.count} tasks belong to a single entity. "
+                      f"Consider --split-axis root-cause for domain '{args.domain}'.",
+                      file=_sys.stderr)
             _pool = [v[0] for v in _groups.values()]
             _random.shuffle(_pool)
             args.task_id = [str(t["id"]) for t in _pool[:args.count]]
@@ -415,6 +435,8 @@ def main() -> int:
             batch,
             policy,
             phase=args.phase,
+            domain=args.domain,
+            split_axis=args.split_axis,
         )
         if "evaluation_criteria" in json.dumps(batch, ensure_ascii=False):
             raise ValueError("sanitized batch still contains evaluation criteria")

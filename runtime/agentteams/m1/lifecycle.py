@@ -153,6 +153,18 @@ def freeze_gate(
         errors = validate(manifest, schema)
         ok &= record(f"{name}.schema", not errors, "; ".join(errors[:4]) or "valid")
 
+    # Manifest completeness: at least 3 of 4 must be instantiated
+    # (sealed_holdout may stay not_instantiated with justification)
+    instantiated = sum(
+        1 for name in MANIFEST_NAMES
+        if (manifests.get(name) or {}).get("contract_status") == "instantiated"
+    )
+    ok &= record(
+        "manifest.completeness",
+        instantiated >= 3,
+        f"{instantiated}/4 instantiated (sealed_holdout may be justified)",
+    )
+
     if audit_path is not None and audit_path.is_file():
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
         verdict = audit.get("verdict")
@@ -166,6 +178,13 @@ def freeze_gate(
             audit.get("minimum_next_action") == "proceed_to_freeze_review",
             f"minimum_next_action={audit.get('minimum_next_action')}",
         )
+        # Consistency: audit PASS + manifest incomplete = contradiction
+        if verdict == "PASS" and instantiated < 3:
+            ok &= record(
+                "audit.manifest_consistency",
+                False,
+                f"audit says PASS but only {instantiated}/4 manifests instantiated - contradiction",
+            )
     else:
         ok &= record("audit.present", False, "audit decision artifact missing")
 
