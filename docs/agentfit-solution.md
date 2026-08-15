@@ -2,7 +2,9 @@
 
 > 文档地位：唯一当前有效的整体方案
 >
-> 最近收敛：2026-08-14
+> 方案版本：v4（强层级映射纪律与场景内持续学习）
+>
+> 最近收敛：2026-08-15
 >
 > 当前阶段：唯一初赛提交版本已冻结；AgentTeams M0 已完成并为 `READY`，M1 已进入 `IN_PROGRESS`，M2–M4 仍为 `NOT_STARTED`
 
@@ -18,7 +20,7 @@
 | 初赛材料 | `READY` | 500 字以内简介、12 页主路演、5 页附录，以及 PPTX/PDF 的结构、内容、可编辑性、几何和视觉检查已完成 | PPT 中的设计图等于运行证据 |
 | AgentTeams 平台试用 | 已有独立 smoke test | Worker、Team、Human、文件同步、定时任务等底座能力曾被单独试用 | 历史平台测试等于 AgentFit 已集成 |
 | retail / airline 探索性 Demo | 有限探索证据 | DeepSeek + OpenCode、本地路径与自建工具/代理评估器可用于发现设计问题 | 官方 τ³-bench 成绩、正式 Candidate、统一候选对照或生产效果 |
-| AgentFit 真实运行 | M0 `READY`；M1 `IN_PROGRESS`；M2–M4 `NOT_STARTED` | 已固定 AgentTeams v1.1.2 官方镜像；原生 Team `Active`、1 个 Leader 和 4 个 Worker 均运行、Human `Active`；已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13），第二轮结构化验证为 `PASS` | 已运行 Candidate、候选评测、闭环、多 Agent 优势或跨项目学习 |
+| AgentFit 真实运行 | M0 `READY`；M1 `IN_PROGRESS`；M2–M4 `NOT_STARTED` | 办公室基线固定 AgentTeams v1.1.2；2026-08-15 家庭实例因 v1.1.2 确定性 Team 房间配置缺陷（reconcile leader DM membership 403）经项目所有者决定改用 v1.2.0-beta.1 官方镜像，五元 Team `Active`、1 Leader + 4 Worker 运行、Human `Active`；已完成三轮 ProjectCase preparation（办公室 R1：task 0；R2：task 0/2/13 结构化验证 PASS；家庭 R3：task 0/2/13 终态 complete，106 事件，治理审查 SUCCESS 有条件） | 已运行 Candidate、候选评测、闭环、多 Agent 优势或跨场景学习 |
 
 初赛材料以[唯一提交目录](../competition/2026-08-15/submission/)为准；真实 AgentFit 运行状态、AgentTeams 边界和后续启动条件以本文件第 3、7、8、13 节为准。
 
@@ -50,6 +52,8 @@
 
 AgentFit 不预设多 Agent 更好，也不以 Agent 数量为优化目标。它交付的是满足任务、成本、安全和责任约束的最小充分方案。
 
+场景在 AgentFit 中被视为随时间演化的活分布，而不是静态数据集：样本持续流入、子场景持续分化。因此 AgentFit 不是一次性方案设计，而是伴随场景演化的持续学习循环——样本流驱动层级化的受控更新，旧能力受回归保护，漂移被检测、裁定和吸收。场景是方案的实例化参数，不是架构本身；同一套层级纪律、持续学习机制与追溯合同适用于故障诊断、零售、航空等任何可描述输入输出与验收的场景。
+
 AgentFit 把机器学习中“样本构建、批量试验、误差分析和验证停止”的工程范式引入 Agent 方案设计；调整的不是模型权重，而是完整 Agent Solution 的组成与边界。用户定义目标权重、验收门槛、预算和 Human 边界，AgentFit 只在这些冻结约束内探索、比较并收敛方案。
 
 ### 2.3 产品、工程表示与研究类比
@@ -57,10 +61,10 @@ AgentFit 把机器学习中“样本构建、批量试验、误差分析和验�
 | 层级 | 回答的问题 | 冻结表述 |
 |---|---|---|
 | 产品价值：Agent 方案建筑师 | 为用户解决什么 | 基于材料、案例和优先级，交付最小充分、可验收的方案 |
-| 核心工程闭环 | 如何作出选择 | 定义案例与验收 → 构建简单方案 → 运行测量 → 分析调整 → 新案例验证并停止 |
-| 机器学习工程纪律 | 如何让闭环易于理解 | 借鉴样本构建、批量试验、误差分析和验证停止；它不是产品名称、训练系统，自动优化器也不是当前能力 |
+| 核心工程闭环 | 如何作出选择 | 定义案例与验收 → 构建简单方案 → 运行测量 → 分析调整 → 新案例验证并停止；调整按层级离散化，更新算子按层白名单化 |
+| 机器学习工程纪律 | 如何让闭环易于理解 | 硬映射而非比喻：四层资产对应从数据基础设施到架构的离散层级，持续学习对应场景演化，回归池对应防遗忘回放；它不是产品名称、训练系统，自动优化器是可插拔工具而非自研目标 |
 
-三者不是并列定位。对用户，AgentFit 提供的是方案工程与交付责任；机器学习工程纪律是比赛主线中的解释桥梁，严格候选表示仍服务于实现与审计。指标告诉系统“错了多少”，Trace 帮助定位“错在哪里”；`Simple First` 则以复杂度控制避免没有证据的过度设计。这里不声称 AutoML、反向传播，自动优化器也不是当前能力；任何跨项目学习仍是未来方向，不是当前能力。
+三者不是并列定位。对用户，AgentFit 提供的是方案工程与交付责任；机器学习工程纪律是比赛主线中的解释桥梁，严格候选表示仍服务于实现与审计。指标告诉系统“错了多少”，Trace 帮助定位“错在哪里”；`Simple First` 则以复杂度控制避免没有证据的过度设计。这里不声称 AutoML、反向传播，自动优化器是可插拔工具而非自研目标；场景内持续学习是当前设计语义，跨场景迁移仍是未来方向。
 
 ### 2.4 五种合法结果
 
@@ -97,14 +101,16 @@ AgentFit 当前不做：
 - 将飞书或其他外部 IM 作为初赛提交依赖；
 - 让优化器静默修改任务目标、验收标准或权限；
 - 用本地模拟或历史平台试用替代真实 AgentFit 证据；
-- 在没有跨项目未见集验证前宣称 Meta-learning。
+- 把场景内持续学习表述为跨场景 Meta-learning；跨场景迁移仍需未见场景验证，属远期方向；
+- 自研 prompt、结构优化器或训练底座模型权重；既有优化器只作为内环可插拔工具接入；
+- 追求对黑盒 LLM 节点的可微性或"文本梯度"式精确归因；AgentFit 的信用分配是层级离散的。
 
 ## 3. AgentTeams、AgentFit 与 Human 的边界
 
 | 主体 | 负责内容 | 不负责内容 |
 |---|---|---|
 | AgentTeams | 身份、Worker/Team/Human、房间与通信、容器、生命周期、共享存储、凭证和 Skill/MCP 绑定 | 决定某个业务任务应该采用什么 Agent 架构 |
-| AgentFit | 任务与能力语义、能力对齐、候选生成、架构搜索、统一评测、审计、Human 门禁和交付 | 重造通用 Agent 运行时、IM、容器编排或企业 IAM |
+| AgentFit | 任务与能力语义、能力对齐、候选生成、架构搜索、统一评测、审计、Human 门禁和交付，以及四层资产治理与持续学习治理（回归保护、漂移裁定） | 重造通用 Agent 运行时、IM、容器编排或企业 IAM |
 | Human | 提供材料、确认任务契约、批准预算与高风险动作、处理责任边界、接受或否决交付 | 替 Agent 静默补证据、修改评测结果或承担未记录的兜底 |
 
 当前获准启动的工程采用“AgentTeams 原生底座 + AgentFit 能力包”：
@@ -318,6 +324,15 @@ Skill 是可复用做事方法；MCP/Tool 是外部接口；Memory 是状态介�
 
 能力缺口不能通过虚构 Agent 名称掩盖。无法在授权范围内补齐时，应请求材料、缩小范围、保留人工或停止搜索。
 
+### 4.12 实体污染与语义复用
+
+样本语料天然携带污染信息：同一实体（同名用户、同号订单、同一工单模板）会跨任务反复出现。这是数据集构造的产物，不构成任何复用证据。
+
+- **实体键的唯一用途是泄漏控制**：按实体分组做近重复切分，防止同一业务事件的近似观察跨 split 污染（真实 retail 语料中存在同用户同订单跨任务的实例，已验证该风险非理论性）；
+- **一切学习信号按语义计算**：复用率、缺口率、路由统计一律基于任务的语义结构——意图类型、归一化后的动作模式、约束形态——禁止按实体重合计数；
+- **虚假复用的危害**：按实体计数会把语料污染误读为资产沉淀，导致复用率虚高、回归池代表性失真；语义复用才是 Solid 池边际成本递减的真实度量；
+- 实体分组键作为版本化资产进入 manifest 的 `grouping_rule`，其变更需重新审计 split 有效性。
+
 ## 5. 完整方案空间与候选表示
 
 ### 5.1 联合候选表示
@@ -378,6 +393,36 @@ Agentless、固定 Workflow、单 Agent、多 Agent、Human 混合、部分自�
 
 每增加一个 Agent、模型、工具、循环或共享范围，都必须在同一冻结 `SampleSetManifest`、同一版本化 `TaskSample`、相同模型与工具边界、预算、指标和安全门禁下证明边际价值。AgentFit 的常驻五元团队提供方案工程闭环；被设计的候选系统不为凑数量而拆分。
 
+### 5.6 强层级映射纪律
+
+完整方案空间按四层资产模型组织，层是离散化映射的载体，也是更新权限的边界：
+
+| 层 | 资产 | 职责 | 共享范围 | 可变性 |
+|---|---|---|---|---|
+| L1 Solid | 固定资产/原子接口（知识库、查询、CMDB 等） | 通用原子访问；不提供复杂可配置参数，配置责任全部上移 | 全局 | 受控生长：观察区 + 升格门限 + 引用计数 + TTL；废弃走 deprecation |
+| L2 Tool | source tool / MCP 封装 | 唯一合法触达 L1 的层；聚合、分析、切片的口径在此唯一定义 | 全局/项目 | 语义版本 |
+| L3 Knowledge | Skill / Memory | 排查链、问题路由、人工门限等组合沉淀 | 项目（可晋升） | 可变；每次变更绑定证据并通过回归门 |
+| L4 DAG | Agent 组合与流程（即 Π） | 独立决策、权限与责任分区 | 项目 | 结构变更需影子模式验证后切换 |
+
+触达规则（全部由 schema 与 checker 代码强制，不依赖 prompt 自觉）：
+
+1. 知识层不得直接调用 Solid 层，直连即层级违规；
+2. 一切聚合、分析、切片操作必须经工具层 source tool 二次封装，原始加工口径全局唯一；
+3. 知识层产出只供 Agent（L4）消费，知识资产之间不互相调用，防止知识层形成隐性 DAG；
+4. 共享范围随层递减：Solid 全局共享但必须原子化，复杂参数即不可信组合；
+5. Candidate 的每个能力节点必须携带 `layer` 标签，每条边必须满足触达规则；越层依赖在注册表校验时即被拒绝。
+
+层内更新算子白名单——离散信用分配，取代对黑盒节点的梯度幻想：
+
+| 层 | 合法更新算子 | 触发证据 |
+|---|---|---|
+| L1 Solid | 接口新增/废弃（原子粒度） | 批次样本暴露的接口需求缺口 |
+| L2 Tool | source tool 参数与聚合口径调整 | 工具调用失败或口径不一致的 episode |
+| L3 Knowledge | 链路重组、路由修正、人工门限调整 | 路由命中率、链路断点、修正样本 |
+| L4 DAG | 拓扑增删、Agentize/合并、权限边界调整 | 验证集对照中的结构性失败 |
+
+一次 episode 失败，ExecutionTrace 定位涉案资产所在层，只开放该层的更新算子，且更新必须引用证据（样本 ID、episode、指标差值）写入轮次记录。上层不得越层代改：工具层不得改接口定义，DAG 层不得改排查链内容。这是反向传播的离散等价物——误差沿层级单向归因，更新沿层级受限回传。
+
 ## 6. 调整、验证与工程类比边界
 
 ### 6.1 在固定方案内调整
@@ -405,15 +450,50 @@ Agentless、固定 Workflow、单 Agent、多 Agent、Human 混合、部分自�
 | Episode | 一个固定候选在一个固定 TaskSample 上的一次完整执行 |
 | 固定方案调整轮 | 固定候选完整处理一轮 adaptation SampleSet |
 | 完整方案比较轮 | 一次候选生成、局部调整、validation SampleSet 比较和方案调整 |
-| 跨项目资产复验 | 跨多个项目比较候选资产的适用边界 |
+| 场景资产复验 | 跨批次在回归池上比较候选资产的适用边界与退化 |
 
 局部 SCC 的一次循环只是 Step。附录中可将上述层次与 ML 的 inner/outer loop 作高层工程类比，但不表示 AgentFit 已实现训练、反向传播或自动优化。
 
-### 6.4 跨项目学习是未来方向
+### 6.4 场景内持续学习（取代跨项目 Meta-learning）
 
-项目内调整和方案比较不是 Meta-learning。跨项目资产复用只有在多个项目轨迹更新可审计先验，并在未见项目上相对无先验 baseline 稳定改善时，才构成 Meta-learning 证据。
+企业单个场景随时间演化：样本持续累积、子场景持续分化。一个场景内部的分布宽度已足以支撑资产演化，因此 AgentFit 的学习语义是**场景内持续学习**，不是跨场景迁移。
 
-LLM、Embedding、SVD、图算法或其他方法都只是处理材料、比较方案或形成资产建议的可选技术手段，不能替代新案例验证或未见项目验证。
+**样本类型学**——每个进入系统的样本首先被分类为一种学习信号，触发不同的更新路径：
+
+| 类型 | 特征 | 触发的学习动作 | 主要影响层 |
+|---|---|---|---|
+| A 确认样本 | 现有方案正确处理 | 强化置信度，更新统计量 | L3 阈值微调 |
+| B 修正样本 | 出错但根因在已知能力范围内 | 产出离散 Correction，定向修补 | L3 / L4 |
+| C 扩展样本 | 需要新的原子接口/数据源才能解决 | 触发 Solid 升格流程 | L1 → L2 |
+| D 重构样本 | 多个知识资产重叠/矛盾/碎片化 | 触发合并、拆分、抽象 | L3 |
+| E 退役样本 | 某类问题长期未出现或系统下线 | 触发衰减、归档、级联清理 | 全层 |
+| F 漂移样本 | 同类问题的表现或根因随时间变化 | 触发版本分叉或条件分支 | L3 + L4 |
+
+样本分类器本身是版本化组件，受同一纪律治理：其修正属于 B 类信号作用于自身，必须过回归门，不得成为游离于审计之外的隐形优化器。
+
+**各层持续学习机制**：
+
+- **L1 受控生长与修剪**：候选接口先进观察区（带计数器），达到升格门限 N 才进入正式池；正式接口有引用计数与 TTL，长期无引用降级归档；语义高度重叠的接口触发合并提案（人工确认）。生长门限防止噪声样本污染全局池。
+- **L2 适配演化**：Solid 升格时自动生成 source tool 骨架；知识层重构后检查无消费者的工具标记待清理。
+- **L3 增量更新与冲突消解（主战场）**：B 类样本产出带证据链的定向 Correction。新 Correction 与既有规则冲突时按序消解：证据强度优先 → 条件分叉（两者适用不同子场景）→ 漂移确认后的时序覆盖 → 人工仲裁。**时序优先仅在漂移被独立裁定后合法**，防止"最新即最对"被噪声利用。防遗忘双机制：RegressionPool（核心样本回放，见 §11）+ 离散弹性权重（高频高置信节点修改阻力更高，需要更强证据）。周期性离线重构（consolidation）：聚类分析知识资产重叠、合并相似项、重组路由——在线学习负责可塑性，离线重构负责稳定性。
+- **L4 影子模式**：结构变更候选并行运行不生效，输出差异达标并通过回归门后才切换。
+
+**免疫系统**（持续学习的安全边界）：
+
+| 机制 | 防什么 | 实现方式 |
+|---|---|---|
+| 回归守卫 | 灾难性遗忘 | RegressionPool 回放 + 自动回归 |
+| 膨胀熔断 | 知识/接口熵增 | 数量上限 + 增长率告警 |
+| 漂移探针 | 语义漂移 | 定期探针样本检验关键资产输出一致性 |
+| 修改阻力梯度 | 过度敏感 | 高频高置信节点更高修改门槛 |
+| 人工兜底环 | 自动化失控 | 低置信修正、冲突、结构变更 → 人工审批 |
+| 回滚快照 | 不可逆损害 | 重大更新前自动快照，一键回退 |
+
+**多速率演化**：四层更新速率天然不同——L4 最快（参数微调）、L3 中速（增量 + 周期重构）、L2 慢速（跟随上下两层）、L1 最慢（强治理）。底层稳定提供锚点，上层灵活适应变化；若所有层同速更新，要么整体僵化，要么整体失控。
+
+**持续学习度量**：Forward Transfer（学新后旧核心样本通过率变化）、Backward Transfer（负值即遗忘）、Solid 复用率与缺口率趋势、知识碎片度、修正命中率、人工介入率趋势、漂移检测延迟。所有指标按 §4.12 的语义口径计算，实体重复不计入任何复用统计。
+
+跨场景迁移保留为远期方向：只有多个场景的资产轨迹更新可审计先验、并在未见场景上相对无先验 baseline 稳定改善时，才构成跨场景 Meta-learning 证据；AgentFit 当前不预设跨场景项目集。
 
 ## 7. 五元 Agent 团队与责任闭环
 
@@ -422,12 +502,12 @@ LLM、Embedding、SVD、图算法或其他方法都只是处理材料、比较�
 | Agent | 核心职责 | 独立责任产物 |
 |---|---|---|
 | EngagementLead | 接收任务、控制阶段、组织审批和交付 | Project Dossier 状态、ArchitectureDecision、DeliveryDecision |
-| BusinessEngineer | 从原始材料定义样本单位、Schema、边界、分布、验收，编译任务语义和自动化边界 | SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec |
+| BusinessEngineer | 从原始材料定义样本单位、Schema、边界、分布、验收，编译任务语义和自动化边界，并做批级 Solid 需求抽象（接口缺口、语义复用率） | SampleSemanticSpec、SampleSetManifest、TaskSemanticSpec、Solid 需求清单 |
 | AgentArchitect | 盘点能力、对齐、建图和 Agent 分区 | Capability Registry、AlignmentReport、CandidateGraphSet |
 | ValidationEngineer | 在 adaptation、validation 和 failure samples 上部署候选、执行可重放试验和故障注入 | SampleEvaluation[]、EvaluationRun、ExecutionTrace |
-| GovernanceAuditor | 候选冻结后独占 sealed holdout 的解析、评价和泄漏检查 | Holdout EvaluationReport、审计结论 |
+| GovernanceAuditor | 候选冻结后独占 sealed holdout 的解析、评价和泄漏检查，并审计层级触达纪律与实体污染控制 | Holdout EvaluationReport、审计结论 |
 
-五个 Agent 具有独立目标、状态、决策、权限和责任产物，不是五个角色标签。`EngagementLead` 在后续运行中可映射到 AgentTeams Manager 或 Team Leader；其余四个角色使用独立 Worker，实际映射以固定版本的运行配置为准。
+五个 Agent 具有独立目标、状态、决策、权限和责任产物，不是五个角色标签。团队的常驻性由持续学习语义直接论证：场景是活分布，样本流、漂移裁定、回归守护和资产演化是持续性职责，一次性项目制无法承载。`EngagementLead` 在后续运行中可映射到 AgentTeams Manager 或 Team Leader；其余四个角色使用独立 Worker，实际映射以固定版本的运行配置为准。
 
 ### 7.2 固定阶段骨架
 
@@ -445,7 +525,7 @@ Intake → Discover → Freeze → Architect → Approve → Trial → Audit →
 | Trial | 运行结果、Trace、故障和成本 | 输入、数据划分和预算受控 |
 | Audit | EvaluationReport、选择或否决建议 | 审计输入与结论可独立追溯 |
 | Deliver | DeliveryDecision；对应的 AgentSolutionPackage、HumanRetained 或 RejectionDecision | 用户确认责任和风险 |
-| Learn | ProjectAsset；可选 MetaAsset 提案 | 脱敏、复验、审计和回滚 |
+| Learn | BatchAsset/ScenarioAsset 沉淀、RegressionPool 更新、ScenarioLedger 追加 | 实体去重、回归验证、审计和版本化 |
 
 ### 7.3 通信、状态与责任
 
@@ -502,6 +582,7 @@ ProjectDossier = {
   sample_evaluations, evaluation_runs, execution_traces,
   aggregate_reports, audit_reports,
   approvals, delivery_decision, artifacts,
+  regression_pool_ref, scenario_ledger_ref,
   provenance_and_license
 }
 ```
@@ -550,7 +631,8 @@ Human 是候选图中的能力和约束对象，必须记录触发条件、审�
 - Trace 完整性、证据质量和可复现性；
 - Agent、Skill、模型和能力节点的边际价值；
 - adaptation、validation 和 holdout 差距；
-- 人工接管质量和最终责任边界。
+- 人工接管质量和最终责任边界；
+- 持续学习指标：Solid 复用率与缺口率趋势、Forward/Backward Transfer（回归池前后通过率差）、知识碎片度、修正命中率、人工介入率趋势、漂移检测延迟；实体重复不计入任何复用统计（见 4.12）。
 
 每一项指标都必须记录样本单位、分母、聚合规则、缺失样本和失败样本；聚合报告还必须标明适用范围。不得用只含成功 Episode 的均值、成功率、成本或人工接管率代替完整样本级结果。
 
@@ -606,6 +688,7 @@ AgentSolutionPackage = {
   evaluation_protocol_and_results,
   trace_and_audit_artifacts,
   rollback_and_failure_handling,
+  asset_versions_and_rollback,
   provenance_dependencies_and_licenses
 }
 ```
@@ -623,31 +706,37 @@ AgentSolutionPackage = {
 
 交付不是 Prompt 或聊天记录。选择自动化方案时交付可部署或可执行、可评测、可审计、可回滚并带适用边界的 `AgentSolutionPackage`；保留人工或拒绝自动化时，交付对应决定、证据和重新评估条件。
 
-## 11. 跨项目资产方向
+## 11. 场景内持续学习资产
 
-### 11.1 ProjectAsset
+### 11.1 资产演化语义
 
-单项目可以沉淀任务和能力语义、经验证的候选图、Agentize 决策、Skill/Prompt/算法配置、评测模板、失败模式、审批回滚和 Trace。ProjectAsset 默认只有项目作用域，不自动成为全局能力。
+每个已交付 ProjectCase 沉淀 BatchAsset：任务与能力语义、经验证的候选图、Agentize 决策、Skill/Prompt/算法配置、Solid 需求增量、评测模板、失败模式、审批回滚和 Trace。BatchAsset 累积为 ScenarioAsset——场景在某时点的完整资产状态。
 
-### 11.2 MetaAsset 晋升
+各层资产的版本化语义：
 
-ProjectAsset 只有经过以下流程才能晋升为 MetaAsset：
+| 资产 | 演化语义 |
+|---|---|
+| SolidPool | append + deprecation，永不静默删除；生长经观察区与升格门限 |
+| SourceTool | 语义版本；聚合口径变更即 minor 提升，通知全部引用方 |
+| Knowledge 资产 | 可变；每次变更绑定（证据引用 + RegressionPool 回归结果） |
+| Candidate | 不可变；每次交付即冻结版本，回滚等价于重部署历史版本 |
 
-```text
-脱敏 → 参数化 → 标注适用域和失败边界
-→ 在其他项目重新适配
-→ 与无先验 baseline 比较
-→ 污染和负迁移检查
-→ 独立审计
-→ 版本化晋升
-→ 持续回归与回滚
-```
+### 11.2 RegressionPool（回归池，一等合同）
 
-只要未见项目退化、数据污染、适用边界不清或证据被推翻，资产就不得晋升或必须冻结。
+RegressionPool 是防灾难性遗忘的核心机制，与四份 SampleSetManifest 并列的版本化对象：
 
-### 11.3 当前边界
+- 构成：已交付 ProjectCase 的冻结样本，按子场景分层抽样，版本化并带内容哈希；
+- 强制门禁：任何 L2/L3/L4 资产更新，必须先在 RegressionPool 上全量回归；老子场景通过率下降即 FAIL，要么回滚（资产版本化使回滚等价于重部署历史 candidate_version），要么携带证据走人工门禁修复；
+- 净化：池内样本按 §4.12 做实体去重，防止虚假复用扭曲回归代表性；
+- 双重身份：回归池既是安全机制也是"分布增量 vs 近重复回归"的判定素材——与历史实体高度重合的新批次优先作为回归验证，而非拟合输入。
 
-仓库当前不预设跨场景项目集或迁移对。首个真实 ProjectCase 完成后，才能依据任务语义、能力边界和运行证据选择迁移对象；单组迁移结果仍不能写成 Meta-learning。
+### 11.3 ScenarioLedger（场景演化账本）
+
+ProjectCase 之间以 hash 链连接：每条 ScenarioLedger 记录引用前一条的哈希、本 case 的资产版本指针、复用率/缺口率/回归通过率等指标。断链即不可审计。逐批次的复用率与缺口率曲线（设计推演中已用 114 个公开 retail 任务验证：接口池从 9 增长到 15 后复用率稳定在 1.00）是资产沉淀边际成本的直接度量，也是漂移检测的监控对象——缺口率从 0 回升即为"场景长出新形态"的信号。
+
+### 11.4 当前边界
+
+场景内持续学习是当前设计；RegressionPool 与 ScenarioLedger 的机器校验属 M2 范围。跨场景迁移保留为远期方向：只有多个场景的资产轨迹更新可审计先验、并在未见场景上相对无先验 baseline 稳定改善时，才构成跨场景 Meta-learning 证据；在此之前任何表述不得使用 Meta-learning 一词。后续运行库计划开源，开源范围与许可证见开放与合规披露。
 
 ## 12. 比赛映射与事实红线
 
@@ -655,11 +744,12 @@ ProjectAsset 只有经过以下流程才能晋升为 MetaAsset：
 
 AgentFit 的差异不是“又一个多 Agent 框架”，而是：
 
-1. 从原始材料和业务目标编译任务与能力语义；
-2. 将 Agent 方案设计转化为受约束的图和分区搜索；
+1. 从原始材料和业务目标编译任务与能力语义，并抽象 Solid 层接口需求；
+2. 将 Agent 方案设计转化为受四层触达纪律约束的图和分区搜索；
 3. 在同一任务上比较 Agentless、单 Agent、多 Agent和 Human 混合；
 4. 同时优化效果、成本、风险、稳定性和可审计性；
-5. 只在未见项目验证后才更新跨项目先验。
+5. 以场景内持续学习吸收样本流演化：回归池防遗忘、漂移探针防语义漂移、膨胀熔断防熵增；
+6. 不依赖对黑盒节点的可微性假设——信用分配层级离散、证据驱动、可机器审计。
 
 ### 12.2 2026-08-15 初赛提交阶段
 
@@ -675,7 +765,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 ### 12.3 后续阶段
 
-初赛提交材料仍与真实运行证据隔离，不把 M0/M1 作为上传前置。2026-08-14，项目所有者已明确授权按第 13 节启动 AgentTeams M0，并在 M0 通过后进入 M1；当前 M0 已完成、M1 已实例化五元 Team 并进入 `IN_PROGRESS`。复赛扩展、M2–M4、跨项目试验和生产部署仍需以晋级结果、评审反馈、运行证据与后续授权为准。
+初赛提交材料仍与真实运行证据隔离，不把 M0/M1 作为上传前置。2026-08-14，项目所有者已明确授权按第 13 节启动 AgentTeams M0，并在 M0 通过后进入 M1；当前 M0 已完成、M1 已实例化五元 Team 并进入 `IN_PROGRESS`。复赛扩展、M2–M4、场景内持续学习工程和生产部署仍需以晋级结果、评审反馈、运行证据与后续授权为准。
 
 ### 12.4 官方关注点映射
 
@@ -696,7 +786,7 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 
 - 把概念图、设计模拟或历史 smoke test 写成 AgentFit 真实运行；
 - 把 AgentTeams 名称或底座能力当作集成证据；
-- 把 Meta-learning、自动搜索或生产收益写成当前能力；
+- 把跨场景 Meta-learning、自动搜索或生产收益写成当前能力；
 - 隐瞒既有仓库、第三方贡献、商业 API、闭源模型、数据来源或许可证；
 - 让高风险动作绕过审批、拒绝、超时、回滚和审计；
 - 只展示成功，不保留失败、降级、人工保留和否决；
@@ -711,11 +801,11 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 - SampleSemanticSpec、Sample、SampleSetManifest、SampleEvaluation、SplitLeakagePolicy、SplitLeakageReport、TaskSemanticSpec、CapabilitySemanticSpec、AlignmentReport、Candidate、CandidateGraphSet、TrialSpec、EvaluationRun、ExecutionTrace、EvaluationReport、DeliveryDecision 的正式机器可执行 Schema；
 - Task–Capability 覆盖、冲突和缺口算法；
 - Agentize 必要性、复杂度代价和自动候选搜索；
-- ProjectAsset/MetaAsset 正式存储、晋升和回归系统；
+- RegressionPool、ScenarioLedger、BatchAsset/ScenarioAsset 存储与校验系统；
 - 任一完整、冻结的真实 ProjectCase；
 - AgentFit 五元 Team 已真实实例化，并完成两轮 ProjectCase preparation、结构化 Dossier 导出及 Team/Leader-DM Trace 合并；Skill/工具运行绑定、正式 manifest 实例化与冻结、Project Dossier 持久共享状态和 Candidate 执行尚未完成；
 - 统一预算下的 Agentless、单 Agent和多 Agent真实对照；
-- 跨项目迁移收益、Meta-learning、生产部署或真实业务效果。
+- 跨场景迁移收益、生产部署或真实业务效果。
 
 ### 13.2 后续运行启动条件
 
@@ -739,11 +829,11 @@ OpsPilot 代码级审计、ProjectCase 设计和事故样本只作为方案依�
 |---|---|---|
 | M0 · 启动授权与基线冻结 | 记录赛事条件、授权范围和首个 ProjectCase；固定 AgentTeams 版本、运行入口、可用能力和未验证边界；冻结本阶段代码与材料基线 | 存在审批记录、ProjectCase 选择理由、版本清单和可复现的 AgentTeams 基线；只能声明“已获准启动”，不能声明已运行闭环 |
 | M1 · 手动可审计 walking skeleton | 先使用 AgentTeams 原生 Worker、Team、Room、Human、Skill/工具和共享存储实例化五元团队；允许人工触发阶段，但必须写出第 7.4 节规定的结构化产物 | 一个冻结 ProjectCase 在当前环境从 Intake 到 Deliver；执行至少一个真实候选，并保留至少一个失败、降级、拒绝或 Human 门禁分支。M1 只证明当前环境首次贯通，不构成可复现最小闭环完成声明 |
-| M2 · 确定性合同代码化 | 只把 M1 暴露的真实缺口固化为 Schema、版本/哈希、阶段状态机、四份 manifest 的冻结与访问策略、审批、预算和 Trace 校验；继续复用 AgentTeams 运行能力 | 机器校验可以拒绝非法状态推进、holdout 越权、版本漂移、预算越界和缺失审批；候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout；同一 M1 ProjectCase 可在不依赖口头补证据的情况下重放 |
-| M3 · 统一候选对照 | 在同一冻结 Sample/Task、四份 manifest、模型/工具边界、预算、指标和 Human 规则下比较候选 | 必须真实运行 Agentless、单 Agent 和多 Agent 三类候选；Human 混合候选必须真实运行，或由 GovernanceAuditor 记录不适用理由、证据与重新评估条件。每个 `EvaluationUnit = CandidateVersion × SampleVersion × RunIndex` 均有 SampleEvaluation 和 Trace；候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout；报告同时呈现成功、失败、成本、风险与人工投入，并形成可追溯的 DeliveryDecision，不预设多 Agent 胜出 |
+| M2 · 确定性合同代码化 | 只把 M1 暴露的真实缺口固化为 Schema、版本/哈希、阶段状态机、四份 manifest 的冻结与访问策略、审批、预算和 Trace 校验；继续复用 AgentTeams 运行能力 | 机器校验可以拒绝非法状态推进、holdout 越权、版本漂移、预算越界和缺失审批；候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout；同一 M1 ProjectCase 可在不依赖口头补证据的情况下重放；层级触达与实体分组违规可被机器拒绝；RegressionPool 与 ScenarioLedger 校验器就位 |
+| M3 · 统一候选对照 | 在同一冻结 Sample/Task、四份 manifest、模型/工具边界、预算、指标和 Human 规则下比较候选 | 必须真实运行 Agentless、单 Agent 和多 Agent 三类候选；Human 混合候选必须真实运行，或由 GovernanceAuditor 记录不适用理由、证据与重新评估条件。每个 `EvaluationUnit = CandidateVersion × SampleVersion × RunIndex` 均有 SampleEvaluation 和 Trace；候选冻结后只有 GovernanceAuditor 可以解析 sealed holdout；报告同时呈现成功、失败、成本、风险与人工投入，并形成可追溯的 DeliveryDecision，不预设多 Agent 胜出；对照即回归——新候选必须在 RegressionPool 的既有冻结样本上不退化方可胜出 |
 | M4 · 复现与比赛证据包 | 在干净环境复现选定 ProjectCase，固定依赖、配置、模型、工具、预算和运行入口；汇总日志、Trace、审批、失败、审计与交付产物 | 独立复现得到同一合同边界下的结论；比赛声明可逐项反向定位到仓库产物，完成态只依据可复现证据更新。独立复现成功且第 13.2 节七项完成门禁全部满足后，才可声明“AgentFit 已在 AgentTeams 跑通最小闭环” |
 
-M0–M4 是单项目落地顺序，不等于跨项目 Meta-learning。只有多个 ProjectAsset 经过第 11 节的脱敏、迁移、未见项目比较和独立审计后，才允许进入 MetaAsset 或 Meta-learning 工作。
+M0–M4 是单场景落地顺序，不等于跨场景 Meta-learning。持续学习的资产演化遵循第 11 节的回归保护、账本记录与版本化语义；只有多个场景的资产轨迹在未见场景上稳定优于无先验 baseline 后，才允许进入跨场景迁移工作。
 
 ### 13.4 代码边界判定
 

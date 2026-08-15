@@ -12,7 +12,7 @@
 
 ## 后续阶段
 
-AgentTeams walking skeleton 已获项目所有者授权启动，并按[整体方案 §13.3](agentfit-solution.md#133-后续最小实施顺序与阶段完成定义)的 M0–M4 顺序实施，不另建并行路线图。当前 M0 已完成并为 `READY`，M1 仍为 `IN_PROGRESS`；真实五元团队已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13），但四份正式 manifest 尚未实例化和冻结，尚未运行 Candidate。复赛工程、M2–M4、跨项目试验和生产部署仍由晋级结果、评审反馈、运行证据与后续授权共同决定。
+AgentTeams walking skeleton 已获项目所有者授权启动，并按[整体方案 §13.3](agentfit-solution.md#133-后续最小实施顺序与阶段完成定义)的 M0–M4 顺序实施，不另建并行路线图。当前 M0 已完成并为 `READY`，M1 仍为 `IN_PROGRESS`；真实五元团队已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13），但四份正式 manifest 尚未实例化和冻结，尚未运行 Candidate。复赛工程、M2–M4、场景内持续学习工程和生产部署仍由晋级结果、评审反馈、运行证据与后续授权共同决定。
 
 - [回家 Demo 执行手册](guides/home-demo-runbook.md)：复用已验收为 `READY` 的 M0 基线，用 τ³-bench retail 样本和 AgentTeams 五元团队完成两轮 ProjectCase preparation，保留部署、回放、Dossier/Trace、结构化验证和下一门禁命令，并保持 M1 `IN_PROGRESS`；它是操作 Runbook，不是第二套方案。
 - [AgentTeams M1 多情景实测](research/home-demo/retail-m1/dossier/15-agentteams-m1-multiscenario-run.md)：保存两轮真实 Trace 的脱敏指标、失败恢复、设计更新、求解/适配路径、成本边界和 post-run provenance 限制；机器可读对照与原始私密证据分离。
