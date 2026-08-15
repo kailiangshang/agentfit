@@ -8,12 +8,12 @@
 
 - OpsPilot baseline 已完成代码级只读审计，作为首个 ProjectCase 参考。
 - 两个事故是 TaskSample 设计样本；没有被写成 AgentFit 运行结果。
-- AgentFit 的真实 ProjectCase、五元团队和统一候选比较尚未运行。
+- 五元团队已在 AgentTeams 官方镜像实例化并完成三轮 ProjectCase preparation（R3：106 事件、治理审查 SUCCESS 有条件）；统一候选比较尚未运行。
 - 当前选择结论是 `requires_runtime_trial`，不声明候选赢家、ROI、生产收益或 Meta-learning。
 
 ## 最终验证门禁
 
-2026-08-14 从最终 HTML 源重新生成后，结果如下：
+2026-08-15 主叙事换轴（四层资产纪律 + 持续学习）后重新生成，结果如下：
 
 | 门禁 | 预期 |
 |---|---|
@@ -22,7 +22,7 @@
 | 原生可编辑性 | 通过；无图片替代、嵌入媒体和转场 |
 | 逐页语义 | 通过；HTML/PPTX/PDF 标题与关键术语一致 |
 | 几何 | overlap / overflow / off-slide 为 0；27 个形状仅有 32 条不影响阅读的 `misaligned` 网格建议 |
-| 作品简介 | 398 个非空白字符 |
+| 作品简介 | 换轴后实测不超过 500 个非空白字符 |
 | 视觉复核 | 17 页联系表整体复核通过；本轮重构的第 5、6、7、10 页已逐页复核 PPTX 转换结果与 PDF，关键短语断行检查已加入回归 |
 
 ## 复现命令

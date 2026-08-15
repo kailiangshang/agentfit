@@ -700,15 +700,12 @@ class SubmissionContractTest(unittest.TestCase):
             page_6,
         )
         for term in (
-            "Tool",
-            "Skill",
-            "MCP",
-            "Memory",
-            "模型",
-            "Agent 拓扑",
-            "Human 边界",
+            "样本分类",
+            "层内更新",
+            "回归验证",
+            "资产沉淀",
         ):
-            with self.subTest(page=6, complete_solution_dimension=term):
+            with self.subTest(page=6, continual_stage=term):
                 self.assertIn(term, page_6)
         validator = _load_validator()
         self.assertIn(validator.SLIDE_11_EVIDENCE_STATEMENT, page_11)
@@ -742,7 +739,7 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertIn(bridge, text)
 
         for term in (
-            "完整 Agent Solution",
+            "四层资产",
             "复杂度控制",
         ):
             with self.subTest(page=5, term=term):
@@ -750,7 +747,8 @@ class SubmissionContractTest(unittest.TestCase):
 
         for term in (
             "机器学习的工程纪律",
-            "调整的不是模型权重",
+            "驱动的持续学习",
+            "离散信用分配",
             "样本工程",
             "最小方案假设",
             "批量试验",
@@ -824,14 +822,15 @@ class SubmissionContractTest(unittest.TestCase):
         agentteams = (SLIDES_DIR / "08-agentteams.html").read_text(encoding="utf-8")
         evidence = (SLIDES_DIR / "11-evidence.html").read_text(encoding="utf-8")
 
-        self.assertIn("C2 · N 业务 Agent", cover)
+        self.assertIn("回归池防遗忘 · 漂移探针触发新一轮", cover)
 
-        self.assertIn("候选搜索顺序 · 设计契约（非运行结果）", selection)
+        self.assertIn("多速率演化 · 设计契约（非运行结果）", selection)
         for label in (
-            "C0 · Agentless · 待真实试验",
-            "C1 · 单 Agent · 待真实试验",
-            "C2 · 多 Agent · 待真实试验",
-            "C3 · Human 混合 · 待真实试验",
+            "样本分类",
+            "层内更新",
+            "回归验证",
+            "资产沉淀",
+            "漂移触发新一轮",
         ):
             with self.subTest(label=label):
                 self.assertIn(label, selection)
@@ -840,8 +839,8 @@ class SubmissionContractTest(unittest.TestCase):
                 self.assertNotIn(misleading_mark, selection)
 
         self.assertIn("生成 → 定位 · 最多 3 次 · 未通过退出", search)
-        self.assertIn("固定 G / Π / ρ；只更新 θ 与分区内状态", search)
-        self.assertIn("更新 G / Π / ρ；比较 validation samples", search)
+        self.assertIn("固定 G / Π / ρ；只动涉案层 θ", search)
+        self.assertIn("新候选必须在旧冻结样本上不退化方可胜出", search)
 
         self.assertIn("六类异常进入同一 Trace 语义：", risk)
         self.assertIn("对应恢复：", risk)
@@ -851,17 +850,17 @@ class SubmissionContractTest(unittest.TestCase):
 
     def test_final_convergence_pdf_labels_do_not_wrap(self) -> None:
         expected_by_page = {
-            1: ("C2 · N 业务 Agent",),
+            1: ("AGENTFIT · 持续学习循环",),
             2: (
                 "AGENTFIT 拿它做什么",
                 "demo 事故 · db.pool.maxSize: 50 -> 8",
             ),
             6: (
-                "候选搜索顺序 · 设计契约（非运行结果）",
-                "C0 · Agentless · 待真实试验",
-                "C1 · 单 Agent · 待真实试验",
-                "C2 · 多 Agent · 待真实试验",
-                "C3 · Human 混合 · 待真实试验",
+                "多速率演化 · 设计契约（非运行结果）",
+                "L4 最快 · 参数微调",
+                "L3 中速 · 增量 + 重构",
+                "L2 慢速 · 跟随上下两层",
+                "L1 最慢 · 强治理",
             ),
             7: (
                 "目标 / 停止控制",
@@ -894,14 +893,14 @@ class SubmissionContractTest(unittest.TestCase):
 
     def test_final_visual_copy_keeps_decision_terms_together(self) -> None:
         expected_by_page = {
-            1: ("AGENTFIT · 由简入繁",),
+            1: ("AGENTFIT · 持续学习循环",),
             2: ("该用哪种方案”。",),
             4: ("TaskSample · 事故 A", "TaskSample · 事故 B"),
             5: (
-                "Human 边界都是变量。",
-                "Agent 拓扑 · 只是其中一维",
+                "各归其层。",
+                "L4 拓扑谱系 · 只是其中一维",
             ),
-            6: ("按失败模式调整七维方案", "复杂度无增益"),
+            6: ("按失败模式调整七维方案", "回归验证"),
             11: (
                 "不证明：官方 evaluator / Candidate / 官方分数",
                 "× RunIndex",
@@ -989,7 +988,7 @@ class SubmissionContractTest(unittest.TestCase):
             return matches[0]
 
         title = find_exact("企业真正缺少的，")
-        right_rail = find_exact("AGENTFIT · 由简入繁")
+        right_rail = find_exact("AGENTFIT · 持续学习循环")
         title_right = float(title["at"][0]) + float(title["size"][0])
         right_rail_left = float(right_rail["at"][0])
         self.assertLessEqual(title_right, right_rail_left)
@@ -1015,10 +1014,10 @@ class SubmissionContractTest(unittest.TestCase):
             "AgentArchitect",
             "ValidationEngineer",
             "GovernanceAuditor",
-            "L1 样本语义",
-            "L7 场景内持续学习",
+            "TaskSample ↔ 数据实例",
+            "复用率 / 缺口率曲线",
             "固定 G / Π / ρ",
-            "更新 G / Π / ρ",
+            "对照即回归",
             "最小权限；明确输入输出",
             "组织 Tool 与判断步骤",
             "Schema、鉴权、幂等",
@@ -1037,24 +1036,24 @@ class SubmissionContractTest(unittest.TestCase):
             "只生成方案",
         )
         scoped_labels = (
-            (0, "先定义“通过”"),
-            (0, "SIMPLE FIRST"),
-            (0, "MEASURE"),
-            (0, "EVIDENCE ONLY"),
-            (0, "STOP / CONTINUE"),
-            (0, "完整方案七维：Tool · Skill · MCP · Memory · 模型 · Agent 拓扑 · Human 边界"),
-            (0, "候选搜索顺序 · 设计契约（非运行结果）"),
+            (0, "ROUTING"),
+            (0, "DISCRETE FIT"),
+            (0, "ANTI-FORGET"),
+            (0, "LEDGER"),
+            (0, "DRIFT → NEW CASE"),
+            (0, "单轮骨架 · 五阶段闭环 = 持续学习的一个周期"),
+            (0, "多速率演化 · 设计契约（非运行结果）"),
             (1, "目标 / 停止控制"),
             (1, "业务理解 / 样本工程"),
             (1, "方案建模 / 结构选择"),
             (1, "批量试验 / 指标采集"),
             (1, "误差分析 / 治理审计"),
             (1, "候选业务执行 Agent · 被五元团队设计与评测"),
-            (2, "SEVEN-LAYER MAPPING · 七层 ML 映射"),
+            (2, "AGENT → ML HARD MAPPING · 硬映射"),
             (2, "候选四元组"),
             (2, "Π · Agent A₁ 分区"),
-            (2, "INNER LOOP · 高层工程类比"),
-            (2, "OUTER LOOP · 高层工程类比"),
+            (2, "INNER · 层内拟合"),
+            (2, "OUTER · 候选对照"),
             (2, "类比边界 · 非实现声明"),
             (3, "SEVEN SKILLS"),
             (3, "TOOL"),
@@ -1096,10 +1095,10 @@ class SubmissionContractTest(unittest.TestCase):
 
         selection_slide = presentation.slides[5]
         candidate_texts = (
-            "C0 · Agentless · 待真实试验",
-            "C1 · 单 Agent · 待真实试验",
-            "C2 · 多 Agent · 待真实试验",
-            "C3 · Human 混合 · 待真实试验",
+            "L4 最快 · 参数微调",
+            "L3 中速 · 增量 + 重构",
+            "L2 慢速 · 跟随上下两层",
+            "L1 最慢 · 强治理",
         )
         candidate_text_shapes = [
             next(shape for shape in selection_slide.shapes if shape.text == text)
@@ -1249,10 +1248,10 @@ class SubmissionContractTest(unittest.TestCase):
 
         page_9 = _pdf_layout_lines(9)
         for label in (
-            "TOOL · 工具",
-            "SKILL · 方法",
-            "MCP / HTTP · 外部契约",
-            "MEMORY · 已验证经验",
+            "① 实体分组 · 防泄漏",
+            "② HASH 链账本",
+            "③ 检查器族 · 代码执政",
+            "④ 泳道报告 · 可视化",
         ):
             with self.subTest(page=9, label=label):
                 self.assertTrue(any(label in line for line in page_9), page_9)
@@ -1300,8 +1299,8 @@ class SubmissionContractTest(unittest.TestCase):
         for term in (
             "七层 ML 映射",
             "G, Π, θ, ρ",
-            "inner loop",
-            "outer loop",
+            "层内拟合",
+            "候选对照",
             "Meta-learning",
         ):
             with self.subTest(term=term):
@@ -1384,11 +1383,11 @@ class SubmissionContractTest(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, validator.REQUIRED_TERMS)
         self.assertEqual(
-            "调整对象是完整 Agent Solution，而不是 Agent 数量。",
+            "方案空间按四层资产组织，调整逐层受控。",
             validator.EXPECTED_PAGE_TITLES[4],
         )
         self.assertEqual(
-            "五阶段闭环：把机器学习的工程纪律带入 Agent 方案设计。",
+            "样本驱动的持续学习：离散信用分配，回归防遗忘。",
             validator.EXPECTED_PAGE_TITLES[5],
         )
         self.assertEqual(

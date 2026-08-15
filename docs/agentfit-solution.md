@@ -509,7 +509,9 @@ Agentless、固定 Workflow、单 Agent、多 Agent、Human 混合、部分自�
 
 五个 Agent 具有独立目标、状态、决策、权限和责任产物，不是五个角色标签。团队的常驻性由持续学习语义直接论证：场景是活分布，样本流、漂移裁定、回归守护和资产演化是持续性职责，一次性项目制无法承载。`EngagementLead` 在后续运行中可映射到 AgentTeams Manager 或 Team Leader；其余四个角色使用独立 Worker，实际映射以固定版本的运行配置为准。
 
-### 7.2 固定阶段骨架
+### 7.2 固定阶段骨架（持续学习的单轮骨架）
+
+九阶段描述一个 ProjectCase 的单轮流转；在持续学习语义下，它是 §6.4 大循环（样本分类→层内更新→回归验证→资产沉淀→漂移触发新一轮）的一个周期，不是项目的终点。
 
 ```text
 Intake → Discover → Freeze → Architect → Approve → Trial → Audit → Deliver → Learn

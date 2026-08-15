@@ -4,7 +4,7 @@
 
 ## 唯一当前方案
 
-- [AgentFit 整体方案](agentfit-solution.md)：产品定位、样本/任务/能力语义、候选搜索、元团队、AgentTeams 边界、评测治理、交付和阶段门禁的唯一有效基线。
+- [AgentFit 整体方案](agentfit-solution.md)：产品定位、四层资产纪律、样本驱动的持续学习、元团队、AgentTeams 边界、评测治理、交付和阶段门禁的唯一有效基线。
 
 ## 2026-08-15 初赛提交阶段
 

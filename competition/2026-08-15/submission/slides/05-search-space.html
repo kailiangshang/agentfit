@@ -1,47 +1,51 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
 <body class="slide">
-  <p class="eyebrow">05 / 12 · COMPLETE SOLUTION SPACE</p>
-  <h1 class="title" style="font-size:30px;line-height:1.1;">调整对象是完整 Agent Solution，而不是 Agent 数量。</h1>
-  <p class="subtitle" style="top:168px;">Tool、Skill、MCP、Memory、模型、Agent 拓扑与 Human 边界都是变量。</p><div class="top-rule" style="top:210px;"></div>
+  <p class="eyebrow">05 / 12 · LAYERED SOLUTION SPACE</p>
+  <h1 class="title" style="font-size:30px;line-height:1.1;">方案空间按四层资产组织，调整逐层受控。</h1>
+  <p class="subtitle" style="top:168px;">七个方案维度不再并列漂浮：工具、Skill、MCP、Memory、模型、Agent 拓扑与 Human 边界各归其层。</p><div class="top-rule" style="top:210px;"></div>
 
-  <div class="panel" style="left:72px;top:230px;width:752px;height:354px;background:#ffffff;border-color:#d6ddd9;"></div>
-  <p class="label" style="left:96px;top:246px;color:#53697c;">六个非拓扑维度 × 四层资产治理</p>
+  <div class="panel soft-blue" style="left:72px;top:230px;width:520px;height:78px;"></div>
+  <p class="code-tag" style="left:96px;top:244px;color:#426b86;">L1 · SOLID</p>
+  <p class="section-title" style="left:96px;top:266px;width:470px;font-size:18px;">原子接口 · 固定资产（知识库 / 查询 / CMDB）</p>
+  <p class="small-copy" style="left:96px;top:288px;width:470px;font-size:13px;">全局共享；无复杂可配置参数；受控生长（观察区 + 升格门限）</p>
+  <div class="line-v" style="left:120px;top:308px;height:20px;"></div>
 
-  <div class="panel soft-blue" style="left:96px;top:282px;width:160px;height:112px;"></div>
-  <p class="code-tag" style="left:112px;top:296px;color:#426b86;">工具 · TOOL</p>
-  <p class="small-copy" style="left:112px;top:326px;width:128px;font-size:16px;line-height:1.35;">L2 source tool<br>唯一合法触达 L1</p>
-  <div class="panel soft-teal" style="left:272px;top:282px;width:160px;height:112px;"></div>
-  <p class="code-tag" style="left:288px;top:296px;">Skill</p>
-  <p class="small-copy" style="left:288px;top:326px;width:128px;font-size:16px;line-height:1.35;">L3 可复用知识<br>验证后复用</p>
-  <div class="panel soft-blue" style="left:448px;top:282px;width:160px;height:112px;"></div>
-  <p class="code-tag" style="left:464px;top:296px;color:#426b86;">MCP</p>
-  <p class="small-copy" style="left:464px;top:326px;width:128px;font-size:16px;line-height:1.35;">L2 外部封装<br>Schema / 鉴权</p>
-  <div class="panel soft-amber" style="left:624px;top:282px;width:176px;height:112px;"></div>
-  <p class="code-tag" style="left:640px;top:296px;color:#a5781c;">Memory</p>
-  <p class="small-copy" style="left:640px;top:326px;width:144px;font-size:16px;line-height:1.35;">L3 记忆沉淀<br>回归池守护</p>
+  <div class="panel soft-blue" style="left:72px;top:328px;width:520px;height:78px;"></div>
+  <p class="code-tag" style="left:96px;top:342px;color:#426b86;">L2 · TOOL / MCP</p>
+  <p class="section-title" style="left:96px;top:364px;width:470px;font-size:18px;">source tool 封装 · 唯一合法触达 L1 的层</p>
+  <p class="small-copy" style="left:96px;top:386px;width:470px;font-size:13px;">聚合、分析、切片的口径在此唯一定义；模型等参数在此校准</p>
+  <div class="line-v" style="left:120px;top:406px;height:20px;"></div>
 
-  <div class="panel soft-blue" style="left:96px;top:414px;width:336px;height:138px;"></div>
-  <p class="code-tag" style="left:112px;top:430px;color:#426b86;">模型</p>
-  <p class="section-title" style="left:112px;top:462px;width:304px;font-size:20px;">能力、时延、成本与部署约束</p>
-  <p class="small-copy" style="left:112px;top:496px;width:304px;font-size:16px;line-height:1.35;">L1–L4 全层可选变量；同一验收下比较，更大模型不是默认答案。</p>
-  <div class="panel soft-amber" style="left:448px;top:414px;width:352px;height:138px;"></div>
-  <p class="code-tag" style="left:464px;top:430px;width:320px;color:#a5781c;">Human 边界</p>
-  <p class="section-title" style="left:464px;top:462px;width:320px;font-size:20px;">审批、责任、降级与拒绝</p>
-  <p class="small-copy" style="left:464px;top:496px;width:320px;font-size:16px;line-height:1.35;">Human 是正式能力，不是失败后的兜底。</p>
+  <div class="panel soft-teal" style="left:72px;top:426px;width:520px;height:78px;"></div>
+  <p class="code-tag" style="left:96px;top:440px;">L3 · SKILL / MEMORY</p>
+  <p class="section-title" style="left:96px;top:462px;width:470px;font-size:18px;">可复用知识 · 排查链、问题路由、人工门限</p>
+  <p class="small-copy" style="left:96px;top:484px;width:470px;font-size:13px;">可变；每次变更绑定证据并通过回归池门；可晋升共享</p>
+  <div class="line-v" style="left:120px;top:504px;height:20px;"></div>
 
-  <div class="panel soft-teal" style="left:840px;top:230px;width:368px;height:354px;"></div>
-  <p class="label" style="left:864px;top:246px;width:320px;color:#1a8d85;">Agent 拓扑 · 只是其中一维</p>
-  <div class="panel" style="left:864px;top:282px;width:320px;height:54px;background:#ffffff;border-color:#53697c;"></div>
-  <p class="small-copy" style="left:880px;top:296px;width:288px;color:#102a43;font-weight:700;">C0 · Agentless</p>
-  <div class="panel" style="left:864px;top:348px;width:320px;height:54px;background:#ffffff;border-color:#426b86;"></div>
-  <p class="small-copy" style="left:880px;top:362px;width:288px;color:#102a43;font-weight:700;">C1 · 单 Agent</p>
-  <div class="panel" style="left:864px;top:414px;width:320px;height:54px;background:#ffffff;border-color:#1a8d85;"></div>
-  <p class="small-copy" style="left:880px;top:428px;width:288px;color:#102a43;font-weight:700;">C2 · 多 Agent</p>
-  <div class="panel" style="left:864px;top:480px;width:320px;height:54px;background:#ffffff;border-color:#d6a43b;"></div>
-  <p class="small-copy" style="left:880px;top:494px;width:288px;color:#102a43;font-weight:700;">C3 · Human 混合</p>
+  <div class="panel soft-amber" style="left:72px;top:524px;width:520px;height:78px;"></div>
+  <p class="code-tag" style="left:96px;top:538px;color:#a5781c;">L4 · DAG</p>
+  <p class="section-title" style="left:96px;top:560px;width:470px;font-size:18px;">Agent 组合与流程 · Agent 拓扑与 Human 边界</p>
+  <p class="small-copy" style="left:96px;top:582px;width:470px;font-size:13px;">结构变更需影子模式验证；责任分区在此定义</p>
 
-  <div class="panel" style="left:72px;top:602px;width:1136px;height:50px;background:#dceeea;border-color:#1a8d85;"></div>
-  <p class="body-copy" style="left:96px;top:612px;width:1090px;font-size:16px;font-weight:700;color:#102a43;">SIMPLE FIRST = 复杂度控制 + 层级纪律：七个维度属于同一搜索空间，按四层资产治理——原子接口 → 工具封装 → 可复用知识 → DAG 组合；越层触达被代码拒绝，只有失败证据证明有价值才增加一维。</p>
-  <p class="footer-left">AGENTFIT · 完整方案空间</p><p class="footer-right">七维可调 · 05</p>
+  <div class="panel" style="left:624px;top:230px;width:296px;height:372px;background:#ffffff;border-color:#53697c;"></div>
+  <p class="label" style="left:648px;top:246px;width:250px;color:#53697c;">触达纪律 · 代码强制</p>
+  <p class="small-copy" style="left:648px;top:280px;width:250px;font-size:15px;line-height:1.5;">1 知识层不得直接调用接口层<br><br>2 聚合分析必须经 source tool 二次封装<br><br>3 知识产出只供 Agent 消费<br><br>4 共享范围随层递减，Solid 全局但原子化<br><br>5 越层依赖在 schema 校验即拒</p>
+  <p class="code-tag" style="left:648px;top:566px;width:250px;color:#c64c32;">不是 prompt 自觉，是 checker 拒绝</p>
+
+  <div class="panel soft-teal" style="left:944px;top:230px;width:264px;height:372px;"></div>
+  <p class="label" style="left:968px;top:246px;width:220px;color:#1a8d85;">L4 拓扑谱系 · 只是其中一维</p>
+  <div class="panel" style="left:968px;top:282px;width:216px;height:54px;background:#ffffff;border-color:#53697c;"></div>
+  <p class="small-copy" style="left:984px;top:296px;width:184px;color:#102a43;font-weight:700;">C0 · Agentless</p>
+  <div class="panel" style="left:968px;top:348px;width:216px;height:54px;background:#ffffff;border-color:#426b86;"></div>
+  <p class="small-copy" style="left:984px;top:362px;width:184px;color:#102a43;font-weight:700;">C1 · 单 Agent</p>
+  <div class="panel" style="left:968px;top:414px;width:216px;height:54px;background:#ffffff;border-color:#1a8d85;"></div>
+  <p class="small-copy" style="left:984px;top:428px;width:184px;color:#102a43;font-weight:700;">C2 · 多 Agent</p>
+  <div class="panel" style="left:968px;top:480px;width:216px;height:54px;background:#ffffff;border-color:#d6a43b;"></div>
+  <p class="small-copy" style="left:984px;top:494px;width:184px;color:#102a43;font-weight:700;">C3 · Human 混合</p>
+  <p class="small-copy" style="left:968px;top:548px;width:220px;font-size:13px;color:#1a8d85;font-weight:700;">七维变量 × 四层治理 = 完整方案空间</p>
+
+  <div class="panel" style="left:72px;top:620px;width:1136px;height:50px;background:#dceeea;border-color:#1a8d85;"></div>
+  <p class="body-copy" style="left:96px;top:630px;width:1090px;font-size:15px;font-weight:700;color:#102a43;">SIMPLE FIRST = 复杂度控制 + 层级纪律：七维属于同一搜索空间、各归其层；只有失败证据证明有价值，才增加一维或一层。</p>
+  <p class="footer-left">AGENTFIT · 完整方案空间</p><p class="footer-right">四层资产 · 05</p>
 </body></html>

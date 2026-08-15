@@ -40,15 +40,15 @@ OpsPilot 是官方案例锚点，作为材料和设计参考，不是 AgentFit �
 | 2 | OpsPilot 官方示例：4 个 Worker 加 1 个 Leader，仍未回答该用哪种。 |
 | 3 | AgentFit 把业务材料、案例与优先级编译成方案约束。 |
 | 4 | 两个事故变成 TaskSample：输入、输出与验收。 |
-| 5 | 调整对象是完整 Agent Solution，而不是 Agent 数量。 |
-| 6 | 五阶段闭环：把机器学习的工程纪律带入 Agent 方案设计。 |
+| 5 | 方案空间按四层资产组织，调整逐层受控。 |
+| 6 | 样本驱动的持续学习：离散信用分配，回归防遗忘。 |
 | 7 | 五个元 Agent 组成 AgentFit Learning Loop，分别负责目标、样本、方案、实验与诊断。 |
 | 8 | AgentTeams 承载 Worker、Team、Room、Human；AgentFit 落地 Dossier 与 Trace。 |
-| 9 | Skill、HTTP/MCP 契约、共享状态与风险门禁支撑闭环。 |
+| 9 | 追溯四件套：实体分组、hash 链账本、检查器族、泳道报告。 |
 | 10 | 交付的不是一张架构图，而是可复现的 AgentSolutionPackage。 |
 | 11 | 证据账本：OpsPilot 为官方锚点，retail/airline 仅探索性 Demo。 |
 | 12 | 从 OpsPilot 回到通用：Fit 是有证据选对方案。 |
-| A1 | 候选四元组 `(G, Π, θ, ρ)`、DAG 主干、局部 SCC 与高层工程类比 |
+| A1 | 七层 ML 映射升级为硬映射：持续学习视角、候选四元组与对照即回归 |
 | A2 | 五个 Agent Identity 契约 |
 | A3 | 七个 Skill、Tool 与 MCP/HTTP 契约、Memory 与 Trace。 |
 | A4 | Human 门禁、风险、异常与回滚 |

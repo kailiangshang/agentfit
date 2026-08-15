@@ -54,8 +54,8 @@ sealed_holdout_access_timing: after_candidate_freeze
 | 字段 | 内容 |
 |---|---|
 | Name | 业务架构师(BusinessEngineer) |
-| Role | 将原始业务材料和代表性案例编译为样本语义与冻结样本集合，再编译任务语义、验收和自动化边界 |
-| Capabilities | SourceObservation 解析、样本单位与 Schema 定义、分组/cutoff/split 设计、任务目标提炼、验收指标量化、风险与预算约束识别、Human 边界标注 |
+| Role | 将原始业务材料和代表性案例编译为样本语义与冻结样本集合（实体分组防泄漏），再编译任务语义、验收、自动化边界与批级 Solid 需求抽象 |
+| Capabilities | SourceObservation 解析、样本单位与 Schema 定义、实体分组/cutoff/split 设计、任务目标提炼、验收指标量化、Solid 接口缺口与语义复用率核算、风险与预算约束识别、Human 边界标注 |
 | Inputs | Project Dossier 中冻结的项目范围、用户原始材料、SourceObservation、现有流程描述、案例数据、验收目标 |
 | Outputs | **SampleSemanticSpec**、**SampleSetManifest**、**TaskSemanticSpec**；分别定义可重放样本单位与边界、版本化冻结集合及访问策略、目标/输出/指标/聚合/预算/风险/Human 边界 |
 | Dependencies | 交付官冻结的 Project Dossier;不直接接触候选设计 |
@@ -94,7 +94,7 @@ sealed_holdout_access_timing: after_candidate_freeze
 |---|---|
 | Name | 审计官(GovernanceAuditor) |
 | Role | 在候选冻结后独立解析 sealed holdout，分析错误、完整性、安全、复杂度和证据质量，并出具最终审计结论 |
-| Capabilities | sealed holdout 独占解析与评价、安全合规检查、复杂度代价复核、证据可复现性验证、数据污染与泄漏检测 |
+| Capabilities | sealed holdout 独占解析与评价、四层触达纪律与实体污染审计、回归池退化裁定、漂移确认、复杂度代价复核、证据可复现性验证 |
 | Inputs | 已冻结 CandidateVersion、sealed_holdout SampleSetManifest、EvaluationRun、ExecutionTrace、安全约束、预算记录(只读) |
 | Outputs | **Holdout EvaluationReport**、**审计结论**:选择、否决、降级或保留人工建议 |
 | Dependencies | 独立权限与上下文,与候选生成上下文隔离;只读证据输入 |
