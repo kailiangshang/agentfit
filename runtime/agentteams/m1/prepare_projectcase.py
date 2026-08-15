@@ -279,6 +279,16 @@ This is a real M1 ProjectCase-preparation run on {sample_count} public source sa
 {step5}
 6. Finish in the Leader DM with a human-facing message whose normalized first line begins `{terminal_prefix}`. Preserve the auditor decision.
 
+## Skill usage (installed in your containers)
+
+- BusinessEngineer: use the published skill `s1-task-compile` for all manifest hashing. Invoke exactly:
+  `python3 /root/.copaw-worker/agentfit-business-engineer/skills/s1-task-compile/compute_set_hashes.py --batch <batch.json> --members adaptation=<ids> --members validation=<ids> --members stress_and_failure=<ids>`
+  Its `set_model_sha256` output is the only acceptable hash source; do not hand-write hashing logic.
+- GovernanceAuditor: use the published skill `s5-independent-audit` for independent verification. Invoke exactly:
+  `python3 /root/.copaw-worker/agentfit-governance-auditor/skills/s5-independent-audit/verify_manifests.py --batch <batch.json> --manifests <sample-set-manifests.json>`
+  Quote its `verdict` and `minimum_next_action` verbatim in the audit result; its FAIL is a FAIL.
+- The four manifests must also be published as machine-readable JSON in one file `sample-set-manifests.json` (each manifest conforming to `agentfit.samplesetmanifest/v1`: schema_version, manifest_name, contract_status, freeze_state, membership[{{sample_id, source_ref, content_sha256, entity_group, membership_state}}], set_hash{{method, member_order, set_model_sha256}}, access_policy, isolation_rules; `not_instantiated` requires not_instantiated_reason). Markdown summaries may accompany but never replace the JSON.
+
 ## Binding evidence and access boundaries
 
 - The {sample_count} selected record(s) are public official source samples, not sealed holdout evidence.
