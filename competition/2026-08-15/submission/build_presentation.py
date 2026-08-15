@@ -44,9 +44,16 @@ def build_deck(output_path: Path = OUTPUT_PATH) -> None:
         )
     for tool in (HTML2PATCH, DECK):
         if not tool.is_file():
-            raise FileNotFoundError(
-                f"missing hands-on-deck tool: {tool}; set HANDS_ON_DECK_DIR to its skill directory"
+            # Portable fallback: compile the HTML sources deterministically when
+            # the office hands-on-deck toolchain is not installed locally.
+            import compile_presentation
+
+            print(
+                f"hands-on-deck tool not found ({tool}); "
+                "falling back to compile_presentation"
             )
+            compile_presentation.build(output_path)
+            return
 
     with tempfile.TemporaryDirectory(prefix="agentfit-submission-pptx-") as temp_dir:
         temp = Path(temp_dir)
