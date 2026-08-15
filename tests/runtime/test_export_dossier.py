@@ -18,20 +18,20 @@ class ExportDossierTest(unittest.TestCase):
             shared = root / "shared"
             project = shared / "projects" / "project-1"
             business = shared / "tasks" / "business-1"
-            governance = shared / "tasks" / "governance-1" / "workspace"
+            gov_task = shared / "tasks" / "governance-1"
+            governance = gov_task / "workspace"
             project.mkdir(parents=True)
             business.mkdir(parents=True)
             governance.mkdir(parents=True)
             for name in ("meta.json", "plan.md", "result.md"):
                 (project / name).write_text("{}" if name.endswith(".json") else name)
             for name, schema in (
-                ("sample-semantic-spec.json", "SampleSemanticSpec"),
-                ("task-semantic-spec.json", "TaskSemanticSpec"),
-                ("capability-semantic-spec.json", "CapabilitySemanticSpec"),
                 ("sample-set-manifests.json", "SampleSetManifestContracts"),
             ):
                 (business / name).write_text(json.dumps({"schema_name": schema}))
-            (governance / "governance_review.md").write_text("BLOCK")
+            (business / "result.md").write_text("STATUS: SUCCESS")
+            (governance / "independent_audit.py").write_text("# audit")
+            (gov_task / "result.md").write_text("STATUS: SUCCESS")
 
             fake = root / "docker"
             fake.write_text(
@@ -86,16 +86,17 @@ class ExportDossierTest(unittest.TestCase):
             )
 
             self.assertEqual(0, result.returncode, result.stderr)
-            self.assertTrue((output / "business" / "sample-semantic-spec.json").is_file())
             self.assertTrue(
-                (output / "governance" / "workspace" / "governance_review.md").is_file()
+                (output / "business" / "sample-set-manifests.json").is_file()
             )
+            self.assertTrue((output / "business" / "result.md").is_file())
+            self.assertTrue((output / "governance" / "result.md").is_file())
             manifest = json.loads(
                 (output / "export-manifest.json").read_text(encoding="utf-8")
             )
             self.assertEqual("project-1", manifest["project_id"])
             self.assertIn(
-                "business/sample-semantic-spec.json", manifest["artifact_sha256"]
+                "business/sample-set-manifests.json", manifest["artifact_sha256"]
             )
             for path in output.rglob("*"):
                 expected = 0o700 if path.is_dir() else 0o600

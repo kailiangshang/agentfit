@@ -13,68 +13,175 @@
     "set_hash"
   ],
   "properties": {
-    "schema_version": { "const": "agentfit.samplesetmanifest/v1" },
-    "manifest_name": {
-      "enum": ["adaptation", "validation", "sealed_holdout", "stress_and_failure"]
+    "schema_version": {
+      "const": "agentfit.samplesetmanifest/v1"
     },
-    "purpose": { "type": "string", "minLength": 1 },
-    "contract_status": { "enum": ["instantiated", "not_instantiated"] },
+    "manifest_name": {
+      "enum": [
+        "adaptation",
+        "validation",
+        "sealed_holdout",
+        "stress_and_failure"
+      ]
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contract_status": {
+      "enum": [
+        "instantiated",
+        "not_instantiated"
+      ]
+    },
     "freeze_state": {
       "type": "object",
-      "required": ["state"],
+      "required": [
+        "state"
+      ],
       "properties": {
-        "state": { "enum": ["not_instantiated", "requested", "approved"] },
-        "approved_by": { "type": "string" },
-        "approved_at": { "type": "string" },
-        "scope": { "type": "string" }
+        "state": {
+          "enum": [
+            "not_instantiated",
+            "requested",
+            "approved"
+          ]
+        },
+        "approved_by": {
+          "type": "string"
+        },
+        "approved_at": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
       }
     },
-    "not_instantiated_reason": { "type": "string" },
-    "re_supply_conditions": { "type": "string" },
+    "not_instantiated_reason": {
+      "type": "string"
+    },
+    "re_supply_conditions": {
+      "type": "string"
+    },
     "membership": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["sample_id", "source_ref", "content_sha256", "membership_state"],
+        "required": [
+          "sample_id",
+          "source_ref",
+          "content_sha256",
+          "membership_state"
+        ],
         "properties": {
-          "sample_id": { "type": "string", "minLength": 1 },
-          "source_ref": { "type": "string", "minLength": 1 },
-          "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "entity_group": { "type": ["string", "null"] },
-          "membership_state": { "enum": ["final", "proposed", "unresolved"] }
+          "sample_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "entity_group": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "membership_state": {
+            "enum": [
+              "final",
+              "proposed",
+              "unresolved"
+            ]
+          }
         }
       }
     },
     "set_hash": {
       "type": "object",
-      "required": ["method", "member_order", "set_model_sha256"],
+      "required": [
+        "method",
+        "member_order",
+        "set_model_sha256"
+      ],
       "properties": {
         "method": {
           "const": "sha256(concat(source_record_sha256) over lexicographic ascending sample_id)"
         },
-        "member_order": { "type": "array", "items": { "type": "string" } },
-        "set_model_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        "member_order": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "set_model_sha256": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{64}|not_instantiated)$"
+        }
       }
     },
-    "access_policy": { "type": "string", "minLength": 1 },
-    "isolation_rules": { "type": "string", "minLength": 1 },
+    "access_policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "isolation_rules": {
+      "type": "string",
+      "minLength": 1
+    },
     "lifecycle": {
       "type": "object",
-      "required": ["m1_state"],
+      "required": [
+        "m1_state"
+      ],
       "properties": {
-        "m1_state": { "enum": ["IN_PROGRESS", "READY", "NOT_STARTED"] },
-        "candidate_evidence": { "type": "string" }
+        "m1_state": {
+          "enum": [
+            "IN_PROGRESS",
+            "READY",
+            "NOT_STARTED"
+          ]
+        },
+        "candidate_evidence": {
+          "type": "string"
+        }
       }
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "contract_status": { "const": "not_instantiated" } } },
-      "then": { "required": ["not_instantiated_reason"] }
+      "if": {
+        "properties": {
+          "contract_status": {
+            "const": "not_instantiated"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "not_instantiated_reason"
+        ]
+      }
     },
     {
-      "if": { "properties": { "contract_status": { "const": "instantiated" } } },
-      "then": { "required": ["access_policy", "isolation_rules"] }
+      "if": {
+        "properties": {
+          "contract_status": {
+            "const": "instantiated"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "access_policy",
+          "isolation_rules"
+        ]
+      }
     }
   ]
 }

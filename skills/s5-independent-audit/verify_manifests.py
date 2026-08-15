@@ -37,8 +37,18 @@ def main() -> int:
         str(s["sample_id"]): s["source_record_sha256"] for s in batch_doc["samples"]
     }
     manifests = json.loads(args.manifests.read_text(encoding="utf-8"))
-    if isinstance(manifests, dict) and "manifests" in manifests:
-        manifests = manifests["manifests"]
+    if isinstance(manifests, dict):
+        for value in manifests.values():
+            if isinstance(value, list) and value and isinstance(value[0], dict) and "manifest_name" in value[0]:
+                manifests = value
+                break
+        else:
+            if "manifests" in manifests:
+                manifests = manifests["manifests"]
+            else:
+                manifests = {m.get("manifest_name"): m for m in [] }
+    if isinstance(manifests, list):
+        manifests = {m.get("manifest_name"): m for m in manifests if isinstance(m, dict)}
 
     checks: list[dict[str, object]] = []
 

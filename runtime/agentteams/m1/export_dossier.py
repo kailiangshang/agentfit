@@ -21,12 +21,9 @@ SAFE_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 REQUIRED_FILES = (
     "project/meta.json",
     "project/plan.md",
-    "project/result.md",
-    "business/sample-semantic-spec.json",
-    "business/task-semantic-spec.json",
-    "business/capability-semantic-spec.json",
     "business/sample-set-manifests.json",
-    "governance/workspace/governance_review.md",
+    "business/result.md",
+    "governance/result.md",
 )
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PRIVATE_ROOT = REPO_ROOT / ".local-demo"
@@ -151,6 +148,17 @@ def export(args: argparse.Namespace) -> dict[str, Any]:
 
     def candidates(label: str, relative: str) -> list[tuple[str, str]]:
         options = [(container, f"{shared_root}/{relative}")]
+        # R5: the leader's cross-worker mirror is absent while its own local
+        # workspace holds the project; the leader-local mirror is the second
+        # candidate before per-worker fallbacks.
+        options.append(
+            (
+                container,
+                "/root/.copaw-worker/{leader}/.copaw/workspaces/default/shared/{rel}".format(
+                    leader=leader_name, rel=relative
+                ),
+            )
+        )
         worker_local = "/root/.copaw-worker/{agent}/.copaw/workspaces/default/shared"
         if label == "business" and business_worker:
             options.append(

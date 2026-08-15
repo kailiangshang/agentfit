@@ -112,9 +112,26 @@ def freeze_gate(
 ) -> dict:
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     document = json.loads(manifests_path.read_text(encoding="utf-8"))
-    manifests = (
-        document.get("manifests", document) if isinstance(document, dict) else {}
-    )
+    manifests: dict = {}
+    if isinstance(document, list):
+        manifests = {m.get("manifest_name"): m for m in document if isinstance(m, dict)}
+    elif isinstance(document, dict):
+        nested = None
+        for value in document.values():
+            if isinstance(value, list) and value and isinstance(value[0], dict) and "manifest_name" in value[0]:
+                nested = value
+                break
+        if nested is not None:
+            manifests = {m.get("manifest_name"): m for m in nested}
+        elif "manifests" in document:
+            inner = document["manifests"]
+            manifests = (
+                {m.get("manifest_name"): m for m in inner}
+                if isinstance(inner, list)
+                else inner
+            )
+        else:
+            manifests = document
     result: dict[str, Any] = {
         "schema_version": "agentfit.lifecycle-freeze-gate/v1",
         "checks": [],

@@ -24,6 +24,14 @@ def run(argv: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(argv, capture_output=True, text=True, check=False)
 
 
+def find_controller(container_command: str) -> str:
+    result = run([container_command, "ps", "--format", "{{.Names}}"])
+    for name in result.stdout.splitlines():
+        if name in ("agentteams-controller", "hiclaw-controller"):
+            return name
+    raise SystemExit("running AgentTeams controller was not found")
+
+
 def publish(container_command: str, team_file: Path, only: list[str]) -> dict:
     import json
 
@@ -47,6 +55,33 @@ def publish(container_command: str, team_file: Path, only: list[str]) -> dict:
             report["published"][agent] = f"container missing: {container}"
             continue
         run([container_command, "exec", container, "mkdir", "-p", target_dir])
+        # Primary channel: the platform-owned shared storage (MinIO). Local
+        # docker-cp copies are wiped by the platform mirror (observed in R5),
+        # so packages must live in the bucket the mirror serves from.
+        controller = find_controller(container_command)
+        run([container_command, "exec", controller, "mkdir", "-p", "/tmp/agentfit-skills"])
+        for package in packages:
+            # mc runs inside the controller and cannot read host paths: stage
+            # the package into the controller first, then copy into the bucket.
+            stage = run([
+                container_command, "cp",
+                str(SKILLS_ROOT / package),
+                f"{controller}:/tmp/agentfit-skills/{package}",
+            ])
+            if stage.returncode != 0:
+                report["published"].setdefault(agent, {})[package] = (
+                    f"staging failed: {stage.stderr.strip()[:120]}"
+                )
+                continue
+            mc = run([
+                container_command, "exec", controller, "mc", "cp", "-r",
+                f"/tmp/agentfit-skills/{package}",
+                f"agentteams/agentteams-storage/agents/{agent}/skills/{package}",
+            ])
+            if mc.returncode != 0:
+                report["published"].setdefault(agent, {})[package] = (
+                    f"minio publish failed: {mc.stderr.strip()[:120]}"
+                )
         for package in packages:
             cp = run(
                 [
