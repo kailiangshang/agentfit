@@ -56,8 +56,13 @@
 
 | 依赖 | 角色 | 版本 | License |
 |---|---|---|---|
-| AgentTeams | 运行底座(身份/通信/容器/权限/共享状态/Skill/MCP/Human) | 待真实集成时固定并披露 | 按官方许可 |
-| 阿里云官方 Skills | 按必要性复用运行底座类能力 | 按需 | 按官方许可 |
+| AgentTeams | 运行底座(身份/通信/容器/权限/共享状态/Skill/MCP/Human) | v1.2.0-beta.1(官方镜像,因 v1.1.2 房间配置缺陷经所有者决定切换) | 按官方许可 |
+| Higress(AgentTeams 内置) | 入口/路由/鉴权网关;AgentFit L1 接口治理映射其策略,不二次封装 | 随 AgentTeams 内置 | Apache-2.0 |
+| Nacos(AgentTeams 内置) | Worker/Skill 市场注册发现;AgentFit L3 资产发现复用,治理由自身 checker 执行 | 随 AgentTeams 内置 | Apache-2.0 |
+| 阿里云官方 Skills | 按必要性复用运行底座类能力;方案工程类 Skill 自研;披露契约对照与迁移成本 | 按需 | 按官方许可 |
+| LoongSuite / AgentScope Studio / AgentLoop | 可观测:ExecutionTrace 事件模型对齐其概念并可导出;M1–M2 不引入新观测后端 | 标准对齐 | 按官方许可 |
+| PolarDB for PostgreSQL | M2 计划:ScenarioLedger/RegressionPool/实体分组的可查询存储;schema 按 SQL/JSONB 设计并声明可替换 | M2 引入 | 按官方许可 |
+| RocketMQ / UnifiedModel | 概念借鉴(幂等事件语义/统一实体建模),暂不引入系统 | 不引入 | — |
 
 ### 2.2 模型依赖
 

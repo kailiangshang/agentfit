@@ -28,17 +28,18 @@
 ## 复现命令
 
 ```bash
-PY=/home/shangkailiang/workspace/.codex-home/venvs/document-skills/bin/python
-DECK=/home/shangkailiang/workspace/.codex-home/skills/hands-on-deck/scripts/deck.py
-THUMB=/home/shangkailiang/workspace/.codex-home/skills/hands-on-deck/scripts/thumbnail.py
 SUB=competition/2026-08-15/submission
 
-"$PY" "$SUB/build_presentation.py"
-soffice --headless --convert-to pdf --outdir "$SUB" "$SUB/agentfit-submission.pptx"
-"$PY" "$THUMB" "$SUB/agentfit-submission.pptx" "$SUB/contact-sheet" --cols 4
+# 依赖(任意机器, uv + 国内镜像示例):
+#   uv venv .venv && uv pip install --python .venv/bin/python \
+#     --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+#     python-pptx pypdf pymupdf reportlab pillow
+PY=.venv/bin/python
+
+"$PY" "$SUB/build_presentation.py"          # 无 hands-on-deck 时自动回退 compile_presentation
+"$PY" "$SUB/build_pdf.py"                   # Edge/Chrome 截图视觉层 + PPTX 文本层 + contact-sheet
 "$PY" "$SUB/validate_presentation.py" "$SUB/agentfit-submission.pptx" "$SUB/agentfit-submission.pdf"
-"$PY" -m unittest -v "$SUB/test_submission_contract.py"
-"$PY" "$DECK" "$SUB/agentfit-submission.pptx" inspect --issues
+"$PY" -m unittest "$SUB/test_submission_contract.py"
 ```
 
 ## 作者与审核

@@ -113,6 +113,18 @@ AgentFit 当前不做：
 | AgentFit | 任务与能力语义、能力对齐、候选生成、架构搜索、统一评测、审计、Human 门禁和交付，以及四层资产治理与持续学习治理（回归保护、漂移裁定） | 重造通用 Agent 运行时、IM、容器编排或企业 IAM |
 | Human | 提供材料、确认任务契约、批准预算与高风险动作、处理责任边界、接受或否决交付 | 替 Agent 静默补证据、修改评测结果或承担未记录的兜底 |
 
+对官方推荐技术栈的映射（证据化选择，非数量堆叠）：
+
+| 技术 | AgentFit 处置 | 依据 |
+|---|---|---|
+| Higress（AI 网关） | **复用，已在运行栈内**：AgentTeams 官方镜像内置 Higress 承担入口/路由/鉴权，AgentFit 的 L1 接口治理直接映射其网关策略，不二次封装 | 家庭实例容器内 5 个 higress 进程实测在跑 |
+| Nacos（AI 管理中心） | **复用**：AgentTeams 原生以 Nacos 作 Worker/Skill 市场注册发现；AgentFit 用它做 L3 资产注册发现，治理语义仍由自身 checker 执行 | 安装器原生 `AGENTTEAMS_NACOS_REGISTRY_URI` |
+| 云 Skills 门户 | **契约借鉴**：按必要性复用官方 Skill；自研方案工程 Skill 不重复造；披露鉴权/编排对照与迁移成本 | 必要性评审原则 |
+| LoongSuite / AgentScope Studio / AgentLoop（可观测） | **标准对齐**：ExecutionTrace 事件模型对齐其 span/agent/tool 概念，可导出可视化；M1–M2 不引入新观测后端，Dossier 自包含报告仍是交付物 | 避免孤立 schema |
+| PolarDB for PostgreSQL（数据层） | **M2 引入（可选实现）**：ScenarioLedger、RegressionPool、实体分组图升级为可查询存储；schema 按标准 SQL/JSONB 设计并声明可替换 | 数据层是 L1 资产，替换不动上层 |
+| RocketMQ（消息队列） | **概念借鉴，暂不引入**：借其幂等/事件语义设计 collector（event_id 去重已实现）；消息面沿用 Matrix，避免违反最小充分 | R3 实测暴露的重复消息问题即其概念库主治 |
+| UnifiedModel | **建模视角借鉴**：实体分组 schema 参考其统一实体描述，不引入系统 | 与 MappingRegistry 目标部分重叠 |
+
 当前获准启动的工程采用“AgentTeams 原生底座 + AgentFit 能力包”：
 
 - 使用 AgentTeams 已有 Dashboard、Manager/聊天入口、Worker、Team、Human、Skill、MCP、共享存储和通信；
