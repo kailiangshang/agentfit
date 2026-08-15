@@ -1016,7 +1016,7 @@ class SubmissionContractTest(unittest.TestCase):
             "ValidationEngineer",
             "GovernanceAuditor",
             "L1 样本语义",
-            "L7 跨项目学习",
+            "L7 场景内持续学习",
             "固定 G / Π / ρ",
             "更新 G / Π / ρ",
             "最小权限；明确输入输出",
