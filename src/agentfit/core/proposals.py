@@ -57,18 +57,35 @@ def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, Sample],
 
 
 def _rule_from_evidence(evidence: list[Sample], solution: Solution, replace_id: str | None = None) -> Knowledge | None:
-    """从失败样本归纳新路由规则：条件 = 样本布尔特征的合取（出现率 100% 的键），目标 = 最常见期望工具。"""
+    """从失败样本归纳新知识：条件 = 样本布尔特征的合取（出现率 100% 的键）。
+
+    单动作证据 → routing_rule（调度一个 L2 工具）；
+    多动作证据 → chain 排查链（任务拆解为有序步骤，骨架 L3 知识类型）。
+    """
     if not evidence:
         return None
     bool_keys: list[str] = []
     for key, val in evidence[0].features.items():
         if isinstance(val, bool) and all(s.features.get(key) is val for s in evidence):
             bool_keys.append(key if val else f"NOT {key}")
+    actions = list(evidence[0].expected.actions)
     tool_counter = Counter(a.tool for s in evidence for a in s.expected.actions)
-    target_tool, _ = tool_counter.most_common(1)[0]
+    if not tool_counter:
+        return None
+    condition = " AND ".join(bool_keys) if bool_keys else None
+
+    if len(actions) > 1:      # 多动作 → 排查链（任务拆解）
+        if any(solution.tool(a.tool) is None for a in actions):
+            return None       # 链上任何工具缺失 → 级联下移，不盲建
+        chain_id = replace_id or f"chain_{abs(hash(tuple(bool_keys))) % 10000}"
+        from ..models.solution import ChainStep
+        return Knowledge(id=chain_id, type="chain", condition=condition,
+                         steps=[ChainStep(tool=a.tool) for a in actions],
+                         description=f"训练归纳（多步）：{[s.id for s in evidence[:3]]}")
+
+    target_tool = tool_counter.most_common(1)[0][0]
     if solution.tool(target_tool) is None:
         return None            # 目标工具不存在 → 级联下移场景，此处不盲建（保持最小实现）
     rule_id = replace_id or f"rule_{target_tool}_{abs(hash(tuple(bool_keys))) % 10000}"
-    condition = " AND ".join(bool_keys) if bool_keys else None
     return Knowledge(id=rule_id, type="routing_rule", condition=condition, dispatches_to=target_tool,
-                     description=f"训练归纳：{[s.id for s in evidence]}")
+                     description=f"训练归纳：{[s.id for s in evidence[:3]]}")

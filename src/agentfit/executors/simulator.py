@@ -33,6 +33,27 @@ class SimulatorExecutor(ExecutorBase):
             trace.result = "PASS"
             return trace
 
+        # L3 优先匹配排查链（多步知识 = 任务拆解），再走路由规则
+        chains = [k for k in solution.L3_knowledge
+                  if k.type == "chain" and not k.superseded and k.steps]
+        matched_chain = next((c for c in chains if _condition_match(c.condition, sample.features)), None)
+        if matched_chain is not None:
+            trace.routed_knowledge_id = matched_chain.id
+            for step in matched_chain.steps:
+                tool = solution.tool(step.tool)
+                if tool is None:
+                    trace.result = "FAIL"
+                    trace.steps.append(TraceStep(layer="L2", element_id=step.tool,
+                                                 action="tool_missing", ok=False, error="链步骤工具不存在"))
+                    return trace
+                trace.steps.append(TraceStep(layer="L2", element_id=tool.id, action="execute",
+                                             ok=True, output=tool.id, expected_output=tool.id))
+                if tool.human_gate is not None:
+                    trace.steps.append(TraceStep(layer="L1", element_id="human_review",
+                                                 action=f"gate:{tool.human_gate.condition}", ok=True))
+            trace.result = "PASS" if self.evaluate(trace, sample.expected) else "FAIL"
+            return trace
+
         # L3 路由
         matched = [r for r in solution.routing_rules() if _condition_match(r.condition, sample.features)]
         if not matched:
