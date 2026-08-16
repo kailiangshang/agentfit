@@ -27,7 +27,9 @@ def main() -> None:
     baseline = [executor.evaluate(executor.execute(initial, s), s.expected) for s in samples]
     print(f"\nbaseline（初始最简方案）: {sum(baseline)}/{len(samples)} = {sum(baseline)/len(baseline):.0%}\n")
 
-    orch = Orchestrator(initial, SamplePool(samples), executor, TrainingConfig(batch_size=21, max_epochs=5))
+    run_dir = "output/telecom-demo-001"
+    orch = Orchestrator(initial, SamplePool(samples), executor, TrainingConfig(batch_size=21, max_epochs=5),
+                        run_dir=run_dir, scenario="telecom-demo")
     build_team(orch)
     outcomes = orch.train()
 
@@ -40,7 +42,11 @@ def main() -> None:
           f" · 总成本 ${orch.total_cost():.3f} · 哈希链 {'可验证' if orch.log.verify() else '损坏!'}"
           f" · 依赖检查 {'通过' if validate_existence_dependencies(orch.solution) == [] else '失败!'}")
     print(f"λ: {orch.solution.lambda_values}")
-    print(f"路由规则数: {len(orch.solution.routing_rules())} · Agent 数: {len(orch.solution.L4_topology.agents)}\n")
+    print(f"路由规则数: {len(orch.solution.routing_rules())} · Agent 数: {len(orch.solution.L4_topology.agents)}")
+
+    from agentfit.dashboard import generate_dashboard
+    dash = generate_dashboard(run_dir)
+    print(f"dashboard: {dash}\n")
 
 
 if __name__ == "__main__":

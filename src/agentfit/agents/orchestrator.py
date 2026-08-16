@@ -35,7 +35,8 @@ class EpochOutcome:
 
 class Orchestrator:
     def __init__(self, solution: Solution, pool: SamplePool, executor: ExecutorBase,
-                 config: TrainingConfig, bus: MessageBus | None = None):
+                 config: TrainingConfig, bus: MessageBus | None = None,
+                 run_dir: str | None = None, scenario: str = "default"):
         self.solution = solution
         self.pool = pool
         self.executor = executor
@@ -46,6 +47,17 @@ class Orchestrator:
         self.lambda_ctl = LambdaController(initial=dict(solution.lambda_values))
         self.outcomes: list[EpochOutcome] = []
         self._prev_solution = solution
+        self.auditor = None
+        if run_dir:
+            from ..agents.auditor import Auditor
+            from ..store.run_store import RunStore
+            store = RunStore(run_dir)
+            store.init_run({"scenario": scenario, "executor": type(executor).__name__,
+                            "config": {"batch_size": config.batch_size, "max_epochs": config.max_epochs},
+                            "solution_version_start": solution.version})
+            store.save_samples(pool.all_samples)
+            store.save_solution_version(solution, note="初始最简方案（Simple First）")
+            self.auditor = Auditor(store)
 
     # ---------- 单轮九步 ----------
     def run_epoch(self, epoch: int) -> EpochOutcome:
@@ -94,6 +106,8 @@ class Orchestrator:
             except ValidationError:
                 outcome.rolled_back = True
                 outcome.notes.append("存在依赖验证失败：事务回滚")
+                if self.auditor:
+                    self.auditor.record_transaction(tx, rolled_back=True, reason="依赖验证失败")
                 candidate = None
             if candidate is not None:
                 self._prev_solution = self.solution
@@ -104,8 +118,13 @@ class Orchestrator:
                     tx.rollback()
                     outcome.rolled_back = True
                     outcome.notes.append(f"回归遗忘 {len(forgot)} 个样本：回滚")
+                    if self.auditor:
+                        self.auditor.record_transaction(tx, rolled_back=True, reason=f"回归遗忘 {forgot}")
                 else:
                     self.solution = candidate
+                    if self.auditor:
+                        self.auditor.record_transaction(tx, rolled_back=False)
+                        self.auditor.store.save_solution_version(candidate, note=f"epoch {epoch} 更新")
                     passed_c = sum(1 for s in self.pool.group("train")
                                    if self.executor.evaluate(self.executor.execute(candidate, s), s.expected))
                     outcome.pass_rate = passed_c / max(1, len(self.pool.group("train")))
@@ -131,6 +150,12 @@ class Orchestrator:
                                      for s, t in zip(batch, traces)})
         for s, t in zip(batch, traces):
             self.regression_pool.add(s, self.executor.evaluate(t, s.expected))
+
+        # ⑨ 落链 + 落盘（Auditor）——保存完整链记录（entry+hash+previous_hash）
+        if self.auditor:
+            new_traffic = self.bus.traffic[self._traffic_cursor:]
+            self._traffic_cursor = len(self.bus.traffic)
+            self.auditor.persist_epoch(epoch, self.log.entries[-1], loss_traces, new_traffic)
 
         outcome.converged = self._check_convergence()
         self.outcomes.append(outcome)
@@ -160,9 +185,21 @@ class Orchestrator:
         return fn(msg)
 
     def train(self) -> list[EpochOutcome]:
-        self._prev_solution = self.solution
+        self._traffic_cursor = 0
         for epoch in range(1, self.config.max_epochs + 1):
             outcome = self.run_epoch(epoch)
             if outcome.converged or self.budget_exceeded():
                 break
+        if self.auditor:
+            series = self.log.pass_rate_series()
+            self.auditor.persist_summary({
+                "epochs_run": len(self.outcomes),
+                "final_pass_rate": series[-1] if series else None,
+                "final_solution_version": self.solution.version,
+                "lambda_values": dict(self.solution.lambda_values),
+                "total_cost_usd": round(self.total_cost(), 4),
+                "converged": bool(self.outcomes and self.outcomes[-1].converged),
+                "budget_exceeded": self.budget_exceeded(),
+                "log_chain_valid": self.log.verify(),
+            })
         return self.outcomes
