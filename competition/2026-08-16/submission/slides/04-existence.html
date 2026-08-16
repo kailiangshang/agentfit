@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head><body class="slide">
+<p class="eyebrow">04 / 12 · EXISTENCE DEPENDENCY</p>
+<h1 class="title" style="font-size:36px;">存在依赖：每个能力追溯到物理基础设施。</h1>
+<p class="subtitle" style="top:166px;">不能凭空创造。任何一层声明能力，下层必须已提供支撑。</p><div class="top-rule" style="top:208px;"></div>
+
+<div class="panel panel-dark" style="left:72px;top:230px;width:560px;height:340px;">
+<p class="label" style="left:96px;top:254px;color:#74d0c7;">声明链（自顶向下）</p>
+<p class="body-copy" style="left:96px;top:292px;width:510px;font-size:16px;line-height:1.5;">
+<b class="amber">L4</b> "我有诊断 Agent"<br>
+<span class="muted">→ L3 必须已有</span> <b class="teal">L3</b> "诊断排查链"<br>
+<span class="muted">→ L2 必须已有</span> <b class="blue">L2</b> "safe_get_device_state"<br>
+<span class="muted">→ L1 必须已有</span> <b style="color:#a8c4d8;">L1</b> "get_device_state 原子"<br>
+<span class="muted">→ 基础设施已有</span> <b style="color:#718190;">设备管理系统 API</b>
+</p>
+<p class="small-copy" style="left:96px;top:486px;width:510px;font-size:13px;color:#f26b4b;">任何一环断了 → 不能在上层创建 → 更新目标下移到断的那层</p>
+</div>
+
+<div class="panel panel-dark" style="left:660px;top:230px;width:548px;height:340px;">
+<p class="label" style="left:684px;top:254px;color:#74d0c7;">ChangeTransaction（原子事务）</p>
+<p class="body-copy" style="left:684px;top:292px;width:500px;font-size:15px;line-height:1.5;">
+级联更新必须原子执行：<br><br>
+<b class="teal">① BEGIN</b> — 记录当前方案快照<br>
+<b class="teal">② APPLY</b> — 自底向上（L1→L2→L3→L4）<br>
+<b class="teal">③ VALIDATE</b> — 依赖完整性检查<br>
+<b class="coral">④ COMMIT</b> — 通过 → 版本号 +1<br>
+<b class="coral">⑤ ROLLBACK</b> — 失败 → 恢复快照
+</p>
+<p class="small-copy" style="left:684px;top:486px;width:500px;font-size:13px;color:#74d0c7;">禁止中间状态 · 禁止部分成功 · 要么全成功要么全回滚</p>
+</div>
+
+<div class="panel" style="left:72px;top:596px;width:1136px;height:70px;background:#132f47;border-color:#1a8d85;">
+<p class="body-copy" style="left:96px;top:618px;width:1088px;font-size:15px;font-weight:700;color:#74d0c7;text-align:center;">保证：无幻影能力 · 全链路可追溯 · 天然可维护 · 无技术债 · 部署即生效</p>
+</div>
+<p class="footer-left">AGENTFIT · 存在依赖</p><p class="footer-right">强约束 · 04</p>
+</body></html>

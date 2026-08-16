@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head><body class="slide">
+<p class="eyebrow">05 / 12 · TRAINING LOOP</p>
+<h1 class="title" style="font-size:36px;">训练循环：执行 → 归因 → 更新 → 回归 → 迭代。</h1>
+<p class="subtitle" style="top:166px;">九步闭环。每步产出结构化数据，训练日志记录一切。</p><div class="top-rule" style="top:208px;"></div>
+
+<div style="position:absolute;left:72px;top:230px;width:1136px;display:flex;gap:8px;flex-wrap:wrap;">
+<div class="panel soft-teal" style="position:relative;width:200px;height:150px;"><p class="big-number" style="left:16px;top:12px;font-size:28px;">①</p><p class="section-title" style="left:16px;top:52px;font-size:15px;">前向执行</p><p class="small-copy" style="left:16px;top:82px;width:168px;font-size:12px;">取一批样本用当前方案执行</p></div>
+<div class="panel soft-coral" style="position:relative;width:200px;height:150px;"><p class="big-number" style="left:16px;top:12px;font-size:28px;color:#f26b4b;">②</p><p class="section-title" style="left:16px;top:52px;font-size:15px;">损失归因</p><p class="small-copy" style="left:16px;top:82px;width:168px;font-size:12px;">自底向上L1→L4 + 因果性验证</p></div>
+<div class="panel soft-amber" style="position:relative;width:200px;height:150px;"><p class="big-number" style="left:16px;top:12px;font-size:28px;color:#d6a43b;">③</p><p class="section-title" style="left:16px;top:52px;font-size:15px;">聚合分析</p><p class="small-copy" style="left:16px;top:82px;width:168px;font-size:12px;">损失模式 + 正则指标计算</p></div>
+<div class="panel soft-blue" style="position:relative;width:200px;height:150px;"><p class="big-number" style="left:16px;top:12px;font-size:28px;color:#74a8c6;">④</p><p class="section-title" style="left:16px;top:52px;font-size:15px;">更新建议</p><p class="small-copy" style="left:16px;top:82px;width:168px;font-size:12px;">分层建议 + λ 调节</p></div>
+<div class="panel" style="position:relative;width:200px;height:150px;"><p class="big-number" style="left:16px;top:12px;font-size:28px;color:#718190;">⑤⑥</p><p class="section-title" style="left:16px;top:52px;font-size:15px;">人审</p><p class="small-copy" style="left:16px;top:82px;width:168px;font-size:12px;">审核方向和安全边界</p></div>
+<div class="panel" style="position:relative;width:200px;height:150px;"><p class="big-number" style="left:16px;top:12px;font-size:28px;color:#718190;">⑦</p><p class="section-title" style="left:16px;top:52px;font-size:15px;">原子应用</p><p class="small-copy" style="left:16px;top:82px;width:168px;font-size:12px;">ChangeTransaction</p></div>
+</div>
+
+<div class="panel" style="left:72px;top:410px;width:1136px;height:130px;background:#132f47;border-color:#1a8d85;">
+<p class="label" style="left:96px;top:434px;color:#74d0c7;">回归验证（⑧）+ 训练日志（⑨）</p>
+<p class="body-copy" style="left:96px;top:470px;width:1088px;font-size:16px;">
+<b class="teal">回归</b>：旧样本重跑，确认更新没破坏已有能力。通过率 < 95% → 自动回滚。<br>
+<b class="teal">日志</b>：每轮追加通过率、损失分布、更新内容、回归结果、λ 变化、成本 — 哈希链保护。
+</p>
+</div>
+
+<div class="panel" style="left:72px;top:570px;width:1136px;height:80px;background:#132f47;border-color:#d6a43b;">
+<p class="label" style="left:96px;top:590px;color:#d6a43b;">收敛条件</p>
+<p class="body-copy" style="left:96px;top:616px;width:1088px;font-size:14px;">通过率连续 N 轮无显著提升 · 剩余失败全部需人工 · 预算/时间超限 · 回归池通过率下降</p>
+</div>
+<p class="footer-left">AGENTFIT · 训练循环</p><p class="footer-right">九步闭环 · 05</p>
+</body></html>

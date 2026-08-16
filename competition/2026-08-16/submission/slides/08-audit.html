@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
+<body class="slide">
+<p class="eyebrow">08 / 12 · AGENTFIT</p>
+<h1 class="title" style="font-size:38px;">可审计：训练日志（哈希链保护）</h1>
+<p class="subtitle">每轮追加不可篡改记录。任何人可回答"为什么改、改了什么、有没有改坏"。</p>
+<div class="top-rule"></div>
+<div class="panel" style="left:72px;top:230px;width:1136px;height:260px;">
+<p class="label" style="left:96px;top:254px;color:#74d0c7;">训练日志条目</p>
+<div style="position:absolute;left:96px;top:290px;width:1088px;font-family:monospace;font-size:14px;color:#a8c4d8;line-height:1.6;background:#0b2236;padding:16px;border-radius:8px;border:1px solid #28516d;">
+{ "epoch": 3, "pass_rate": 0.85,<br>
+&nbsp;&nbsp;"loss": {"L1":0,"L2":1,"L3":4,"L4":0,"human":5},<br>
+&nbsp;&nbsp;"updates": [{"layer":"L3","change":"compound routing","reason":"3 samples failed"}],<br>
+&nbsp;&nbsp;"regression": {"tested":87,"passed":87}, "cost": {"usd":2.50},<br>
+&nbsp;&nbsp;"previous_hash": "abc123..." }
+</div></div>
+<div class="panel soft-teal" style="left:72px;top:520px;width:1136px;height:120px;">
+<p class="body-copy" style="left:96px;top:548px;width:1088px;font-size:16px;line-height:1.6;">
+✓ 可回答"为什么改" → 3个样本在复合退款上失败<br>
+✓ 可回答"有没有改坏" → 回归 87/87 通过 &nbsp; ✓ 可回答"总成本" → 3轮 $2.50
+</p></div>
+<p class="footer-left">AGENTFIT · AGENT 方案训练系统</p>
+<p class="footer-right">训练日志 · 08</p>
+</body></html>
