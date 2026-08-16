@@ -35,3 +35,5 @@
 
 注意：与提交材料中记录的 80% baseline（10 样本）相比本次为 90%——单轮小样本方差大，
 正式对比实验需多 trial（test-scenario.md 的 A/B/C/D 分组设计）。
+
+> 标准产物：`output/tau2-smoke-001/`（RunStore 目录 + dashboard.html，由 `bridges/tau2bench/results_to_runstore.py` 生成）
