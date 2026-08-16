@@ -1,10 +1,10 @@
-# AgentFit 四层骨架 · 最终指导性文档 v3
+# AgentFit 四层骨架 · 最终指导性文档 v4-FINAL
 
 > 本文档是 AgentFit 的模型架构唯一基线。所有训练、适配、记录、交付都建立在这副骨架上。
 >
-> 版本：v3（2026-08-16）
+> 版本：v4-FINAL（2026-08-16）
 >
-> 状态：**指导性文档**——后续所有实现以此为设计依据，修改本文档需全量评审。
+> 状态：**定稿**——经过六轮审核修正（v1→v2→v3→v4），全部必修项（M0-M4）已落实。骨架不再修改，后续以实现驱动文档。
 
 ---
 
@@ -74,7 +74,7 @@ human_review 是 L1 的标准原子:
 层内约束：
 - 必须通过 L2 才能触达 L1（L3/L4 不能绕过）
 - 一个 L2 可以封装多个 L1
-- L2 之间可以互相调用
+- L2 之间禁止互相调用（需要组合 → 上提到 L3 用 Skill/排查链组合）
 
 ### L3 · 可复用知识层
 
@@ -88,7 +88,7 @@ human_review 是 L1 的标准原子:
 | **路由规则** | IF-THEN 条件判断（"什么情况走哪条路"） | 初始从样本归纳；训练中新增分支 | 归因驱动修正 | 覆盖度、分支因子 |
 | **排查链** | 有序的诊断-修复-验证步骤序列 | 初始从解决轨迹归纳 | 归因驱动增减步骤 | 链路长度 |
 | **决策阈值** | 数值化判断边界（"重试超 N 次升级"） | 初始配置 | 归因驱动调整 | 少量，无强约束 |
-| **经验记录** | 从失败中学到的教训 | 训练中从损失轨迹归纳 | 只增不删（除非过时） | 去重度、引用率 |
+| **经验记录** | 从失败中学到的教训 | 训练中从损失轨迹归纳 | 活跃→归档（不物理删除，过时标记 superseded） | 去重度、引用率 |
 
 经验记录的治理策略：
 - 去重：新教训与已有教训语义相似度 > 90% → 合并
@@ -98,7 +98,7 @@ human_review 是 L1 的标准原子:
 
 层内约束：
 - 只能通过 L2 使用能力（知识决定怎么走，走要靠工具）
-- 知识可以引用知识（排查链某步可调用另一个 Skill）
+- 知识之间禁止互相引用（需要复用 → 提取公共子操作下沉为 L2，或上提为 L4 子拓扑）
 - 知识有版本（旧版本保留可回滚）
 
 ### L4 · 行为拓扑层
@@ -119,7 +119,7 @@ human_review 是 L1 的标准原子:
 - 必须基于证据（训练数据显示当前架构处理不了某类问题才改）
 - Simple First：初始从最简开始（单 Agent），失败证据驱动复杂化
 
-### 跨层依赖铁律
+### 跨层依赖铁律（纵向）
 
 ```
 L4 → 只能调 L3
@@ -127,7 +127,55 @@ L3 → 只能调 L2
 L2 → 只能调 L1
 ```
 
-唯一例外：L4 可直接调 L2 的人工审批能力（人工介入是架构级决策，不是知识级判断）。
+唯一例外：L4 可直接调 L2 的人工审批工具（`human_review` 封装），但受三条防护栏约束（见下）。
+
+#### L4 直调 L2 例外的防护栏
+
+```
+L4 可直接调用 L2 的 human_review 工具，但仅限以下条件同时满足:
+
+① 仅限 human_review 工具
+   L4 不能直调 L2 的任何其他工具（如 safe_create_refund 等）
+   human_review 是特殊的：人工介入是架构级决策，不是知识级判断
+
+② 必须在 L3 登记触发条件
+   L3 必须有一条路由规则或排查链步骤
+   声明"什么情况下触发此人工审批"
+   否则 L4 的直调没有依据，验证不通过
+
+③ 归因走特殊路径
+   如果 human_review 相关的样本失败
+   归因时先查 L3 的触发条件是否正确
+   再查 L2 的送审路由是否正确
+   不跳过 L3 直接归因给 L2
+```
+
+### 同层约束（横向铁律）
+
+| 层 | 同层引用 | 理由 |
+|---|---|---|
+| L1 | ❌ 禁止 | 原子之间无依赖。每个原子独立可用。A 调 B → A 不是真正的原子 |
+| L2 | ❌ 禁止 | 工具之间无调用。需要组合 → 上提到 L3 用 Skill/排查链组合 |
+| L3 | ❌ 禁止 | 知识之间无引用。需要复用 → 提取公共子操作下沉为 L2，或上提为 L4 子拓扑 |
+| L4 | ✅ 允许（受约束） | Agent 间通信是拓扑的定义本身（拓扑 = 节点 + 边），但须满足三条约束 |
+
+#### L4 同层通信的三条约束
+
+```
+① 通信必须沿拓扑定义的边进行
+   合法: L4 定义了 "Agent A → Agent B" 的边，A 通过这条边向 B 传递结果
+   非法: L4 没有定义 A→C 的边，但 A 在运行时直接调用 C
+   拓扑是静态定义的。运行时通信只能在已定义的边上发生。
+   需要新通信路径 → 修改拓扑 → 触发 L4 变更（需证据支撑）
+
+② 通信内容是 L3 层面的
+   合法: Agent A 完成诊断，将诊断结论（L3 产物）传给 Agent B 执行
+   非法: Agent A 直接调用 Agent B 内部的 safe_create_refund（L2 工具）
+
+③ 不允许绕过拓扑的隐式通信
+   Agent 之间不能通过共享内存、全局变量、文件系统等方式绕过拓扑边通信
+   所有 Agent 间信息流必须在拓扑中有对应的边
+```
 
 ### 存在依赖强约束（全链路逐层支撑）
 
@@ -175,14 +223,16 @@ L1 存在"get_device_state 原子"
   ✗ 在基础设施没有后端的情况下建 L1 原子
 ```
 
-#### 更新时的级联检查
+#### 更新时的级联检查与原子性
 
-训练中发现"需要新能力"时，不能直接在目标层创建——必须先检查下层是否支撑，如果下层缺失，更新目标下移：
+训练中发现"需要新能力"时，不能直接在目标层创建——必须先检查下层是否支撑，如果下层缺失，更新目标下移。**级联变更是原子操作：要么全部层一次性更新成功，要么全部回滚。**
 
 ```
+级联更新流程:
+
 训练发现: 样本失败因为缺少"经验回溯"能力
 归因: L3 缺少经验路由规则
-  ↓ 级联检查
+  ↓ 级联检查（存在依赖强约束）
 L3 经验路由 需要 L2 的 safe_memory_search
   → L2 没有这个工具 → 更新目标下移到 L2
     ↓ 继续检查
@@ -192,44 +242,114 @@ L2 safe_memory_search 需要 L1 的 memory_search 原子
 L1 memory_search 原子需要存储基础设施
   → 基础设施没有 → 这不是 AgentFit 能自己解决的
   → 升级给用户: "需要你提供一个存储系统（可以是 SQLite/文件/云服务）"
-
-级联更新顺序（必须从底往上）:
-  ① 用户确认基础设施
-  ② AgentFit 建 L1 原子
-  ③ AgentFit 建 L2 工具
-  ④ AgentFit 建 L3 路由规则
 ```
+
+#### ChangeTransaction（级联变更的原子性保障）
+
+```
+当一次更新建议涉及多层时（如 L1+L2+L3 同时新增），必须作为一个原子事务执行:
+
+ChangeTransaction:
+  proposed_changes: [
+    {layer: "L1", action: "add_atom", target: "memory_search", ...},
+    {layer: "L2", action: "add_tool", target: "safe_memory_search", wraps: "memory_search", ...},
+    {layer: "L3", action: "add_knowledge", target: "experience_routing", references: "safe_memory_search", ...}
+  ]
+
+执行流程:
+  ① BEGIN: 记录当前方案版本快照
+  ② 按自底向上顺序应用所有变更（L1 → L2 → L3 → L4）
+  ③ 验证: 运行 validate_existence_dependencies(solution)
+     → 通过 → COMMIT: 变更生效，方案版本号 +1
+     → 失败 → ROLLBACK: 恢复到步骤 ① 的快照，报告失败原因
+
+禁止:
+  ✗ 只应用 L1 而不应用 L2/L3（中间状态方案不允许存在）
+  ✗ 先应用 L3 再回头补 L1/L2（违反自底向上顺序）
+  ✗ 部分成功部分失败时保留成功部分（必须全成功或全回滚）
+```
+
+级联更新顺序（必须从底往上，且原子性执行）:
+  ① 用户确认基础设施（如果需要新基础设施）
+  ② AgentFit 以 ChangeTransaction 形式执行: L1 → L2 → L3 → L4
+  ③ 验证通过后 COMMIT，方案版本号递增
 
 #### 验证规则（每次方案变更后执行）
 
 ```python
 def validate_existence_dependencies(solution):
-    """验证所有层间依赖完整，无悬空引用。"""
+    """验证所有层间依赖完整 + 同层约束 + L4 通信合法性。"""
 
     errors = []
 
-    # L1 → 基础设施
+    # ── 纵向: L1 → 基础设施 ──
     for atom in solution.L1_atoms:
         if not infrastructure_exists(atom.backend):
             errors.append(f"L1 原子 {atom.id} 引用了不存在的基础设施 {atom.backend}")
 
-    # L2 → L1
+    # ── 纵向: L2 → L1 ──
     for tool in solution.L2_tools:
         for wrapped_atom in tool.wraps:
             if wrapped_atom not in solution.L1_atoms:
                 errors.append(f"L2 工具 {tool.id} 封装了不存在的 L1 原子 {wrapped_atom}")
 
-    # L3 → L2
+    # ── 纵向: L3 → L2 ──
     for knowledge in solution.L3_knowledge:
         for referenced_tool in knowledge.references:
             if referenced_tool not in solution.L2_tools:
                 errors.append(f"L3 知识 {knowledge.id} 引用了不存在的 L2 工具 {referenced_tool}")
 
-    # L4 → L3
+    # ── 纵向: L4 → L3 ──
     for element in solution.L4_topology:
         for used_knowledge in element.uses:
             if used_knowledge not in solution.L3_knowledge:
                 errors.append(f"L4 元素 {element.id} 使用了不存在的 L3 知识 {used_knowledge}")
+
+    # ── 横向: L2 同层互调禁止 ──
+    for tool in solution.L2_tools:
+        if hasattr(tool, 'references'):
+            for ref in tool.references:
+                if ref in solution.L2_tools:
+                    errors.append(f"L2 工具 {tool.id} 引用了同层工具 {ref}，违反同层约束")
+
+    # ── 横向: L3 同层互调禁止 ──
+    for knowledge in solution.L3_knowledge:
+        if hasattr(knowledge, 'references'):
+            for ref in knowledge.references:
+                if ref in solution.L3_knowledge:
+                    errors.append(
+                        f"L3 知识 {knowledge.id} 引用了同层知识 {ref}，"
+                        f"应提取公共子操作下沉为 L2 或上提为 L4 子拓扑"
+                    )
+
+    # ── 横向: L4 同层通信合法性 ──
+    for edge in solution.L4_topology.edges:
+        # 约束 ①: 每条通信边必须在拓扑定义中显式声明
+        if edge not in solution.L4_topology.declared_edges:
+            errors.append(f"L4 存在未声明的通信边 {edge}")
+
+        # 约束 ②: 边上流动的内容必须是 L3 层产物
+        if edge.payload_type not in ("L3_decision", "L3_diagnosis",
+                                      "L3_route_result", "L3_skill_output"):
+            errors.append(f"L4 边 {edge} 传递了非 L3 层内容: {edge.payload_type}")
+
+    # ── 例外防护栏: L4 直调 L2 仅限 human_review ──
+    for element in solution.L4_topology:
+        if hasattr(element, 'direct_L2_calls'):
+            for call in element.direct_L2_calls:
+                if call.target_tool != "human_review":
+                    errors.append(
+                        f"L4 元素 {element.id} 直调了非 human_review 的 L2 工具 {call.target_tool}"
+                    )
+                # 防护栏②: 必须在 L3 有触发条件登记
+                trigger_registered = any(
+                    k.id == call.trigger_knowledge
+                    for k in solution.L3_knowledge
+                )
+                if not trigger_registered:
+                    errors.append(
+                        f"L4 元素 {element.id} 直调 human_review 但未在 L3 登记触发条件"
+                    )
 
     return errors  # 空列表 = 验证通过
 ```
@@ -302,7 +422,17 @@ Step 4 → 检查 L4（拓扑层）
   "当前架构适合这类问题吗？"
   ├── 不适合（如单 Agent 处理不了复合问题）
   │     确认根因 = L4（架构不匹配），停止
-  └── 适合 → 归因为"需要人工"或"评价标准有误"
+  └── 适合 →
+        前置检查: 这个失败样本是否真的需要 AI？
+        判定依据（按优先级）:
+        ① 样本的期望操作是否包含 human_review 原子
+           → 是 → 归因为"需要人工"（不是 AI 的失败）
+        ② 样本的期望操作是否涉及主观判断（金额争议/情绪安抚/政策模糊）
+           → 是 → 归因为"需要人工"
+        ③ 样本的期望操作是否使用了 L1 中不存在的原子
+           → 是 → 这是 L1 损失（回到 Step 1，归因器漏检了）
+        ④ 排除以上三种 → 归因为"评价标准可能有误"
+           → 人工审查评价规则本身是否合理
 
 附带问题处理:
   所有在检查过程中发现但不构成根因的异常
@@ -396,6 +526,33 @@ def would_change_outcome(anomalous_step, dependent_step, expected):
 其中:
   任务损失 = 1 - 通过率
   λ₁~λ₄ = 正则权重（控制"通过率 vs 可维护性"的平衡）
+```
+
+### 每层正则项的聚合公式
+
+每层的正则项值 = 该层最严重违规指标的超阈比例（hinge loss 形式，不用亚系数）：
+
+```
+Lx正则 = max(0, worst_violation_ratio)
+
+其中:
+  worst_violation_ratio = 该层所有正则指标中，
+                          actual_value / threshold_value 的最大值 - 1
+
+当 actual ≤ threshold 时，该指标贡献为 0（不违规）
+当 actual > threshold 时，贡献为超出比例
+
+示例:
+  L3 有 5 个正则指标:
+    链路覆盖度: 实际 65% / 阈值 60% → 超出 8.3%
+    链路长度:   实际 8 步 / 阈值 10 步 → 未超 → 0
+    分支因子:   实际 12 个 / 阈值 15 个 → 未超 → 0
+    知识冲突率: 实际 3% / 阈值 5% → 未超 → 0
+    经验去重度: 实际 10% / 阈值 20% → 未超 → 0
+
+  L3正则 = max(0, 65/60 - 1) = 0.083
+
+简洁: 4 个超参（λ₁~λ₄），16 个指标通过 max 聚合为一层一个值
 ```
 
 ### 默认权重
