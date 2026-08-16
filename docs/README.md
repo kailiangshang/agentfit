@@ -1,38 +1,46 @@
-# AgentFit 文档
+# AgentFit
 
-本目录只保留一个当前整体方案，以及支撑它的比赛约束、来源证据和官方参考。历史设计和过程计划不再并行保留，需要追溯时使用 Git。
+> Agent 方案训练系统：输入业务场景和样本，输出经过多轮训练、通过率验证、边界明确的可部署 Agent 方案。
 
-## 唯一当前方案
+## 核心思想
 
-- [AgentFit 整体方案](agentfit-solution.md)：产品定位、四层资产纪律、样本驱动的持续学习、元团队、AgentTeams 边界、评测治理、交付和阶段门禁的唯一有效基线。
-- [AgentFit 实现蓝图](agentfit-implementation.md)：实现层唯一基线——架构、任务流转管线、生命周期状态机、Skill 体系、中间产物注册表、追溯与可视化导出；每一轮运行是对蓝图的逐组件验收。
+**方案不是设计出来的，是训练出来的。**
 
-## 2026-08-15 初赛提交阶段
+```
+传统: 设计 → 评审 → 部署（一次性，静态，靠经验）
+AgentFit: 训练 → 评估 → 更新 → 再训练 → 收敛 → 部署（迭代，动态，靠数据）
+```
 
-本阶段只完成简介、PPTX、PDF、Agent Identity、Skill、Human/风险和开放披露，以及上传前验证。真实 AgentTeams 元团队、ProjectCase 和候选对照不是提交前置条件；当前运行结论保持 `requires_runtime_trial`。唯一材料入口见 [初赛提交工作区](../competition/2026-08-15/README.md)。
+## 四层骨架
 
-## 后续阶段
+```
+L4  行为拓扑层     Agent 架构 + 协作模式 + 人工介入位置
+L3  可复用知识层   Skill + 路由规则 + 排查链 + 经验
+L2  可二次开发能力层 安全封装 + 组合 + 口径 + 送审路由
+L1  Solid 层       固定原子能力: API + 数据库 + 人工审核
+```
 
-AgentTeams walking skeleton 已获项目所有者授权启动，并按[整体方案 §13.3](agentfit-solution.md#133-后续最小实施顺序与阶段完成定义)的 M0–M4 顺序实施，不另建并行路线图。当前 M0 已完成并为 `READY`，M1 仍为 `IN_PROGRESS`；真实五元团队已完成两轮 ProjectCase preparation（Round 1：task 0；Round 2：task 0、2、13），但四份正式 manifest 尚未实例化和冻结，尚未运行 Candidate。复赛工程、M2–M4、场景内持续学习工程和生产部署仍由晋级结果、评审反馈、运行证据与后续授权共同决定。
+三组约束保证天然可维护：纵向逐层调用、横向同层禁止互调、存在依赖全链路追溯。
 
-- [回家 Demo 执行手册](guides/home-demo-runbook.md)：复用已验收为 `READY` 的 M0 基线，用 τ³-bench retail 样本和 AgentTeams 五元团队完成两轮 ProjectCase preparation，保留部署、回放、Dossier/Trace、结构化验证和下一门禁命令，并保持 M1 `IN_PROGRESS`；它是操作 Runbook，不是第二套方案。
-- [AgentTeams M1 多情景实测](research/home-demo/retail-m1/dossier/15-agentteams-m1-multiscenario-run.md)：保存两轮真实 Trace 的脱敏指标、失败恢复、设计更新、求解/适配路径、成本边界和 post-run provenance 限制；机器可读对照与原始私密证据分离。
+## 文档
 
-## 内部依据
+| 文件 | 内容 |
+|---|---|
+| [四层骨架 v4-FINAL](agentfit-skeleton.md) | 唯一指导性文档（定稿，不改） |
+| [AgentFit 方案](agentfit-solution.md) | 基于骨架的完整方案 |
+| [落地设计](agentfit-implementation.md) | 真实实现架构 |
+| [测试场景](test-scenario.md) | Telecom 故障诊断全链路执行方案 |
 
-### 比赛约束
+## 竞赛提交
 
-- [GOAI Agent Infra 初赛要求矩阵](internal/competition/preliminary-requirements-matrix.md)
-- [GOAI Agent Infra 初赛红线与声明检查表](internal/competition/preliminary-red-line-checklist.md)
+| 文件 | 内容 |
+|---|---|
+| [作品简介](../competition/2026-08-16/submission/work-introduction.md) | 500 字以内 |
+| [PPT 大纲](../competition/2026-08-16/submission/ppt-outline.md) | 12 页主路演 + 5 页附录 |
+| [Agent Identity](../competition/2026-08-16/submission/agent-identity.md) | 四层架构中的身份定义 |
+| [开放与合规](../competition/2026-08-16/submission/openness-and-compliance.md) | MIT 开源 + 依赖 + 未实现披露 |
+| [风险与人工门禁](../competition/2026-08-16/submission/risk-and-human-gates.md) | 门禁分类 + 正则保障 |
 
-### 来源证据
+## License
 
-- [证据研究规则](internal/evidence-research/README.md)
-- [Evidence Registry](internal/evidence-research/evidence-registry.json)
-- [证据卡模板](internal/evidence-research/evidence-card-template.md)
-
-### 官方参考
-
-- [《新智基座》Agent Infra 参赛手册](reference/新智基座-参赛手册.pdf)
-
-历史内容只通过 Git 追溯，不能覆盖 [AgentFit 整体方案](agentfit-solution.md)中的当前定义、状态和证据边界。
+MIT — 详见 [LICENSE](../LICENSE)

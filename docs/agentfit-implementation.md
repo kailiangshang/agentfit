@@ -1,257 +1,391 @@
-# AgentFit 实现蓝图
+# AgentFit 落地设计：真实实现架构
 
-> 文档地位：实现层唯一基线。语义与纪律以 [AgentFit 整体方案](agentfit-solution.md)（v4）为准；本文档定义它的代码结构、Skill 结构、数据结构与产物管线。执行每一轮运行即是对本蓝图逐组件的验收。
->
-> 版本：v1（2026-08-15，基于 R1–R4 四轮真实运行的经验与教训收敛）
+> 基于四层骨架 v4-FINAL，设计 AgentFit 的真实实现。回答"代码怎么写、组件怎么组合、数据怎么流转"。
 
-## 0. 设计原则
+---
 
-1. **代码执政**：凡可由 schema/checker/状态机拒绝的，不依赖 prompt 自觉；
-2. **产物即接口**：组件间只通过本蓝图注册的中间产物通信，每个产物有 schema、生产者、消费者与内容哈希；
-3. **训练日志级导出**：任何一轮运行可导出为自包含 bundle（结构化数据 + 可视化报告），断链即不可审计；
-4. **最小充分**：不引入蓝图之外的系统；平台缺陷只记录不吸收；
-5. **双平面分离**：控制平面（SOUL + Skill + 生命周期门禁，可阻断）与观测平面（采集/校验/账本/报告，只读 sidecar）严格分离。观测平面永不阻塞主进程、永不要求被观测者配合——**被观测者不得持有自己审计轨迹的写权**；观测失败不毁运行，独立开发独立演进。唯一阻断式检查（freeze/审批门禁）属控制平面，与事后验证（观测平面）不得混淆；
-6. **阶段完成以结构化产物为准**：九个生命周期阶段各有结构化产物合同（§5.1）；阶段完成的唯一定义是对应产物通过 schema 校验——聊天声明、消息数、任务状态都不构成完成（R3 实证：聊天完成而 plan 节点未回写）。
-
-## 0.1 可复用轮子（借格式与库，不借系统）
-
-| 轮子 | 用法 | 不造的理由 |
-|---|---|---|
-| Matrix 事件流 / MinIO 工件 / token 账本 | 观测平面唯一的原始源，只读采集 | 不给 Agent 加埋点；事件天然带 event_id/sender/ts/mentions |
-| OpenTelemetry GenAI 语义约定 | Trace/RoundRecord 字段命名对齐 `gen_ai.*` 概念 | 借 schema 不借后端，未来可导出任意生态 |
-| `jsonschema` 库 | 全部阶段产物校验 | 声明式 schema 免手写解析 |
-| Chart.js / mermaid.js（内嵌） | 报告图表 | 纯前端轮子 |
-| CoPaw skill 安装机制 | S1–S7 以 SKILL.md+脚本包发布 | 分发渠道用平台的，我们只写内容 |
-| 自家已验证资产 | `matrix_run`/`validate_run`、R4 即兴脚本（S1/S5 种子）、实体分组函数 | 实战验证过 |
-| 明确不引入 | MLflow/Langfuse 服务端、消息队列、区块链库、状态机库 | JSON 哈希链约 50 行；显式状态表约 100 行；服务器化违反最小充分 |
-
-自己写的只有三样：哈希链账本、生命周期状态机、checker 逻辑——这三样是 AgentFit 的核心资产，不是轮子。
-
-## 0.2 审查官守则（用 AgentFit 的思想审查 AgentFit）
-
-操作官/监控官每轮审查以下检查表——这些不是外在标准，而是 AgentFit 自身主张的反射：
-
-| AgentFit 原则 | 审查动作 |
-|---|---|
-| Simple First / 最小充分 | 本轮新增的任何复杂度（Agent/工具/循环/层）是否都有失败证据支撑？没有 → 标记过度设计 |
-| 证据分层诚实 | 每条对外声明能否反向定位到 event_id/工件哈希？"平台可用"是否被混写为"闭环证据"？ |
-| Baseline-first | 调整是否从最简候选起步？是否跳过基线直接上复杂方案？ |
-| 层级纪律 | 修正是否落在涉案层？有无越层代改（工具层改接口、DAG 层改排查链）？ |
-| 实体污染纪律 | 本轮一切复用/统计是否按语义计算？实体重复是否被误读为复用？ |
-| 持续学习视角 | 本轮学到了什么（A–F 哪类样本）？修复是否过回归（旧能力未退化）？资产沉淀了什么？ |
-| 停止规则 | 是否该停而未停（沉没成本）/ 该拒而未拒（无证据推进）？ |
-| 双平面纪律 | 观测是否越权阻塞或要求被观测者配合？控制门禁是否被伪装成"监控"？ |
-| 阶段产物即完成 | 每个宣告完成的阶段，其结构化产物是否真的过 schema？ |
-| 反身性 | 我（操作官）本轮的行为是否也符合以上（我的工具是否最小充分、我的结论是否有证据）？ |
-
-违反项按四分归因（Agent 侧/合同侧/工具侧/平台侧）进入当轮改进提案。
-
-## 1. 总体架构
-
-```mermaid
-graph TB
-    subgraph L5["呈现层 Presentation"]
-        VIZ[四层泳道 lineage 报告<br/>跨轮度量曲线]
-        BUNDLE[Run Bundle 导出<br/>数据+报告自包含]
-    end
-    subgraph L4["证据层 Evidence"]
-        RR[RoundRecord 链]
-        SL[ScenarioLedger 链]
-        DOSSIER[Dossier 导出包]
-        V[validate_run 校验]
-    end
-    subgraph L3["能力层 Skills（M1尾–M2 落地）"]
-        S1[S1 任务编译]
-        S2[S2 能力对齐]
-        S3[S3 候选建图]
-        S4[S4 统一试验]
-        S5[S5 独立审计]
-        S6[S6 人工门禁]
-        S7[S7 经验沉淀]
-    end
-    subgraph L2["身份层 Identity"]
-        SOUL[五元 SOUL 合同<br/>agentfit-retail-m1.yaml]
-    end
-    subgraph L1["平台层 AgentTeams v1.2.0-beta.1"]
-        TF[taskflow: project/DAG/task]
-        MX[Matrix: Team Room / Leader DM]
-        FS[共享存储 MinIO + filesync]
-        GW[Higress 网关 / Nacos 注册]
-    end
-    subgraph L0["工具层 Operator runtime（2539 行，操作侧）"]
-        PREP[prepare_projectcase]
-        SEND[matrix_run send/export]
-        SNAP[usage-snapshot]
-        EXP[export_dossier]
-    end
-    OPER((操作官)) --> PREP --> MX
-    MX --> SOUL --> S1 & S5
-    TF --> FS --> EXP
-    SEND --> RR --> SL --> VIZ --> BUNDLE
-    V --> DOSSIER
-```
-
-双平面标注：L1–L3 = **控制平面**（可阻断，含 lifecycle 门禁）；L0 的只读源（Matrix 事件/MinIO 工件/账本）+ L4 + L5 = **观测平面**（sidecar，只读、不阻塞、不要求被观测者配合）。工具层按此一分为二：`prepare/send` 属分发（控制侧），`export/snapshot/validate/报告` 属观测侧。
-
-要点：能力层是当前最大空白（R4 实证：GA 与 BE 在任务现场即兴手写 `verify_hashes.py` / `compute_hashes.py`——Skill 未落地时 Agent 会自己造工具）。Skill 层的种子代码就来自这些被实战验证过的即兴产物。
-
-## 2. 任务流转（一轮运行的完整管线）
-
-```mermaid
-sequenceDiagram
-    participant O as 操作官(分发/监控)
-    participant L as EngagementLead
-    participant B as BusinessEngineer
-    participant G as GovernanceAuditor
-    participant W as 共享存储
-    O->>L: Leader DM: request.md<br/>(脱敏批次+terminal token+阶段简报)
-    L->>W: projectflow create_project + plan DAG
-    L->>B: @mention New task[01] (Team Room)
-    B->>B: 调用 S1 任务编译 Skill
-    B->>W: 四份 manifest(JSON) + 三份语义规格<br/>+ result.md(STATUS/DECISION字段)
-    B-->>L: TASK_COMPLETED
-    L->>W: 验收读取工件
-    L->>G: @mention New task[02]
-    G->>G: 调用 S5 独立审计 Skill
-    G->>W: governance_review.md + result.md<br/>(minimum_next_action 等机器字段)
-    G-->>L: 审计结论
-    L-->>O: Leader DM 终态消息<br/>(token 首行 + 逐字引用治理字段)
-    O->>W: export_dossier(多 Worker 收集)
-    O->>O: validate_run + usage 差分
-    O->>O: RoundRecord 追加 + 报告生成
-```
-
-与现状的差异（蓝图生效后）：工件为 JSON（不再是自由 .md）；导出从多 Worker 本地收集（不依赖 filesync 镜像）；治理字段机器比对（保真不再靠人眼）。
-
-## 3. 生命周期状态机（代码强制，取代口头门禁）
-
-```mermaid
-stateDiagram-v2
-    [*] --> Intake: request 包构建(provenance 哈希)
-    Intake --> Discover: Project 创建
-    Discover --> Freeze: 四 manifest 实例化<br/>+ 实体泄漏检查 PASS
-    Freeze --> Freeze: BLOCKED(缺实体/缺审计)
-    Freeze --> Architect: Human freeze 批准
-    Architect --> Approve: CandidateGraphSet<br/>+ 层级触达检查 PASS
-    Approve --> Trial: TrialSpec 批准
-    Trial --> Audit: SampleEvaluation[] + Trace
-    Audit --> Deliver: Holdout 审计 + 回归池通过
-    Deliver --> Learn: DeliveryDecision
-    Learn --> Discover: 下一批样本(漂移触发)
-    Learn --> [*]: 场景 SLA 门(非收敛)
-```
-
-非法迁移（如 Freeze 未批先进 Architect、holdout 泄漏、回归退化）由 `lifecycle.py` 直接拒绝——这是 M2 的核心交付物。
-
-## 4. Skill 体系（能力层）
-
-每个 Skill 是一个可安装包，发布到 Worker 的 skills 目录，Agent 调用而非现场造轮子：
+## 一、系统架构
 
 ```
-skills/
-├── s1-task-compile/        # 种子: BE 的 compute_hashes.py(R4)
-│   ├── SKILL.md            # 触发条件、IO 契约、失败处理
-│   ├── compute_hashes.py   # manifest 内容哈希(确定性)
-│   └── schema/manifest.schema.json
-├── s2-capability-align/    # 接口缺口/复用率核算
-├── s3-candidate-graph/     # 四层建图(layer 标签+触达校验)
-├── s4-unified-trial/       # Episode 执行+分层 Trace 采集
-├── s5-independent-audit/   # 种子: GA 的 verify_hashes.py(R4)
-│   ├── SKILL.md
-│   ├── verify_hashes.py    # 哈希独立复算
-│   └── check_entity_leak.py# 实体跨 split 检查
-├── s6-human-gate/          # 审批记录/拒绝/超时/回滚模板
-└── s7-asset-consolidation/ # RegressionPool 回归+资产版本化
+┌─────────────────────────────────────────────────────────────────┐
+│                         用户                                     │
+│    提供材料+样本+评价 → 审核更新建议 → 接收交付                    │
+└──────────┬──────────────────────────────────────┬───────────────┘
+           │                                       │
+           ▼                                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    AgentFit 训练系统                              │
+│                                                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              训练循环控制器 (train_loop.py)                 │  │
+│  │  管理轮次、预算、收敛判定、λ 调节、安全约束                    │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│  │ 数据工程      │  │ 方案管理      │  │ 损失归因器            │ │
+│  │ (data.py)    │  │ (solution.py)│  │ (attribution.py)     │ │
+│  │              │  │              │  │                      │ │
+│  │ 样本解析      │  │ L1-L4 CRUD  │  │ 自底向上 L1→L4      │ │
+│  │ 聚类分析      │  │ 依赖验证     │  │ 因果性验证           │ │
+│  │ 批次构建      │  │ 版本管理     │  │ 附带问题记录         │ │
+│  │ 回归池管理    │  │ 原子事务     │  │ 正则指标计算         │ │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘ │
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐ │
+│  │ 执行适配器    │  │ 回归验证器    │  │ 监控协程              │ │
+│  │(executor.py) │  │(regression.py)│  │(monitor.py)         │ │
+│  │              │  │              │  │                      │ │
+│  │ τ²-bench    │  │ 旧样本重跑    │  │ 漂移检测             │ │
+│  │ 自建模拟器   │  │ 遗忘检测     │  │ 预算告警             │ │
+│  │ 影子模式     │  │ 回滚触发     │  │ 正则追踪             │ │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘ │
+│                                                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              训练日志 (training_log.py)                     │  │
+│  │  哈希链保护 · 通过率 · 损失分布 · 更新记录 · 回归 · λ       │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-原则：Skill 只含**确定性代码与 schema**，判断类步骤仍在 Agent（SOUL 定义何时调用）；Skill 的每次调用记入 Trace（输入哈希、版本、输出哈希）。
+---
 
-## 5. 中间产物注册表（产物即接口）
+## 二、核心数据结构
 
-### 5.1 九阶段结构化产物合同（AgentFit 自身每阶段的产出）
+### Solution（方案）
 
-每个阶段一个 JSON 产物（schema 版本化，`agentfit.<stage-artifact>/v1`）；**产物通过 schema 校验即阶段完成，否则阶段未完成**——由 lifecycle 状态机消费。
-
-| 阶段 | 结构化产物 | 关键字段（机器可查） | 生产者 | 进入下一阶段的门禁 |
-|---|---|---|---|---|
-| Intake | `intake_record.json` | run_id、requester、材料引用+哈希、范围、优先级 | 操作官工具 | 材料引用齐全 |
-| Discover | `semantic-specs.json` | sample/task/capability 三规格；样本单位、实体分组键、验收指标 | BE via S1 | 三规格 schema PASS |
-| Freeze | `sample-set-manifest.*.json` ×4 + `freeze_record.json` | 成员+内容哈希、set_model_sha256、访问策略；批准人/时间/范围 | BE via S1；Human 签 freeze | 实体泄漏检查 PASS + Human 批准 |
-| Architect | `candidate-graph-set.json` | 候选 (G,Π,θ,ρ)；节点 layer 标签、边触达关系 | AgentArchitect via S3 | 层级触达检查 PASS |
-| Approve | `trial-spec.json` | 权限、预算、回滚、并发、种子 | 操作官+Human | Human 批准记录 |
-| Trial | `sample-evaluation.json[]` + `execution-trace.json[]` | EvaluationUnit=候选×样本×run；Step 级事件、成本、失败类 | VE via S4 | 预算/权限未越界 |
-| Audit | `evaluation-report.json` + `audit-decision.json` | holdout 结果、**minimum_next_action / freeze_permitted / candidate_generation_permitted**（机器字段，Leader 只能逐字引用） | GA via S5 | 审计输入可追溯 |
-| Deliver | `delivery-decision.json` | 五种合法结果之一 + 证据引用 + 重新评估条件 | EngagementLead | 决策引用的工件哈希全部存在 |
-| Learn | `round-record.json` + `asset-versions.json` | 见 §5.2；资产增量（池/知识/版本回滚指针） | 操作官工具 + S7 | 哈希链连续 |
-
-演进约束：阶段产物 schema 变更 = 新版本号 + lifecycle 同步评审；`not_instantiated` 仍是显式合法值（缺什么写什么，不虚构）。
-
-### 5.2 运行级产物（一轮运行的管线工件）
-
-| 产物 | 格式 | 生产者 | 消费者 | 存储 |
-|---|---|---|---|---|
-| `request.md` + `provenance.json` | md + json | prepare_projectcase | Leader / validator | run 目录(0600) |
-| `samples.json`（脱敏批次） | json | prepare | 团队 / 回放 | run 目录 |
-| `send.json`（token/event 锚点） | json | matrix_run | collector / validator | run 目录 |
-| `conversation.raw/normalized.json` | json | export-once | validator / 报告 | run 目录 |
-| 四份 `sample-set-manifest.*.json` | json(B1) | BE via S1 | GA / validator / freeze | task 目录+导出包 |
-| `governance_review.md` + `result.md` | md+机器字段 | GA via S5 | Leader / validator | task 目录+导出包 |
-| `export-manifest.json`（全文件哈希） | json | export_dossier | validator | dossier 目录 |
-| `usage-before/after.json` | json | usage-snapshot | 成本核算 | run 目录 |
-| `RoundRecord` | json | 操作官工具 | ScenarioLedger / 报告 | ledger 链 |
-| `ScenarioLedger` | json(哈希链) | 操作官工具 | 审计 / 报告 | ledger 链 |
-| Run Bundle | json+html | 报告生成器 | 人 / 评审 | 可导出 |
-
-**RoundRecord 结构**（AgentFit 版训练日志条目）：
-
-```json
-{
-  "round_id": "retail-home-r4-...",
-  "prev_record_sha256": "...",
-  "lifecycle_position": "Discover→Freeze",
-  "input_refs": {"manifest_sha256": "...", "candidate_version": null},
-  "metrics": {"events": 70, "tokens": 9773683, "artifact_contract_rate": 1.0,
-               "delegation_correct": true, "governance_fidelity": true,
-               "terminal_discipline": true},
-  "findings": [{"side": "agent|contract|tool|platform", "note": "...", "evidence": "event_id/工件哈希"}],
-  "design_changes": [{"file": "...", "diff_ref": "git", "evidence": "..."}]
-}
+```python
+@dataclass
+class Solution:
+    version: int
+    L1_atoms: list[SolidAtom]           # 原子能力
+    L2_tools: list[CapabilityTool]       # 安全封装
+    L3_knowledge: list[Knowledge]        # 路由/Skill/链/阈值/经验
+    L4_topology: Topology                # Agent 架构
+    regularization_state: RegState       # 正则指标当前值
+    lambda_values: dict[str, float]      # λ₁~λ₄ 当前值
 ```
 
-## 6. 可追溯与可视化
+### SolidAtom（L1 原子）
 
-```mermaid
-graph LR
-    subgraph 追溯链
-        A[event_id] --> B[工件哈希] --> C[RoundRecord] --> D[ScenarioLedger]
-    end
-    subgraph 报告组件
-        R1[四层泳道图<br/>sample→solid→tool→knowledge→DAG]
-        R2[跨轮度量曲线<br/>token/合同率/保真/复用率]
-        R3[指标下钻<br/>到 event_id 与哈希]
-        R4[门禁时间线<br/>阶段推进与阻断]
-    end
-    追溯链 --> R1 & R2 & R3 & R4
+```python
+@dataclass
+class SolidAtom:
+    id: str                    # "toggle_roaming"
+    type: str                  # "read" | "write" | "human" | "notify"
+    backend: str               # "telecom_api" | "human_finance_team"
+    input_schema: dict         # 参数定义
+    output_schema: dict        # 返回值定义
+    description: str           # 人可读描述
 ```
 
-- **形态**：自包含单文件 HTML（无外部依赖、无服务端），作为 Dossier 工件导出——不是产品 UI；
-- **导出训练结果** = Run Bundle：`round-records.json`（机器可读全链）+ `report.html`（人读）+ 哈希清单；评审可在离线环境完整复核；
-- 数据源全部来自第 5 节注册表——报告不引入新的真实源。
+### CapabilityTool（L2 工具）
 
-## 7. 分阶段落地
+```python
+@dataclass
+class CapabilityTool:
+    id: str                    # "safe_toggle_roaming"
+    wraps: list[str]           # L1 原子 ID 列表
+    preconditions: list[str]   # 执行前检查
+    postconditions: list[str]  # 执行后记录
+    human_gate: HumanGate | None  # 人工审批条件
+    aggregation_logic: str | None  # 组合/口径逻辑
+```
 
-| 阶段 | 交付 | 验收 |
-|---|---|---|
-| M1 尾 | S1/S5 Skill 包（种子收编 R4 即兴产物）；manifest JSON schema；导出器多 Worker 收集 | R5：Agent 调用 Skill 产出 JSON 工件，dossier 导出 PASS |
-| M2 | `lifecycle.py` 状态机；checker 族（层级/泄漏/保真/schema）；RoundRecord→ScenarioLedger；报告生成器 v1（泳道+曲线） | 非法迁移被机器拒绝；R6 报告自动生成；bundle 导出可离线复核 |
-| M3 | S2/S3/S4/S6 补齐；对照即回归；报告 v2（下钻） | 三类候选统一对照 + 回归池通过率曲线 |
-| M4 | S7；干净环境复现；报告为比赛证据包 | 独立复现同结论 |
+### Knowledge（L3 知识）
 
-## 8. 与既有资产的关系
+```python
+@dataclass
+class Knowledge:
+    id: str                    # "roaming_routing"
+    type: str                  # "skill" | "routing_rule" | "chain" | "threshold" | "experience"
+    # 路由规则
+    condition: str | None      # "no_data AND abroad AND roaming_off"
+    dispatches_to: str | None  # L2 工具 ID（调度，不是调用）
+    # 排查链
+    steps: list[ChainStep] | None  # 有序步骤
+    # 经验
+    lesson: str | None         # 教训内容
+    evidence_sample_ids: list[str]  # 来源样本
+```
 
-- `runtime/agentteams/**`（工具层）全部保留，按本蓝图演进（export_dossier 改多 Worker 收集）；
-- `docs/agentfit-solution.md` v4 不变——本蓝图是其实现投影；
-- 提交材料不受本蓝图影响（实现属复赛工程证据）；
-- R4 的即兴脚本（`verify_hashes.py`/`compute_hashes.py`）在征得确认后收编为 S5/S1 种子。
+### Topology（L4 拓扑）
 
-历史版本经 Git 追溯；本文档的变更即实现基线变更，需与整体方案同步评审。
+```python
+@dataclass
+class Topology:
+    agents: list[Agent]
+    edges: list[TopologyEdge]      # Agent 间通信边
+    human_gates: list[HumanGatePosition]
+    trigger_mode: str             # "passive" | "proactive" | "scheduled" | "event"
+
+@dataclass
+class TopologyEdge:
+    from_agent: str
+    to_agent: str
+    payload_type: str  # "L3_decision" | "L3_diagnosis" | "L3_route_result"
+```
+
+### LossTrace（损失轨迹）
+
+```python
+@dataclass
+class LossTrace:
+    sample_id: str
+    root_cause_layer: str       # "L1" | "L2" | "L3" | "L4" | "human" | "eval_error"
+    root_cause_element: str     # 具体的原子/工具/知识/Agent ID
+    failure_mode: str           # "missing_atom" | "tool_error" | "routing_error" | ...
+    detail: str                 # 人可读描述
+    evidence: dict              # 执行轨迹关键步骤
+    confidence: float           # 归因置信度
+    side_issues: list[SideIssue]  # 附带问题（不阻塞但记录
+```
+
+---
+
+## 三、核心算法
+
+### 训练循环
+
+```python
+def train(initial_solution, sample_pool, evaluation, config):
+    solution = initial_solution
+    regression_pool = RegressionPool()
+    training_log = TrainingLog()
+    
+    for epoch in range(config.max_epochs):
+        # ① 前向
+        batch = sample_pool.next_batch(config.batch_size)
+        traces = execute_batch(solution, batch, config.executor)
+        
+        # ② 损失归因
+        loss_traces = []
+        for trace, sample in zip(traces, batch):
+            if trace.result != "PASS":
+                lt = attribute_loss(sample, trace, evaluation, solution)
+                if lt:
+                    loss_traces.append(lt)
+        
+        # ③ 聚合 + 正则
+        aggregated = aggregate_losses(loss_traces)
+        reg_metrics = compute_regularization(solution, traces)
+        
+        # ④ 反向传播
+        proposals = generate_update_proposals(aggregated, reg_metrics)
+        
+        # ⑤ λ 调节
+        lambda_adjustments = check_lambda_adjustment(reg_metrics, config)
+        
+        # ⑥ 人审
+        approved = human_review_gate(proposals, lambda_adjustments)
+        
+        # ⑦ 应用（原子事务）
+        if approved:
+            transaction = ChangeTransaction(solution, approved)
+            new_solution = transaction.execute()  # commit or rollback
+        
+        # ⑧ 回归
+        regression_result = validate_regression(new_solution, regression_pool)
+        if regression_result.status == "FAIL":
+            transaction.rollback()
+            continue
+        
+        # ⑨ 日志
+        solution = new_solution
+        training_log.append(epoch, solution, traces, loss_traces,
+                          reg_metrics, approved, regression_result)
+        regression_pool.update(traces, batch)
+        
+        # 收敛检查
+        if check_convergence(training_log, config):
+            break
+    
+    return build_delivery(solution, training_log)
+```
+
+### 反向归因
+
+```python
+def attribute_loss(sample, trace, evaluation, solution):
+    """自底向上逐层检查，找到即验证（因果性校验）。"""
+    
+    side_issues = []
+    
+    # Step 1: L1
+    for expected_action in sample.expected.actions:
+        if expected_action.tool not in solution.L1_atoms:
+            if is_root_cause(expected_action.tool, trace, "missing"):
+                return LossTrace(layer="L1", ...)
+            else:
+                side_issues.append(...)
+    
+    # Step 2: L2
+    for step in trace.steps:
+        if step.layer == "L2" and step.has_error:
+            if is_on_critical_path(step, trace):
+                return LossTrace(layer="L2", ...)
+            else:
+                side_issues.append(...)
+    
+    # Step 3: L3
+    actual_path = extract_path(trace)
+    expected_path = sample.expected.actions
+    if actual_path != expected_path:
+        if is_root_cause(actual_path, expected_path, trace):
+            return LossTrace(layer="L3", ...)
+        else:
+            side_issues.append(...)
+    
+    # Step 4: L4（含前置检查）
+    if sample.complexity == "compound" and solution.L4_topology.agents == 1:
+        return LossTrace(layer="L4", ...)
+    
+    # 前置检查：真的需要 AI 吗？
+    if sample.requires_human:
+        return LossTrace(layer="human", ...)
+    if sample.expected_uses_missing_atoms:
+        return attribute_loss(...)  # 回到 L1
+    return LossTrace(layer="eval_error", ...)
+```
+
+---
+
+## 四、文件结构
+
+```
+agentfit/
+├── LICENSE                          # MIT
+├── docs/
+│   ├── agentfit-skeleton.md        # 四层骨架（定稿，不改）
+│   ├── agentfit-solution.md        # 方案文档
+│   ├── agentfit-implementation.md  # 本文件
+│   ├── test-scenario.md            # 测试场景执行方案
+│   └── README.md                   # 入口
+├── src/agentfit/
+│   ├── __init__.py
+│   ├── models/                     # 数据结构
+│   │   ├── solution.py             # Solution, SolidAtom, CapabilityTool, ...
+│   │   ├── loss.py                 # LossTrace, SideIssue
+│   │   └── config.py               # TrainingConfig, LambdaConfig
+│   ├── core/                       # 核心算法
+│   │   ├── train_loop.py           # 训练循环控制器
+│   │   ├── attribution.py          # 反向归因器
+│   │   ├── aggregation.py          # 损失聚合分析器
+│   │   ├── regularization.py       # 正则指标计算
+│   │   ├── regression.py           # 回归验证器
+│   │   └── transaction.py          # ChangeTransaction
+│   ├── data/                       # 数据工程
+│   │   ├── sample_pool.py          # 样本池管理
+│   │   ├── clustering.py           # 聚类分析
+│   │   └── batch.py                # 批次构建
+│   ├── executors/                  # 执行环境适配
+│   │   ├── base.py                 # 执行器接口
+│   │   └── tau2bench.py            # τ²-bench 适配器
+│   ├── solution/                   # 方案管理
+│   │   ├── builder.py              # 初始方案构建
+│   │   ├── validator.py            # 依赖验证 + 同层约束检查
+│   │   └── versioning.py           # 版本管理
+│   ├── monitoring/                 # 监控
+│   │   ├── monitor.py              # 监控协程
+│   │   └── drift.py               # 漂移检测
+│   ├── log/                        # 训练日志
+│   │   ├── training_log.py         # 哈希链日志
+│   │   └── report.py              # 报告生成
+│   └── delivery/                   # 交付
+│       ├── package.py              # 方案打包
+│       └── boundary.py             # 适用边界
+└── tests/
+    ├── test_attribution.py
+    ├── test_regularization.py
+    ├── test_transaction.py
+    ├── test_regression.py
+    └── test_scenarios/
+        ├── test_telecom.py
+        └── test_ecommerce.py
+```
+
+---
+
+## 五、执行环境适配器设计
+
+执行环境是可插拔的。任何系统只要实现三个接口就能作为 AgentFit 的执行环境：
+
+```python
+class ExecutorBase(ABC):
+    """执行环境接口。τ²-bench、自建模拟器、生产影子模式都实现这个接口。"""
+    
+    @abstractmethod
+    def execute(self, solution: Solution, sample: Sample) -> Trace:
+        """用当前方案执行一个样本，返回执行轨迹。"""
+        ...
+    
+    @abstractmethod
+    def evaluate(self, trace: Trace, expected: Expected) -> Result:
+        """评测一个执行轨迹，返回通过/失败。"""
+        ...
+    
+    @abstractmethod
+    def replay(self, solution: Solution, samples: list[Sample]) -> list[Result]:
+        """批量重跑（用于回归验证）。"""
+        ...
+
+
+
+class Tau2BenchExecutor(ExecutorBase):
+    """τ²-bench 适配器。"""
+    
+    def execute(self, solution, sample):
+        # 把 Solution 转换为 τ²-bench 可理解的 agent 配置
+        # 调用 τ²-bench 执行
+        # 把结果转换为 AgentFit 的 Trace 格式
+        ...
+    
+    def evaluate(self, trace, expected):
+        # 调用 τ²-bench 的 evaluator
+        # 转换为 AgentFit 的 Result 格式
+        ...
+```
+
+---
+
+## 六、ChangeTransaction 实现
+
+```python
+class ChangeTransaction:
+    """级联变更的原子性保障。"""
+    
+    def __init__(self, solution: Solution, changes: list[UpdateProposal]):
+        self.solution = solution
+        self.changes = changes
+        self.snapshot = None
+        self.status = "PENDING"
+    
+    def execute(self) -> Solution:
+        self.snapshot = deepcopy(self.solution)
+        self.status = "IN_PROGRESS"
+        
+        try:
+            # 按自底向上顺序应用
+            for change in sorted(self.changes, key=lambda c: c.layer):
+                self._apply(change)
+            
+            # 验证依赖完整性
+            errors = validate_existence_dependencies(self.solution)
+            if errors:
+                raise ValidationError(errors)
+            
+            # 验证通过依赖验证
+            self._commit()
+            return self.solution
+            
+        except Exception:
+            self._rollback()
+            raise
+    
+    def _commit(self):
+        self.solution.version += 1
+        self.status = "COMMITTED"
+    
+    def _rollback(self):
+        self.solution = self.snapshot
+        self.status = "ROLLED_BACK"
+```
