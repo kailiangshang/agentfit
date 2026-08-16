@@ -1,0 +1,74 @@
+"""更新建议生成（S3 内核）+ 级联检查（S4 内核）。
+
+模式 → 更新动作映射（骨架）：
+  L3 missing_rule   → 新增路由规则（条件=共性特征合取，目标=证据样本期望工具）
+  L3 routing_error  → supersede 错误规则 + 新增修正规则
+  L4 topology_mismatch → 拓扑变更（必须走 G1 人审）
+  human / eval_error → 不改方案（边界项记录）
+  L1 missing_atom   → 升级用户确认基础设施（不自动建）
+"""
+from __future__ import annotations
+
+from collections import Counter
+
+from ..core.aggregation import AggregatedLoss
+from ..core.transaction import UpdateProposal
+from ..models.loss import Sample
+from ..models.solution import Agent, Knowledge, Solution, Topology
+
+
+def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, Sample],
+                    solution: Solution) -> tuple[list[UpdateProposal], list[str]]:
+    """返回 (建议列表, 边界备注列表)。"""
+    proposals: list[UpdateProposal] = []
+    notes: list[str] = []
+
+    for (layer, mode, element), sample_ids in sorted(agg.patterns.items(), key=lambda kv: -len(kv[1])):
+        evidence = [samples_by_id[sid] for sid in sample_ids if sid in samples_by_id]
+        if layer == "L3" and mode == "missing_rule":
+            rule = _rule_from_evidence(evidence, solution)
+            if rule is not None:
+                proposals.append(UpdateProposal("L3", "add", rule,
+                                                reason=f"{len(sample_ids)} 个样本缺路由覆盖",
+                                                evidence_sample_ids=sample_ids))
+        elif layer == "L3" and mode == "routing_error" and element != "-":
+            old = solution.knowledge(element)
+            fixed = _rule_from_evidence(evidence, solution, replace_id=element)
+            if old is not None and fixed is not None:
+                proposals.append(UpdateProposal("L3", "supersede", old,
+                                                reason="错误分支下线", evidence_sample_ids=sample_ids))
+                proposals.append(UpdateProposal("L3", "add", fixed,
+                                                reason=f"{len(sample_ids)} 个样本路由错误修正",
+                                                evidence_sample_ids=sample_ids))
+        elif layer == "L4" and mode == "topology_mismatch":
+            dual = Topology(agents=[Agent("triage", "diagnostic", uses=[k.id for k in solution.routing_rules()]),
+                                    Agent("resolver", "repair", uses=[k.id for k in solution.routing_rules()])],
+                            edges=[], human_gate_positions=[], trigger_mode="passive")
+            proposals.append(UpdateProposal("L4", "add", dual,
+                                            reason="复合样本证据：需要诊断+修复双 Agent",
+                                            evidence_sample_ids=sample_ids))
+        elif layer in ("human",):
+            notes.append(f"{len(sample_ids)} 个样本归因 needs_human：纳入交付边界（保留人工）")
+        elif layer == "eval_error":
+            notes.append(f"{len(sample_ids)} 个样本归因 eval_error：评价方式需复核")
+        elif layer == "L1" and mode == "missing_atom":
+            notes.append(f"缺原子 {element}：需用户确认基础设施后才能建（不自动创建）")
+    return proposals, notes
+
+
+def _rule_from_evidence(evidence: list[Sample], solution: Solution, replace_id: str | None = None) -> Knowledge | None:
+    """从失败样本归纳新路由规则：条件 = 样本布尔特征的合取（出现率 100% 的键），目标 = 最常见期望工具。"""
+    if not evidence:
+        return None
+    bool_keys: list[str] = []
+    for key, val in evidence[0].features.items():
+        if isinstance(val, bool) and all(s.features.get(key) is val for s in evidence):
+            bool_keys.append(key if val else f"NOT {key}")
+    tool_counter = Counter(a.tool for s in evidence for a in s.expected.actions)
+    target_tool, _ = tool_counter.most_common(1)[0]
+    if solution.tool(target_tool) is None:
+        return None            # 目标工具不存在 → 级联下移场景，此处不盲建（保持最小实现）
+    rule_id = replace_id or f"rule_{target_tool}_{abs(hash(tuple(bool_keys))) % 10000}"
+    condition = " AND ".join(bool_keys) if bool_keys else None
+    return Knowledge(id=rule_id, type="routing_rule", condition=condition, dispatches_to=target_tool,
+                     description=f"训练归纳：{[s.id for s in evidence]}")
