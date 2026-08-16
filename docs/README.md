@@ -28,7 +28,7 @@ L1  Solid 层       固定原子能力: API + 数据库 + 人工审核
 |---|---|
 | [四层骨架 v4-FINAL](agentfit-skeleton.md) | 唯一指导性文档（定稿，不改） |
 | [AgentFit 方案](agentfit-solution.md) | 基于骨架的完整方案 |
-| [落地设计](agentfit-implementation.md) | 真实实现架构 |
+| [落地设计](agentfit-implementation.md) | 真实实现架构：元层 5 Agent + 7 Skill + 交互协议 + 任务分发，及对象层数据结构与算法 |
 | [测试场景](test-scenario.md) | Telecom 故障诊断全链路执行方案 |
 
 ## 竞赛提交
