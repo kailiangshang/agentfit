@@ -129,7 +129,120 @@ L2 → 只能调 L1
 
 唯一例外：L4 可直接调 L2 的人工审批能力（人工介入是架构级决策，不是知识级判断）。
 
-违反后果：L3 直接调 L1 = 绕过安全检查，可能执行危险操作。
+### 存在依赖强约束（全链路逐层支撑）
+
+**任何一层声明一个能力，下层必须已经提供支撑。不能凭空创造。**
+
+```
+L4 声明"我有诊断 Agent"
+  ↓ 这句话要成立，L3 必须已有
+L3 存在"诊断排查链和路由规则"
+  ↓ 这句话要成立，L2 必须已有
+L2 存在"safe_get_device_state 等诊断工具"
+  ↓ 这句话要成立，L1 必须已有
+L1 存在"get_device_state 原子"
+  ↓ 这句话要成立，基础设施必须已有
+基础设施存在"设备管理系统 API"
+```
+
+**每一层的每个能力，都必须能一路追溯到物理基础设施。**
+
+#### 具体例子
+
+| 层 | 声明 | 下层必须已有什么 | 如果没有 |
+|---|---|---|---|
+| L4: "我有诊断 Agent" | Agent 使用诊断知识 | L3 必须有诊断排查链 | 不能建这个 Agent，先建 L3 |
+| L3: "我有经验记录" | 知识层能查历史经验 | L2 必须有 `safe_memory_search` 工具 | 不能声明有经验，先建 L2 工具 |
+| L3: "IF 退款 THEN safe_create_refund" | 路由规则引用工具 | L2 必须有 `safe_create_refund` 工具 | 不能建这条路由，先建 L2 封装 |
+| L2: "我有 safe_memory_search" | 工具封装原子 | L1 必须有 `memory_search` 原子 | 不能建这个工具，先建 L1 原子 |
+| L2: "我有 safe_finance_review" | 工具封装人工审核 | L1 必须有 `human_review` 原子 | 不能建这个工具，先建 L1 人工原子 |
+| L1: "我有 memory_search 原子" | 原子接口真实系统 | 基础设施必须有存储后端（DB/文件/云端） | 不能建这个原子，先建基础设施 |
+
+#### 构建顺序（强制自底向上）
+
+```
+正确顺序:
+  ① 确认基础设施存在（API、数据库、存储、人工团队）
+  ② 在 L1 注册原子（每个原子对准一个真实基础设施）
+  ③ 在 L2 封装工具（每个工具只封装已存在的 L1 原子）
+  ④ 在 L3 创建知识（每条规则/链路只引用已存在的 L2 工具）
+  ⑤ 在 L4 设计拓扑（每个 Agent 只使用已存在的 L3 知识）
+
+禁止:
+  ✗ 在 L1 没有原子的情况下建 L2 工具
+  ✗ 在 L2 没有工具的情况下建 L3 路由规则
+  ✗ 在 L3 没有知识的情况下建 L4 Agent 角色
+  ✗ 在基础设施没有后端的情况下建 L1 原子
+```
+
+#### 更新时的级联检查
+
+训练中发现"需要新能力"时，不能直接在目标层创建——必须先检查下层是否支撑，如果下层缺失，更新目标下移：
+
+```
+训练发现: 样本失败因为缺少"经验回溯"能力
+归因: L3 缺少经验路由规则
+  ↓ 级联检查
+L3 经验路由 需要 L2 的 safe_memory_search
+  → L2 没有这个工具 → 更新目标下移到 L2
+    ↓ 继续检查
+L2 safe_memory_search 需要 L1 的 memory_search 原子
+  → L1 没有这个原子 → 更新目标下移到 L1
+    ↓ 继续检查
+L1 memory_search 原子需要存储基础设施
+  → 基础设施没有 → 这不是 AgentFit 能自己解决的
+  → 升级给用户: "需要你提供一个存储系统（可以是 SQLite/文件/云服务）"
+
+级联更新顺序（必须从底往上）:
+  ① 用户确认基础设施
+  ② AgentFit 建 L1 原子
+  ③ AgentFit 建 L2 工具
+  ④ AgentFit 建 L3 路由规则
+```
+
+#### 验证规则（每次方案变更后执行）
+
+```python
+def validate_existence_dependencies(solution):
+    """验证所有层间依赖完整，无悬空引用。"""
+
+    errors = []
+
+    # L1 → 基础设施
+    for atom in solution.L1_atoms:
+        if not infrastructure_exists(atom.backend):
+            errors.append(f"L1 原子 {atom.id} 引用了不存在的基础设施 {atom.backend}")
+
+    # L2 → L1
+    for tool in solution.L2_tools:
+        for wrapped_atom in tool.wraps:
+            if wrapped_atom not in solution.L1_atoms:
+                errors.append(f"L2 工具 {tool.id} 封装了不存在的 L1 原子 {wrapped_atom}")
+
+    # L3 → L2
+    for knowledge in solution.L3_knowledge:
+        for referenced_tool in knowledge.references:
+            if referenced_tool not in solution.L2_tools:
+                errors.append(f"L3 知识 {knowledge.id} 引用了不存在的 L2 工具 {referenced_tool}")
+
+    # L4 → L3
+    for element in solution.L4_topology:
+        for used_knowledge in element.uses:
+            if used_knowledge not in solution.L3_knowledge:
+                errors.append(f"L4 元素 {element.id} 使用了不存在的 L3 知识 {used_knowledge}")
+
+    return errors  # 空列表 = 验证通过
+```
+
+#### 这个约束保证了什么
+
+| 保证 | 含义 |
+|---|---|
+| **无幻影能力** | 不能声明一个没有实现支撑的功能 |
+| **全链路可追溯** | 每个能力从 L4 到基础设施都能追到底 |
+| **天然可维护** | 改某层的东西，影响范围清晰（只影响直接上层） |
+| **无技术债** | 不存在"先声明后实现"的欠账 |
+| **部署即生效** | 因为一切都是实在的，方案生成即可部署 |
 
 ---
 
