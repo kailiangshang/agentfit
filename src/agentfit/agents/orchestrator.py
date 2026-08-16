@@ -202,4 +202,9 @@ class Orchestrator:
                 "budget_exceeded": self.budget_exceeded(),
                 "log_chain_valid": self.log.verify(),
             })
+            # 运行完成仪制：训练结果 + 对 AgentFit 自身的建议
+            from ..log.meta_review import generate_meta_review
+            from ..log.report import generate_report
+            generate_report(self.auditor.store.root)
+            generate_meta_review(self.auditor.store.root)
         return self.outcomes
