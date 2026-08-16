@@ -98,7 +98,8 @@ human_review 是 L1 的标准原子:
 
 层内约束：
 - 只能通过 L2 使用能力（知识决定怎么走，走要靠工具）
-- 知识之间禁止互相引用（需要复用 → 提取公共子操作下沉为 L2，或上提为 L4 子拓扑）
+- 知识之间禁止执行时互调（一个 Skill 不能在自己步骤中调用另一个 Skill，一条排查链不能跳转到另一条排查链，一条经验记录不能以另一条经验记录作为判断依据）
+- 路由规则对 Skill/排查链的调度关系（IF X THEN 走 Skill A）是 L3 的组织职能，不视为互引
 - 知识有版本（旧版本保留可回滚）
 
 ### L4 · 行为拓扑层
@@ -156,7 +157,7 @@ L4 可直接调用 L2 的 human_review 工具，但仅限以下条件同时满�
 |---|---|---|
 | L1 | ❌ 禁止 | 原子之间无依赖。每个原子独立可用。A 调 B → A 不是真正的原子 |
 | L2 | ❌ 禁止 | 工具之间无调用。需要组合 → 上提到 L3 用 Skill/排查链组合 |
-| L3 | ❌ 禁止 | 知识之间无引用。需要复用 → 提取公共子操作下沉为 L2，或上提为 L4 子拓扑 |
+| L3 | ❌ 禁止执行时互调 | Skill 步骤调另一个 Skill / 排查链跳转另一条链 / 经验引用经验。路由规则→Skill 是调度（组织职能），不算互引 |
 | L4 | ✅ 允许（受约束） | Agent 间通信是拓扑的定义本身（拓扑 = 节点 + 边），但须满足三条约束 |
 
 #### L4 同层通信的三条约束
@@ -312,15 +313,28 @@ def validate_existence_dependencies(solution):
                 if ref in solution.L2_tools:
                     errors.append(f"L2 工具 {tool.id} 引用了同层工具 {ref}，违反同层约束")
 
-    # ── 横向: L3 同层互调禁止 ──
+    # ── 横向: L3 执行时互调禁止（调度不算）──
+    # 路由规则 references Skill/Chain = 调度（合法）
+    # Skill 步骤 calls 另一个 Skill = 执行时互调（违规）
     for knowledge in solution.L3_knowledge:
-        if hasattr(knowledge, 'references'):
-            for ref in knowledge.references:
-                if ref in solution.L3_knowledge:
+        if knowledge.type == "skill" or knowledge.type == "chain":
+            # 检查 Skill/Chain 的执行步骤是否引用了同层知识
+            for step in knowledge.steps:
+                if hasattr(step, 'calls_knowledge') and step.calls_knowledge:
+                    if step.calls_knowledge in solution.L3_knowledge:
+                        errors.append(
+                            f"L3 {knowledge.type} {knowledge.id} 的步骤 {step.id} "
+                            f"执行时调用了同层知识 {step.calls_knowledge}，违反同层约束"
+                        )
+        elif knowledge.type == "experience_record":
+            # 经验记录不能以另一条经验为判断依据
+            if hasattr(knowledge, 'based_on') and knowledge.based_on:
+                if knowledge.based_on in solution.L3_knowledge:
                     errors.append(
-                        f"L3 知识 {knowledge.id} 引用了同层知识 {ref}，"
-                        f"应提取公共子操作下沉为 L2 或上提为 L4 子拓扑"
+                        f"L3 经验记录 {knowledge.id} 以同层经验 {knowledge.based_on} 为判断依据，"
+                        f"违反同层约束"
                     )
+        # 路由规则 references Skill/Chain = 调度 → 不检查，合法
 
     # ── 横向: L4 同层通信合法性 ──
     for edge in solution.L4_topology.edges:
