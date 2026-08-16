@@ -39,7 +39,7 @@ OUTPUT_PPTX = ROOT / "agentfit-submission.pptx"
 OUTPUT_PDF = ROOT / "agentfit-submission.pdf"
 OUTPUT_SHEET = ROOT / "contact-sheet.jpg"
 
-EXPECTED_SLIDES = 17
+EXPECTED_SLIDES = 18
 PX_TO_EMU = 9525
 BROWSER_CANDIDATES = (
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",

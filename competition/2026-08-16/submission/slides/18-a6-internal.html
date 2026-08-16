@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
+<body class="slide appendix">
+<p class="eyebrow">A6 / 06 · APPENDIX</p>
+<h1 class="title">内部架构：六角色协同——系统自身即样板</h1>
+<p class="subtitle">AgentFit 用自己倡导的纪律构建自己：多角色分权 + 确定性边界 + 消息因果链，覆盖从用户提交材料到交付的全链路</p>
+<div class="top-rule"></div>
+
+<div class="panel" style="left:72px;top:206px;width:640px;height:330px;">
+<p class="label" style="left:24px;top:16px;color:#74d0c7;">Agent 分工：六角色（3 个 LLM 认知体 + 3 个确定性官员 + 1 个人审）</p>
+<table style="position:absolute;left:24px;top:50px;width:592px;border-collapse:collapse;font-size:12.5px;">
+<tr style="color:#74d0c7;"><th style="padding:5px 8px;text-align:left;">角色</th><th style="padding:5px 8px;text-align:left;">职责</th><th style="padding:5px 8px;text-align:left;">实现</th></tr>
+<tr><td style="padding:5px 8px;color:#fff;border-top:1px solid #28516d;">交互官 Steward</td><td style="padding:5px 8px;color:#a8c4d8;border-top:1px solid #28516d;">材料操作化·澄清对话·解释呈现（用户唯一出口）</td><td style="padding:5px 8px;color:#74d0c7;border-top:1px solid #28516d;">LLM</td></tr>
+<tr><td style="padding:5px 8px;color:#fff;border-top:1px solid #28516d;">编排者 Orchestrator</td><td style="padding:5px 8px;color:#a8c4d8;border-top:1px solid #28516d;">任务分发·预算熔断·收敛·λ 调节</td><td style="padding:5px 8px;color:#718190;border-top:1px solid #28516d;">确定性</td></tr>
+<tr><td style="padding:5px 8px;color:#fff;border-top:1px solid #28516d;">归因师 Attributor</td><td style="padding:5px 8px;color:#a8c4d8;border-top:1px solid #28516d;">失败样本→LossTrace（多实例并行扇出）</td><td style="padding:5px 8px;color:#74d0c7;border-top:1px solid #28516d;">LLM 槽位</td></tr>
+<tr><td style="padding:5px 8px;color:#fff;border-top:1px solid #28516d;">架构师 Architect</td><td style="padding:5px 8px;color:#a8c4d8;border-top:1px solid #28516d;">初始方案归纳·更新建议·级联检查</td><td style="padding:5px 8px;color:#74d0c7;border-top:1px solid #28516d;">LLM</td></tr>
+<tr><td style="padding:5px 8px;color:#fff;border-top:1px solid #28516d;">验证官 Validator</td><td style="padding:5px 8px;color:#a8c4d8;border-top:1px solid #28516d;">存在依赖·正则·回归裁决（COMMIT/ROLLBACK）</td><td style="padding:5px 8px;color:#f26b4b;border-top:1px solid #28516d;">纯代码</td></tr>
+<tr><td style="padding:5px 8px;color:#fff;border-top:1px solid #28516d;">审计官 Auditor</td><td style="padding:5px 8px;color:#a8c4d8;border-top:1px solid #28516d;">哈希链日志·预算监控·漂移检测</td><td style="padding:5px 8px;color:#f26b4b;border-top:1px solid #28516d;">纯代码</td></tr>
+</table>
+</div>
+
+<div class="panel soft-coral" style="left:736px;top:206px;width:472px;height:155px;">
+<p class="label" style="left:24px;top:14px;color:#f26b4b;">确定性边界（可审计的机制保证）</p>
+<p class="body-copy" style="left:24px;top:44px;width:424px;font-size:12.5px;line-height:1.5;">
+裁决 COMMIT 的验证官与审计官是<b>纯确定性代码</b>——同输入必同裁决，"禁止部分成功"机制级成立。<br>
+<span class="muted">LLM 只进认知槽位（材料操作化/归因消歧/建议生成）：版本化 + 逐次计量 + 置信度 < 0.6 升级人审</span>
+</p>
+</div>
+
+<div class="panel soft-teal" style="left:736px;top:376px;width:472px;height:160px;">
+<p class="label" style="left:24px;top:14px;color:#74d0c7;">消息因果链 + 任务分发</p>
+<p class="body-copy" style="left:24px;top:44px;width:424px;font-size:12.5px;line-height:1.5;">
+一切消息走总线（TaskMsg/ResultMsg），context_ref 串起同轮全部消息 → <b>任意决策可完整重建</b><br>
+路由表分发：INTAKE / BOOTSTRAP / ATTRIBUTE / PROPOSE / VALIDATE / REGRESSION / LOG<br>
+<span class="muted">运行时禁止角色直呼（同层纪律）· 拓扑边声明式 · 上下文按引用传递</span>
+</p>
+</div>
+
+<div class="panel" style="left:72px;top:556px;width:1136px;height:88px;border-color:#1a8d85;">
+<p class="body-copy" style="left:24px;top:14px;width:1088px;font-size:12.5px;line-height:1.5;">
+<b style="color:#fff;">Skill 与工具集成</b>：L3 Skill/排查链 调度 → L2 safe_* 封装 → L1 原子 → 可插拔执行环境（τ²-bench / 模拟器 / 生产影子模式）<br>
+<b style="color:#74d0c7;">异常分支与风险控制</b>：升级人审 · 降级 · 拒绝自动化 · 回归回滚 · 预算熔断 · 漂移触发重训练——每条异常路径都有证据与日志
+</p>
+</div>
+<p class="footer-left">AGENTFIT · APPENDIX A6</p><p class="footer-right">内部架构 · 18</p>
+</body></html>
