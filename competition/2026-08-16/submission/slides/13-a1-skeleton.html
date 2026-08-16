@@ -8,15 +8,15 @@
 
 <div class="panel soft-amber" style="left:72px;top:206px;width:556px;height:118px;">
 <p class="code-tag" style="left:24px;top:14px;color:#d6a43b;">L4 · 行为拓扑层</p>
-<p class="body-copy" style="left:24px;top:42px;width:508px;font-size:14px;line-height:1.5;">要素：Agent 数量 · 协作模式（串行/并行/层级）· 行为序列 · 人工介入位置 · 升级路径<br><span class="muted">约束：Simple First 单 Agent 起步，复杂化需失败证据 · 改拓扑影响全局需人审</span></p>
+<p class="body-copy" style="left:24px;top:42px;width:508px;font-size:14px;line-height:1.5;">要素：Agent 数量 · 协作模式 · 行为序列 · 人工介入位置 · 升级路径<br><span class="muted">多 Agent 协同与 Agent 间上下文传递在本层定义 · Simple First · 改拓扑需证据+人审</span></p>
 </div>
 <div class="panel soft-teal" style="left:652px;top:206px;width:556px;height:118px;">
 <p class="code-tag" style="left:24px;top:14px;color:#74d0c7;">L3 · 可复用知识层</p>
-<p class="body-copy" style="left:24px;top:42px;width:508px;font-size:14px;line-height:1.5;">五类知识严格区分：Skill（操作模板）· 路由规则（IF-THEN）· 排查链（有序步骤）· 决策阈值 · 经验记录<br><span class="muted">Memory = L3 经验记录，不是独立系统 · 上限 200 条，去重/过时/压缩治理</span></p>
+<p class="body-copy" style="left:24px;top:42px;width:508px;font-size:14px;line-height:1.5;">五类知识严格区分：Skill（操作模板）· 路由规则（IF-THEN）· 排查链（任务拆解为有序步骤）· 决策阈值 · 经验记录<br><span class="muted">Memory = L3 经验记录，不是独立系统 · 上限 200 条，去重/过时/压缩治理</span></p>
 </div>
 <div class="panel soft-blue" style="left:72px;top:340px;width:556px;height:118px;">
 <p class="code-tag" style="left:24px;top:14px;color:#74a8c6;">L2 · 可二次开发能力层</p>
-<p class="body-copy" style="left:24px;top:42px;width:508px;font-size:14px;line-height:1.5;">四类封装：安全包装（safe_*）· 组合能力（full_diagnostic）· 口径封装 · 送审路由<br><span class="muted">例：safe_create_refund = 验证身份 → 检查金额 → 超限送审 · L3/L4 必须经 L2 触达 L1</span></p>
+<p class="body-copy" style="left:24px;top:42px;width:508px;font-size:14px;line-height:1.5;">四类封装：安全包装（safe_*）· 组合能力（跨原子上下文传递）· 口径封装 · 送审路由<br><span class="muted">工具调用统一经 L2 触达 L1 · 例：safe_create_refund = 验证身份 → 检查金额 → 超限送审</span></p>
 </div>
 <div class="panel" style="left:652px;top:340px;width:556px;height:118px;">
 <p class="code-tag" style="left:24px;top:14px;color:#718190;">L1 · Solid 层（固定地基）</p>
