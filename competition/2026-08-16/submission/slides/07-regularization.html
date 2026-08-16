@@ -5,19 +5,21 @@
 <h1 class="title" style="font-size:38px;">正则约束：可维护性从口号变成数字</h1>
 <p class="subtitle">16 指标 × 4 层。每层正则 = max(0, worst_violation_ratio)。λ 两级调节。</p>
 <div class="top-rule"></div>
-<div class="panel" style="left:72px;top:230px;width:560px;height:200px;">
-<p class="label" style="left:96px;top:250px;color:#74d0c7;">聚合公式</p>
-<p class="body-copy" style="left:96px;top:284px;width:510px;font-family:monospace;font-size:16px;">Lx_reg = max(0, worst_violation)<br>总损失 = (1-通过率) + Σλᵢ·Li_reg</p>
+<div class="panel" style="left:72px;top:230px;width:560px;height:210px;">
+<p class="label" style="left:24px;top:18px;color:#74d0c7;">聚合公式</p>
+<p class="body-copy" style="left:24px;top:54px;width:510px;font-family:monospace;font-size:16px;line-height:1.7;">Lx_reg = max(0, worst_violation)<br>总损失 = (1-通过率)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ Σλᵢ·Li_reg</p>
+<p class="small-copy" style="left:24px;top:168px;width:510px;font-size:12px;">结构正则=方案验证器静态算 · 行为正则=归因器每轮从轨迹算</p>
 </div>
-<div class="panel" style="left:660px;top:230px;width:548px;height:200px;">
-<p class="label" style="left:684px;top:250px;color:#74d0c7;">λ 默认值（上层惩罚更重）</p>
-<p class="body-copy" style="left:684px;top:284px;width:500px;font-size:15px;">λ₁=0.1 原子耦合 · λ₂=0.2 工具复杂<br>λ₃=0.3 知识集中 · λ₄=0.4 拓扑复杂<br><span style="color:#d6a43b;font-size:13px;">Level 1: 自动 ≤±20% · Level 2: 人审 >±20%</span></p>
+<div class="panel" style="left:660px;top:230px;width:548px;height:210px;">
+<p class="label" style="left:24px;top:18px;color:#74d0c7;">λ 默认值（上层惩罚更重）</p>
+<p class="body-copy" style="left:24px;top:54px;width:500px;font-size:15px;line-height:1.6;">λ₁=0.1 原子耦合 · λ₂=0.2 工具复杂<br>λ₃=0.3 知识集中 · λ₄=0.4 拓扑复杂<br><span style="color:#d6a43b;font-size:13px;">Level 1: 自动 ≤±20% · Level 2: 人审 >±20%</span></p>
+<p class="small-copy" style="left:24px;top:168px;width:500px;font-size:12px;">λ₄>λ₃>λ₂>λ₁：越上层过度复杂越危险，惩罚越重</p>
 </div>
-<div class="panel" style="left:72px;top:460px;width:1136px;height:180px;">
-<p class="label" style="left:96px;top:484px;color:#74d0c7;">关键指标示例</p>
-<p class="body-copy" style="left:96px;top:520px;width:1088px;font-size:15px;line-height:1.6;">
+<div class="panel" style="left:72px;top:470px;width:1136px;height:180px;">
+<p class="label" style="left:24px;top:18px;color:#74d0c7;">关键指标示例（16 项中）</p>
+<p class="body-copy" style="left:24px;top:56px;width:1088px;font-size:15px;line-height:1.65;">
 <b style="color:#f26b4b;">L1 原子使用率 > 80%</b> → 一个原子做所有事 → 拆分建议<br>
-<b style="color:#f26b4b;">L3 链路覆盖度 > 60%</b> → 万能路由 → λ₃ 自动调大<br>
+<b style="color:#f26b4b;">L3 链路覆盖度 > 60%</b> → 万能路由 → λ₃ 连续 2 轮超限自动 ×1.2<br>
 <b style="color:#f26b4b;">L4 人工介入率 > 30%</b> → 自动化价值低 → 重新评估范围
 </p>
 </div>

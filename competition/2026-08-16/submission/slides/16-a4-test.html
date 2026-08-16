@@ -1,11 +1,31 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
-<body class="slide">
-<p class="eyebrow">A4 / 05 · AGENTFIT</p>
-<h1 class="title" style="font-size:38px;">测试场景执行方案</h1>
-<p class="subtitle">详见 test-scenario.md</p>
+<body class="slide appendix">
+<p class="eyebrow">A4 / 05 · APPENDIX</p>
+<h1 class="title">测试场景执行方案（Telecom）</h1>
+<p class="subtitle">五阶段全链路：环境 → 样本 → 初始方案 → 训练循环 → 对比交付 · 详见 docs/test-scenario.md</p>
 <div class="top-rule"></div>
 
-<p class="footer-left">AGENTFIT · AGENT 方案训练系统</p>
-<p class="footer-right">测试 · A4</p>
+<div style="position:absolute;left:72px;top:206px;width:1136px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+<div class="panel soft-teal" style="position:relative;height:190px;"><p class="label" style="left:16px;top:14px;color:#74d0c7;">① 环境准备</p><p class="body-copy" style="left:16px;top:44px;width:196px;font-size:12.5px;line-height:1.5;">τ²-bench telecom 环境<br><span style="color:#718190;font-size:11.5px;">DeepSeek API key<br>AgentTeams 运行底座<br>成本监控就位</span></p></div>
+<div class="panel soft-teal" style="position:relative;height:190px;"><p class="label" style="left:16px;top:14px;color:#74d0c7;">② 样本准备</p><p class="body-copy" style="left:16px;top:44px;width:196px;font-size:12.5px;line-height:1.5;">500 样本分层抽样<br><span style="color:#718190;font-size:11.5px;">训练/回归/测试 = 6:2:2<br>按故障类型分层<br>难度标签 A-D 四组</span></p></div>
+<div class="panel soft-amber" style="position:relative;height:190px;"><p class="label" style="left:16px;top:14px;color:#d6a43b;">③ 初始方案</p><p class="body-copy" style="left:16px;top:44px;width:196px;font-size:12.5px;line-height:1.5;">最简起步（Simple First）<br><span style="color:#718190;font-size:11.5px;">单 Agent + 基础工具<br>从样本归纳 L3 初始链路<br>λ 用默认值</span></p></div>
+<div class="panel soft-coral" style="position:relative;height:190px;"><p class="label" style="left:16px;top:14px;color:#f26b4b;">④ 训练循环</p><p class="body-copy" style="left:16px;top:44px;width:196px;font-size:12.5px;line-height:1.5;">九步闭环迭代<br><span style="color:#718190;font-size:11.5px;">每轮 50 样本<br>归因→更新→回归<br>收敛即停（预计 8-10 轮）</span></p></div>
+<div class="panel soft-blue" style="position:relative;height:190px;"><p class="label" style="left:16px;top:14px;color:#74a8c6;">⑤ 对比交付</p><p class="body-copy" style="left:16px;top:44px;width:196px;font-size:12.5px;line-height:1.5;">A/B/C/D 四组对照<br><span style="color:#718190;font-size:11.5px;">baseline vs 训练后<br>产出四可报告<br>交付方案包+边界</span></p></div>
+</div>
+
+<div class="panel" style="left:72px;top:416px;width:560px;height:120px;">
+<p class="label" style="left:24px;top:14px;color:#74d0c7;">预算估算（全流程）</p>
+<p class="body-copy" style="left:24px;top:46px;width:510px;font-size:13.5px;line-height:1.55;">500 样本 × $0.006 = $3.00（一轮）<br>训练+回归+测试 ≈ <b class="teal">$7.05 总预算</b> · 超支自动熔断</p>
+</div>
+<div class="panel" style="left:652px;top:416px;width:556px;height:120px;">
+<p class="label" style="left:24px;top:14px;color:#74d0c7;">已完成的实测（不是空想）</p>
+<p class="body-copy" style="left:24px;top:46px;width:508px;font-size:13.5px;line-height:1.55;">τ²-bench telecom 10 样本已跑通：<b class="teal">80% 通过率</b> · $0.006/样本<br>AgentTeams 平台 8 轮真实运行（R1-R8）已完成</p>
+</div>
+
+<div class="panel" style="left:72px;top:552px;width:1136px;height:92px;border-color:#1a8d85;">
+<p class="label" style="left:24px;top:12px;color:#74d0c7;">成功标准</p>
+<p class="body-copy" style="left:24px;top:42px;width:1088px;font-size:13px;">通过率 ≥ baseline 且正则全绿 · 回归池 100% 不遗忘 · 每个失败样本有 LossTrace · 交付五选一结论有证据 · 总成本 < $10</p>
+</div>
+<p class="footer-left">AGENTFIT · APPENDIX A4</p><p class="footer-right">测试方案 · 16</p>
 </body></html>

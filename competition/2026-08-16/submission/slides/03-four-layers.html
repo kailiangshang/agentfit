@@ -4,30 +4,30 @@
 <p class="subtitle" style="top:166px;">每一层只做一件事。层间逐层调用，同层禁止执行时互调。</p><div class="top-rule" style="top:208px;"></div>
 
 <div class="panel soft-amber" style="left:72px;top:230px;width:1136px;height:88px;">
-<p class="code-tag" style="left:96px;top:246px;color:#d6a43b;">L4 · 行为拓扑层</p>
-<p class="section-title" style="left:96px;top:268px;font-size:17px;">Agent 架构 + 协作模式 + 行为序列 + 人工介入位置</p>
-<p class="small-copy" style="left:700px;top:270px;width:480px;font-size:13px;color:#d6a43b;">更新频率：低（需证据支撑）</p>
+<p class="code-tag" style="left:24px;top:14px;color:#d6a43b;">L4 · 行为拓扑层</p>
+<p class="section-title" style="left:24px;top:36px;font-size:17px;">Agent 架构 + 协作模式 + 行为序列 + 人工介入位置</p>
+<p class="small-copy" style="left:628px;top:38px;width:480px;font-size:13px;color:#d6a43b;">更新频率：低（需失败证据支撑）· Simple First 单 Agent 起步</p>
 </div>
 <div style="position:absolute;left:120px;top:318px;width:2px;height:18px;background:#28516d;"></div>
 
 <div class="panel soft-teal" style="left:72px;top:336px;width:1136px;height:88px;">
-<p class="code-tag" style="left:96px;top:352px;color:#74d0c7;">L3 · 可复用知识层</p>
-<p class="section-title" style="left:96px;top:374px;font-size:17px;">Skill + 路由规则 + 排查链 + 决策阈值 + 经验记录</p>
-<p class="small-copy" style="left:700px;top:376px;width:480px;font-size:13px;color:#74d0c7;">更新频率：高（主要训练目标）</p>
+<p class="code-tag" style="left:24px;top:14px;color:#74d0c7;">L3 · 可复用知识层</p>
+<p class="section-title" style="left:24px;top:36px;font-size:17px;">Skill + 路由规则 + 排查链 + 决策阈值 + 经验记录</p>
+<p class="small-copy" style="left:628px;top:38px;width:480px;font-size:13px;color:#74d0c7;">更新频率：高（主要训练目标）· Memory 是 L3 的经验记录</p>
 </div>
 <div style="position:absolute;left:120px;top:424px;width:2px;height:18px;background:#28516d;"></div>
 
 <div class="panel soft-blue" style="left:72px;top:442px;width:1136px;height:88px;">
-<p class="code-tag" style="left:96px;top:458px;color:#74a8c6;">L2 · 可二次开发能力层</p>
-<p class="section-title" style="left:96px;top:480px;font-size:17px;">对 Solid 的安全封装 + 组合 + 口径统一 + 送审路由</p>
-<p class="small-copy" style="left:700px;top:482px;width:480px;font-size:13px;color:#74a8c6;">更新频率：中</p>
+<p class="code-tag" style="left:24px;top:14px;color:#74a8c6;">L2 · 可二次开发能力层</p>
+<p class="section-title" style="left:24px;top:36px;font-size:17px;">对 Solid 的安全封装 + 组合 + 口径统一 + 送审路由</p>
+<p class="small-copy" style="left:628px;top:38px;width:480px;font-size:13px;color:#74a8c6;">更新频率：中 · 例：safe_create_refund 验证→检查→超限送审</p>
 </div>
 <div style="position:absolute;left:120px;top:530px;width:2px;height:18px;background:#28516d;"></div>
 
 <div class="panel" style="left:72px;top:548px;width:1136px;height:88px;background:#132f47;">
-<p class="code-tag" style="left:96px;top:564px;color:#718190;">L1 · Solid 层（固定地基）</p>
-<p class="section-title" style="left:96px;top:586px;font-size:17px;">固定原子能力：API + 数据库 + 知识库 + 外部系统 + 人工审核</p>
-<p class="small-copy" style="left:700px;top:588px;width:480px;font-size:13px;color:#718190;">更新频率：最低（只增不删）</p>
+<p class="code-tag" style="left:24px;top:14px;color:#718190;">L1 · Solid 层（固定地基）</p>
+<p class="section-title" style="left:24px;top:36px;font-size:17px;">固定原子能力：API + 数据库 + 知识库 + 外部系统 + 人工审核</p>
+<p class="small-copy" style="left:628px;top:38px;width:480px;font-size:13px;color:#718190;">更新频率：最低（只增不删）· human_review 与 query_database 同级</p>
 </div>
 
 <p class="body-copy" style="left:72px;top:656px;width:1136px;text-align:center;font-size:15px;font-weight:700;color:#74d0c7;">铁律：L3 不能直接调 L1 · 同层禁止执行时互调 · 每个能力必须追溯到物理基础设施</p>

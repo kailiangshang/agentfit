@@ -5,17 +5,18 @@
 <h1 class="title" style="font-size:38px;">可追溯：失败 → 根因 → 修复 → 验证</h1>
 <p class="subtitle">每个失败样本从 L1 到 L4 全链路归因，附带因果性验证。</p>
 <div class="top-rule"></div>
-<div class="panel" style="left:72px;top:230px;width:1136px;height:300px;">
-<p class="label" style="left:96px;top:254px;color:#74d0c7;">损失轨迹示例</p>
-<div style="position:absolute;left:96px;top:290px;width:1088px;font-family:monospace;font-size:14px;color:#a8c4d8;line-height:1.7;background:#0b2236;padding:16px;border-radius:8px;border:1px solid #28516d;">
+<div class="panel" style="left:72px;top:230px;width:1136px;height:310px;">
+<p class="label" style="left:24px;top:18px;color:#74d0c7;">损失轨迹示例（LossTrace）</p>
+<div style="position:absolute;left:24px;top:54px;width:1088px;font-family:monospace;font-size:14px;color:#a8c4d8;line-height:1.7;background:#0b2236;padding:14px;border-radius:8px;border:1px solid #28516d;">
 样本 #42 失败（复合根因：飞行模式 + 漫游）<br>
 L1: 原子存在 ✓ → 跨过<br>
 L2: 封装正确 ✓ → 跨过<br>
 L3: 路由只处理了漫游（主因），没处理飞行模式（次因）<br>
-&nbsp;&nbsp;&nbsp;&nbsp;因果性验证: "修复路由后能通过吗？" → 是 → <b style="color:#74d0c7;">确认根因 = L3</b>
+&nbsp;&nbsp;&nbsp;&nbsp;因果性验证: "修复路由后能通过吗？" → 是 → <b style="color:#74d0c7;">确认根因 = L3</b><br>
+附带问题: L2 日志格式（旁路，不阻塞） → 记录在案
 </div></div>
-<div class="panel" style="left:72px;top:560px;width:1136px;height:60px;border-color:#1a8d85;">
-<p class="body-copy" style="left:96px;top:578px;width:1088px;font-size:15px;font-weight:700;color:#74d0c7;text-align:center;">从失败样本 → 具体层的具体规则的具体分支 → 全链路可追溯</p>
+<div class="panel" style="left:72px;top:570px;width:1136px;height:60px;border-color:#1a8d85;">
+<p class="body-copy" style="left:24px;top:20px;width:1088px;font-size:15px;font-weight:700;color:#74d0c7;text-align:center;">从失败样本 → 具体层的具体规则的具体分支 → 全链路可追溯</p>
 </div>
 <p class="footer-left">AGENTFIT · AGENT 方案训练系统</p>
 <p class="footer-right">损失轨迹 · 09</p>

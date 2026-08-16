@@ -4,8 +4,8 @@
 <p class="subtitle" style="top:166px;">从 L1 开始逐层检查。找到异常后验证因果性，不是"找到即停"。</p><div class="top-rule" style="top:208px;"></div>
 
 <div class="panel panel-dark" style="left:72px;top:230px;width:560px;height:340px;">
-<p class="label" style="left:96px;top:254px;color:#74d0c7;">归因流程</p>
-<p class="body-copy" style="left:96px;top:290px;width:510px;font-size:15px;line-height:1.5;">
+<p class="label" style="left:24px;top:20px;color:#74d0c7;">归因流程（自底向上）</p>
+<p class="body-copy" style="left:24px;top:54px;width:510px;font-size:15px;line-height:1.5;">
 <b style="color:#a8c4d8;">Step 1 → L1</b> "原子存在吗？"<br>
 <span class="muted" style="font-size:13px;">缺 → 验证因果 → 是根因则停 / 否则标记附带问题</span><br>
 <b style="color:#74a8c6;">Step 2 → L2</b> "封装正确吗？"<br>
@@ -18,17 +18,17 @@
 </div>
 
 <div class="panel panel-dark" style="left:660px;top:230px;width:548px;height:340px;">
-<p class="label" style="left:684px;top:254px;color:#f26b4b;">因果性验证（反事实推演）</p>
-<p class="body-copy" style="left:684px;top:290px;width:500px;font-size:15px;line-height:1.5;">
+<p class="label" style="left:24px;top:20px;color:#f26b4b;">因果性验证（反事实推演）</p>
+<p class="body-copy" style="left:24px;top:54px;width:500px;font-size:15px;line-height:1.5;">
 发现异常 ≠ 导致失败。<br><br>
 <b>验证方法</b>："如果这个异常被修复，样本能通过吗？"<br><br>
 <span class="muted" style="font-size:13px;">例：L2 有日志格式问题（旁路操作），但真正失败原因是 L3 路由错误。验证因果性后跳过 L2 日志问题，正确归因到 L3。</span><br><br>
-<b class="teal">附带问题</b>：不构成根因的异常记录为附带问题，在后续训练中可能升级为根因。
+<b class="teal">附带问题</b>：不构成根因的异常记录在案，后续训练中可能升级为根因。
 </p>
 </div>
 
 <div class="panel" style="left:72px;top:596px;width:1136px;height:70px;background:#132f47;border-color:#1a8d85;">
-<p class="body-copy" style="left:96px;top:618px;width:1088px;font-size:15px;font-weight:700;color:#74d0c7;text-align:center;">就近归因 · 逐层排查 · 找到即验证 · 附带问题不阻塞</p>
+<p class="body-copy" style="left:24px;top:24px;width:1088px;font-size:15px;font-weight:700;color:#74d0c7;text-align:center;">就近归因 · 逐层排查 · 找到即验证 · 附带问题不阻塞</p>
 </div>
 <p class="footer-left">AGENTFIT · 反向归因</p><p class="footer-right">归因算法 · 06</p>
 </body></html>

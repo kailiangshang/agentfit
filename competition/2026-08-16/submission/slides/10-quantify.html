@@ -11,12 +11,14 @@
 <div class="panel soft-teal" style="position:relative;height:140px;"><p class="big-number" style="left:20px;top:20px;font-size:36px;">100%</p><p class="label" style="left:20px;top:70px;color:#74d0c7;">回归通过率</p><p class="small-copy" style="left:20px;top:96px;font-size:12px;">必须 100%</p></div>
 <div class="panel soft-teal" style="position:relative;height:140px;"><p class="big-number" style="left:20px;top:20px;font-size:36px;color:#d6a43b;">0.08</p><p class="label" style="left:20px;top:70px;color:#74d0c7;">L3 正则值</p><p class="small-copy" style="left:20px;top:96px;font-size:12px;">阈值 0.10 内</p></div>
 </div>
-<div class="panel" style="left:72px;top:400px;width:1136px;height:200px;">
-<p class="label" style="left:96px;top:424px;color:#74d0c7;">各层损失分布（第 3 轮）</p>
-<p class="body-copy" style="left:96px;top:460px;width:1088px;font-size:16px;line-height:1.6;">
-L1 ████░░░░░░░░░░ 0 (0%)<br>
+<div class="panel" style="left:72px;top:400px;width:1136px;height:230px;">
+<p class="label" style="left:24px;top:18px;color:#74d0c7;">各层损失分布（第 3 轮）— 归因给哪层，一目了然</p>
+<p class="body-copy" style="left:24px;top:56px;width:1088px;font-size:16px;line-height:1.7;font-family:monospace;">
+L1 ░░░░░░░░░░░░░░ 0 (0%)<br>
 L2 ████████░░░░░░ 1 (4%) &nbsp;&nbsp; L3 █████████████░ 4 (16%) &nbsp;&nbsp; 人工 ████████░░░ 5 (20%)
-</p></div>
+</p>
+<p class="small-copy" style="left:24px;top:186px;width:1088px;font-size:12px;">解读：主要损失在 L3 路由 → 本轮更新集中在 L3；20% 需人工 → 交付形态选"部分自动"的证据</p>
+</div>
 <p class="footer-left">AGENTFIT · AGENT 方案训练系统</p>
 <p class="footer-right">指标 · 10</p>
 </body></html>

@@ -1,11 +1,46 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="common.css"></head>
-<body class="slide">
-<p class="eyebrow">A3 / 05 · AGENTFIT</p>
-<h1 class="title" style="font-size:38px;">正则指标完整清单</h1>
-<p class="subtitle">详见 agentfit-skeleton.md</p>
+<body class="slide appendix">
+<p class="eyebrow">A3 / 05 · APPENDIX</p>
+<h1 class="title">正则指标完整清单（16 项）</h1>
+<p class="subtitle">每个指标 = 三元组（数据源, 计算时机, 计算者）· 完整操作定义见 docs/agentfit-skeleton.md §三</p>
 <div class="top-rule"></div>
 
-<p class="footer-left">AGENTFIT · AGENT 方案训练系统</p>
-<p class="footer-right">正则 · A3</p>
+<div class="panel" style="left:72px;top:206px;width:556px;height:250px;">
+<p class="label" style="left:24px;top:14px;color:#74d0c7;">结构性正则（静态 · 方案更新后 · 方案验证器算）</p>
+<table style="position:absolute;left:24px;top:46px;width:508px;border-collapse:collapse;font-size:12.5px;">
+<tr style="color:#74d0c7;"><th style="padding:4px 8px;text-align:left;">指标</th><th style="padding:4px 8px;text-align:left;">层</th><th style="padding:4px 8px;text-align:left;">阈值</th></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">原子使用率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L1</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>80% 过耦合</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">原子稀缺率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L1</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>30% 冗余</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">封装复杂度</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L2</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>5 原子太复杂</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">工具复用率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L2</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;"><2 链路低复用</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">链路长度 / 分支因子</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L3</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>10 步 / >15 分支</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">经验引用率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L3</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>30% 未引用</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">Agent 数量</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L4</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>5 需要理由</td></tr>
+</table>
+</div>
+
+<div class="panel" style="left:652px;top:206px;width:556px;height:250px;">
+<p class="label" style="left:24px;top:14px;color:#74d0c7;">行为性正则（动态 · 每轮训练后 · 归因器从轨迹算）</p>
+<table style="position:absolute;left:24px;top:46px;width:508px;border-collapse:collapse;font-size:12.5px;">
+<tr style="color:#74d0c7;"><th style="padding:4px 8px;text-align:left;">指标</th><th style="padding:4px 8px;text-align:left;">层</th><th style="padding:4px 8px;text-align:left;">阈值</th></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">原子增长率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L1</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>5 个/轮过快</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">审批延迟</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L2</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>5min 瓶颈</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">链路覆盖度</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L3</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>60% 过集中</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">知识冲突率 / 经验去重度</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L3</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>5% / >20%</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">人工介入率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L4</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>30% 价值低</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">通信开销</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L4</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>10 轮/样本</td></tr>
+<tr><td style="padding:4px 8px;color:#a8c4d8;border-top:1px solid #28516d;">拓扑变更频率</td><td style="padding:4px 8px;color:#718190;border-top:1px solid #28516d;">L4</td><td style="padding:4px 8px;color:#f26b4b;border-top:1px solid #28516d;">>1 次/轮不稳</td></tr>
+</table>
+</div>
+
+<div class="panel soft-amber" style="left:72px;top:476px;width:1136px;height:168px;">
+<p class="label" style="left:24px;top:14px;color:#d6a43b;">λ 两级调节（防"单点耦合爆炸"）</p>
+<p class="body-copy" style="left:24px;top:48px;width:1088px;font-size:13.5px;line-height:1.6;">
+<b style="color:#d6a43b;">Level 1 自动</b>：单 λ ≤±20%，对应层正则连续 2 轮超阈值自动调，仅记日志 · 每轮最多调 1 个，累计 ≤±50%<br>
+<b style="color:#d6a43b;">Level 2 人审</b>：单 λ >±20% 或多 λ 同调 · 生成结构化建议（触发/当前值/建议值/预期影响/权衡）进人审队列 · 用户不响应 = 不应用<br>
+<span class="muted">用户场景：小团队 λ 全×2 宁简单 · 合规严格 λ₂ 调大要透明 · 极致通过率 λ 调小容过拟合</span>
+</p>
+</div>
+<p class="footer-left">AGENTFIT · APPENDIX A3</p><p class="footer-right">正则清单 · 15</p>
 </body></html>
