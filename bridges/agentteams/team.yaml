@@ -1,11 +1,11 @@
 apiVersion: hiclaw.io/v1beta1
 kind: Team
 metadata:
-  name: agentfit-v2
+  name: agentfit
 spec:
-  teamName: agentfit-v2
+  teamName: agentfit
   description: >-
-    AgentFit v2 元层认知团队（确定性边界版）：只有 3 个 LLM 认知角色上平台——
+    AgentFit 元层认知团队（确定性边界版，本清单即唯一正本，改动后重新 apply 迭代）：只有 3 个 LLM 认知角色上平台——
     Steward（用户唯一对话出口）/ Attributor（归因师）/ Architect（架构师）。
     Orchestrator/Validator/Auditor 是库内纯确定性代码，不占 Worker
     （裁决可复现 = 可审计的机制保证）。设计依据 docs/agentfit-implementation.md §一。
