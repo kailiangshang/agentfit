@@ -12,6 +12,7 @@ from .agents.orchestrator import Orchestrator
 from .agents.team import build_team
 from .dashboard import generate_dashboard
 from .data.sample_pool import SamplePool
+from .delivery.approval import assert_delivery_approved, verify_delivery_decision
 from .delivery.boundary import write_boundary
 from .delivery.package import export_evidence_package, export_package
 from .executors.simulator import SimulatorExecutor
@@ -224,22 +225,49 @@ def _validate_episodes(store: RunStore) -> list[dict]:
         candidate_refs.add(canonical_hash(solution_from_dict(snapshot)))
     episodes = []
     for path in sorted((store.root / "episodes").glob("*.json")):
-        episode = json.loads(path.read_text(encoding="utf-8"))
-        identity = episode.get("identity") or {}
-        if identity.get("candidate_ref") not in candidate_refs:
+        episode_data = json.loads(path.read_text(encoding="utf-8"))
+        identity_data = episode_data.get("identity") or {}
+        ref_data = identity_data.get("sample_ref") or {}
+        try:
+            identity = EvaluationIdentity(
+                candidate_ref=identity_data["candidate_ref"],
+                sample_ref=SampleRef(ref_data["sample_id"], ref_data["content_hash"]),
+                run_index=identity_data["run_index"],
+            )
+            episode = Episode(
+                identity=identity,
+                trace_ref=episode_data["trace_ref"],
+                result=episode_data["result"],
+                cost_usd=episode_data["cost_usd"],
+                evidence_hash=episode_data["evidence_hash"],
+                status=episode_data.get("status", "completed"),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CliError(f"invalid RunStore: malformed Episode: {path.name}") from exc
+        if episode.status != "completed":
+            raise CliError("invalid RunStore: Episode is not completed")
+        if path.name != f"{identity.key}.json":
+            raise CliError("invalid RunStore: Episode filename does not match identity")
+        if identity.candidate_ref not in candidate_refs:
             raise CliError("invalid RunStore: Episode candidate snapshot mismatch")
-        trace_path = _safe_artifact(store.root, str(episode.get("trace_ref", "")))
+        expected_trace_ref = f"traces/{identity.key}.json"
+        if episode.trace_ref != expected_trace_ref:
+            raise CliError("invalid RunStore: Episode trace reference does not match identity")
+        trace_path = _safe_artifact(store.root, episode.trace_ref)
         if not trace_path.is_file():
             raise CliError("invalid RunStore: Episode trace missing")
         trace = json.loads(trace_path.read_text(encoding="utf-8"))
-        sample_id = (identity.get("sample_ref") or {}).get("sample_id")
+        sample_id = identity.sample_ref.sample_id
         if trace.get("sample_id") != sample_id:
             raise CliError("invalid RunStore: Episode trace sample mismatch")
-        if episode.get("result") != trace.get("result"):
+        expected_trace_result = "PASS" if episode.result == "PASS" else "FAIL"
+        if trace.get("result") != expected_trace_result:
             raise CliError("invalid RunStore: Episode result does not match Trace")
-        if episode.get("evidence_hash") != canonical_hash(trace):
+        if float(trace.get("cost_usd", 0)) != episode.cost_usd:
+            raise CliError("invalid RunStore: Episode cost does not match Trace")
+        if episode.evidence_hash != canonical_hash(trace):
             raise CliError("invalid RunStore: Episode evidence hash mismatch")
-        episodes.append(episode)
+        episodes.append(episode_data)
     if not episodes:
         raise CliError("invalid RunStore: no Episode evidence")
     return episodes
@@ -252,12 +280,22 @@ def _evaluation_from_episodes(collection: SampleSetCollection,
         for manifest in collection.manifests for ref in manifest.sample_refs
     }
     grouped: dict[SampleSetPurpose, list[dict]] = {purpose: [] for purpose in SampleSetPurpose}
+    expected_identities = {
+        (ref.sample_id, ref.content_hash, 0)
+        for manifest in collection.manifests for ref in manifest.sample_refs
+    }
+    actual_identities = set()
     for episode in episodes:
         ref = episode["identity"]["sample_ref"]
+        actual_identities.add((
+            ref.get("sample_id"), ref.get("content_hash"), episode["identity"].get("run_index"),
+        ))
         purpose = purpose_by_ref.get((ref.get("sample_id"), ref.get("content_hash")))
         if purpose is None:
             raise CliError("invalid RunStore: Episode references sample outside frozen sets")
         grouped[purpose].append(episode)
+    if actual_identities != expected_identities or len(episodes) != len(expected_identities):
+        raise CliError("invalid RunStore: every frozen sample requires exactly one completed Episode")
     return {purpose.value: _purpose_metrics(grouped[purpose]) for purpose in SampleSetPurpose}
 
 
@@ -281,6 +319,11 @@ def _validate_summary(store: RunStore, collection: SampleSetCollection,
         raise CliError("invalid RunStore: final evaluation mixes candidate identities")
     expected["candidate_ref"] = next(iter(candidate_refs))
     expected["candidate_frozen"] = True
+    final_snapshot = store.load_json(
+        f"solution_versions/v{expected['final_solution_version']:03d}.json"
+    )["solution"]
+    if canonical_hash(solution_from_dict(final_snapshot)) != expected["candidate_ref"]:
+        raise CliError("invalid RunStore: final candidate was not evaluated")
     for key, value in expected.items():
         if summary.get(key) != value:
             raise CliError(f"invalid RunStore: summary mismatch: {key}")
@@ -300,10 +343,13 @@ def _validate_evidence_manifest(store: RunStore) -> None:
             raise CliError(f"invalid RunStore: evidence manifest mismatch: {relative}")
 
 
-def _assert_valid_runstore(path: Path) -> RunStore:
+def assert_valid_runstore(path: Path) -> RunStore:
     if not path.is_dir():
         raise CliError("invalid RunStore: directory does not exist")
-    required = ("run.json", "samples.json", "sample_sets.json", "summary.json")
+    required = (
+        "run.json", "samples.json", "sample_sets.json", "summary.json",
+        "delivery_decision.json",
+    )
     if any(not (path / name).is_file() for name in required):
         raise CliError("invalid RunStore: required artifacts missing")
     store = RunStore(path)
@@ -315,28 +361,28 @@ def _assert_valid_runstore(path: Path) -> RunStore:
     episodes = _validate_episodes(store)
     _validate_summary(store, collection, episodes)
     _validate_evidence_manifest(store)
+    verify_delivery_decision(store)
     return store
 
 
 def _validate(args: argparse.Namespace) -> int:
-    _assert_valid_runstore(args.run_dir)
+    assert_valid_runstore(args.run_dir)
     print("RunStore valid")
     return 0
 
 
 def _report(args: argparse.Namespace) -> int:
-    store = _assert_valid_runstore(args.run_dir)
+    store = assert_valid_runstore(args.run_dir)
     print(generate_report(store.root))
     print(generate_dashboard(store.root))
     return 0
 
 
 def _export(args: argparse.Namespace) -> int:
-    store = _assert_valid_runstore(args.run_dir)
-    if not store.load_json("summary.json").get("delivery_approved"):
-        raise CliError("G3 delivery approval is required before export")
-    latest = store.solution_versions()[-1]
-    snapshot = store.load_json(f"solution_versions/v{latest:03d}.json")["solution"]
+    store = assert_valid_runstore(args.run_dir)
+    decision = assert_delivery_approved(store)
+    approved_version = decision["final_solution_version"]
+    snapshot = store.load_json(f"solution_versions/v{approved_version:03d}.json")["solution"]
     solution = solution_from_dict(snapshot)
     write_boundary(store.root)
     print(export_package(solution, store.root))

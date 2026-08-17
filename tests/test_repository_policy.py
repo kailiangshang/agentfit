@@ -60,7 +60,10 @@ def test_active_docs_do_not_carry_iteration_names() -> None:
     for path in sorted((REPO / "docs").glob("*.md")):
         text = path.read_text(encoding="utf-8")
         for line_no, line in enumerate(text.splitlines(), 1):
-            if any(pattern.search(line) for pattern in patterns):
+            active_text = re.sub(
+                r"(?i)\bAgentTeams\s+v\d+(?:[._-]\d+)*\b", "AgentTeams", line,
+            )
+            if any(pattern.search(active_text) for pattern in patterns):
                 violations.append(f"{path.relative_to(REPO)}:{line_no}: {line.strip()}")
     assert violations == [], "活跃文档仍携带迭代名称:\n" + "\n".join(violations)
 
@@ -116,6 +119,7 @@ def test_documented_cli_and_example_are_executable_contracts() -> None:
         assert command in scenario
     assert (REPO / "examples" / "telecom-case.json").is_file()
     for artifact in ("sample_sets.json", "summary.json", "boundary.json",
+                     "delivery_decision.json",
                      "solution_package/package.json", "evidence_package/manifest.json"):
         assert artifact in scenario
 

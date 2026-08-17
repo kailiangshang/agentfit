@@ -39,6 +39,7 @@ output/telecom-demo/
 ├── traces/
 ├── episodes/
 ├── summary.json
+├── delivery_decision.json
 ├── training_report.md
 ├── meta_review.md
 ├── dashboard.html
@@ -47,7 +48,7 @@ output/telecom-demo/
 └── evidence_package/manifest.json
 ```
 
-`agentfit validate` 会从磁盘重新计算 epoch 哈希链，不接受 `summary.json` 中未经验证的布尔值。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
+`agentfit validate` 会从磁盘重新计算 epoch 哈希链、四类冻结样本的 Episode 覆盖和最终候选身份，不接受 `summary.json` 中未经验证的布尔值。`delivery_decision.json` 将 Human G3 结果绑定到获评测候选、四集合指标和决策前证据哈希；核心与 AgentTeams 导出共用该门禁。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
 
 本地命令只用 adaptation 集合驱动方案更新；候选冻结后会分别为四类集合生成 Episode 和指标，再请求 G3。validation、sealed_holdout 和 stress_and_failure 只用于评价，不把结果反向写入方案。当前 Executor 仍是确定性模拟器，因此这些结果只能证明合同和调度闭环，不得描述为真实模型泛化效果。
 
@@ -67,7 +68,7 @@ python bridges/agentteams/apply_team.py \
   --manifest bridges/agentteams/team.yaml
 ```
 
-状态回读只把 `agentfit` 前缀的其他 Team 识别为本项目遗留对象，不触碰无关 Team。列表接口无法返回 Worker/Registry 内容时，结果标记为 `unverified`，不会误报 `in_sync`。
+状态回读只把 `agentfit` 前缀的其他 Team 识别为本项目遗留对象，不触碰无关 Team。AgentTeams v1.1.2 的扁平列表结果只能核对 Team/Worker 成员；拿不到 model、runtime、soul 和 Registry 注解时，对应项明确标记为 `unverified`，不会误报 `in_sync` 或伪称完整规格一致。完整 drift 需要平台返回原始 Team/Worker 规格。
 
 AgentTeams 的 Team Active 只证明部署对象存在；只有 Matrix 消息、模型清单、工具 Trace、成本和导出哈希齐全时，才能证明一次真实运行完成。
 

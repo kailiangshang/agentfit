@@ -200,6 +200,95 @@ def test_export_requires_g3_delivery_approval(tmp_path: Path) -> None:
     assert "G3" in exported.stderr
 
 
+def test_g3_approval_cannot_be_forged_by_flipping_summary_bit(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    assert _run("train", "--case", str(case), "--output", str(run_dir)).returncode == 0
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["delivery_approved"] is False
+    summary["delivery_approved"] = True
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    validated = _run("validate", str(run_dir))
+    assert validated.returncode != 0
+    assert "delivery decision" in validated.stderr
+    exported = _run("export", str(run_dir))
+    assert exported.returncode != 0
+
+
+def test_validate_rejects_unevaluated_latest_candidate(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    assert _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve").returncode == 0
+
+    versions = sorted((run_dir / "solution_versions").glob("v*.json"))
+    latest = json.loads(versions[-1].read_text(encoding="utf-8"))
+    next_version = latest["version"] + 1
+    latest["version"] = next_version
+    latest["solution"]["version"] = next_version
+    latest["solution"]["L4_topology"]["trigger_mode"] = "unevaluated"
+    (run_dir / "solution_versions" / f"v{next_version:03d}.json").write_text(
+        json.dumps(latest), encoding="utf-8",
+    )
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["final_solution_version"] = next_version
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    validated = _run("validate", str(run_dir))
+    assert validated.returncode != 0
+    assert "candidate" in validated.stderr
+
+
+def test_validate_requires_episode_for_every_frozen_sample(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    doc = json.loads(case.read_text(encoding="utf-8"))
+    doc["samples"].append({
+        "id": "sample-validation-extra",
+        "features": {"validation_extra": True},
+        "expected": {"actions": [{"tool": "safe_fix_validation_extra", "params": {}}], "outcome": {}},
+        "requires_human": False,
+        "complexity": "simple",
+    })
+    doc["sample_sets"][1]["sample_ids"].append("sample-validation-extra")
+    case.write_text(json.dumps(doc), encoding="utf-8")
+    assert _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve").returncode == 0
+
+    removed = None
+    remaining_validation = []
+    for episode_path in (run_dir / "episodes").glob("*.json"):
+        episode = json.loads(episode_path.read_text(encoding="utf-8"))
+        sample_id = episode["identity"]["sample_ref"]["sample_id"]
+        if sample_id == "sample-validation-extra":
+            removed = episode
+            episode_path.unlink()
+            (run_dir / episode["trace_ref"]).unlink()
+        elif sample_id == "sample-2":
+            remaining_validation.append(episode)
+    assert removed is not None and len(remaining_validation) == 1
+    episode = remaining_validation[0]
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["evaluation_by_purpose"]["validation"] = {
+        "total": 1,
+        "passed": int(episode["result"] == "PASS"),
+        "failed": int(episode["result"] == "FAIL"),
+        "errors": int(episode["result"] == "ERROR"),
+        "pass_rate": 1.0 if episode["result"] == "PASS" else 0.0,
+        "cost_usd": episode["cost_usd"],
+    }
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    validated = _run("validate", str(run_dir))
+    assert validated.returncode != 0
+    assert "frozen sample" in validated.stderr
+
+
 def test_validate_recomputes_summary_and_episode_result(tmp_path: Path) -> None:
     case = tmp_path / "case.json"
     _write_case(case)

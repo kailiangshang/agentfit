@@ -124,6 +124,7 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 - 候选快照及内容哈希；
 - Episode、Trace、LossTrace、消息因果链；
 - ChangeTransaction、Human 决策和回归结果；
+- 与候选和最终证据哈希绑定的 G3 交付决策；
 - 真实成本、正则、边界和收敛结果；
 - 可重算的哈希链与验证结果。
 

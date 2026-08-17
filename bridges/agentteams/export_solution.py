@@ -15,17 +15,19 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "src"))
 
+from agentfit.cli import assert_valid_runstore  # noqa: E402
+from agentfit.delivery.approval import assert_delivery_approved  # noqa: E402
 from agentfit.store.run_store import RunStore  # noqa: E402
 
 
 def export(run_dir: str, version: int | None = None) -> dict:
     store = RunStore(run_dir)
-    if not store.load_json("summary.json").get("delivery_approved"):
-        raise SystemExit("G3 delivery approval is required before AgentTeams export")
-    versions = store.solution_versions()
-    if not versions:
-        raise SystemExit("RunStore 无方案版本")
-    v = version if version is not None else versions[-1]
+    try:
+        decision = assert_delivery_approved(store, version)
+        store = assert_valid_runstore(Path(run_dir))
+    except (OSError, TypeError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+    v = decision["final_solution_version"]
     meta = store.load_json(f"solution_versions/v{v:03d}.json")
     so = meta["solution"]
 

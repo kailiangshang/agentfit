@@ -48,13 +48,18 @@ def _name(item: dict) -> str:
 
 def _workers(item: dict) -> tuple[str, ...] | None:
     spec = item.get("spec")
-    if not isinstance(spec, dict):
-        return None
     names = []
-    leader = spec.get("leader") or {}
-    if leader.get("name"):
-        names.append(leader["name"])
-    names.extend(worker["name"] for worker in spec.get("workers", []) if worker.get("name"))
+    if isinstance(spec, dict):
+        leader = spec.get("leader") or {}
+        if leader.get("name"):
+            names.append(leader["name"])
+        names.extend(worker["name"] for worker in spec.get("workers", []) if worker.get("name"))
+    elif item.get("leaderName") or isinstance(item.get("workerNames"), list):
+        if item.get("leaderName"):
+            names.append(item["leaderName"])
+        names.extend(str(name) for name in item.get("workerNames", []) if name)
+    else:
+        return None
     return tuple(sorted(names))
 
 
@@ -67,16 +72,42 @@ def _owned_spec(item: dict) -> dict | None:
         keys = ("name", "model", "runtime", "state", "identity", "soul")
         return {key: role.get(key) for key in keys if key in role}
 
-    return {
-        "teamName": spec.get("teamName"),
-        "description": spec.get("description"),
-        "peerMentions": spec.get("peerMentions"),
-        "leader": role_payload(spec.get("leader") or {}),
-        "workers": sorted(
+    payload = {
+        key: spec[key] for key in ("teamName", "description", "peerMentions") if key in spec
+    }
+    if "leader" in spec:
+        payload["leader"] = role_payload(spec.get("leader") or {})
+    if "workers" in spec:
+        payload["workers"] = sorted(
             (role_payload(worker) for worker in spec.get("workers", [])),
             key=lambda worker: worker.get("name", ""),
-        ),
-    }
+        )
+    return payload
+
+
+def _compare_owned(expected: Any, actual: Any) -> str:
+    """Return equal, changed, or unverified for fields owned by the manifest."""
+    if isinstance(expected, dict):
+        if not isinstance(actual, dict):
+            return "changed"
+        changed = False
+        unverified = False
+        for key, expected_value in expected.items():
+            if key not in actual:
+                unverified = True
+                continue
+            status = _compare_owned(expected_value, actual[key])
+            changed |= status == "changed"
+            unverified |= status == "unverified"
+        if any(key not in expected for key in actual):
+            changed = True
+        return "changed" if changed else "unverified" if unverified else "equal"
+    if isinstance(expected, list):
+        if not isinstance(actual, list) or len(expected) != len(actual):
+            return "changed"
+        statuses = [_compare_owned(left, right) for left, right in zip(expected, actual)]
+        return "changed" if "changed" in statuses else "unverified" if "unverified" in statuses else "equal"
+    return "equal" if expected == actual else "changed"
 
 
 def reconcile_status(expected: dict, actual: Any) -> DriftReport:
@@ -93,13 +124,26 @@ def reconcile_status(expected: dict, actual: Any) -> DriftReport:
     current = by_name.get(expected_name)
     if current is not None:
         current_workers = _workers(current)
+        expected_workers = _workers(expected)
         if current_workers is None:
             unverified.append(f"{expected_name}:content")
-        elif _owned_spec(current) != _owned_spec(expected):
-            changed.append(f"{expected_name}:spec")
+        elif current_workers != expected_workers:
+            changed.append(f"{expected_name}:members")
+        else:
+            current_spec = _owned_spec(current)
+            if current_spec is None:
+                unverified.append(f"{expected_name}:content")
+            else:
+                spec_status = _compare_owned(_owned_spec(expected), current_spec)
+                if spec_status == "changed":
+                    changed.append(f"{expected_name}:spec")
+                elif spec_status == "unverified":
+                    unverified.append(f"{expected_name}:content")
         expected_hash = (expected.get("metadata") or {}).get("annotations", {}).get("agentfit.io/registry-hash")
         actual_hash = (current.get("metadata") or {}).get("annotations", {}).get("agentfit.io/registry-hash")
-        if current_workers is not None and expected_hash and actual_hash != expected_hash:
+        if expected_hash and actual_hash is None:
+            unverified.append(f"{expected_name}:registry-hash")
+        elif expected_hash and actual_hash != expected_hash:
             changed.append(f"{expected_name}:registry-hash")
     return DriftReport(missing, unexpected, tuple(changed), tuple(unverified))
 

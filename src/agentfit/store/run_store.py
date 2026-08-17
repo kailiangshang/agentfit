@@ -98,6 +98,11 @@ class RunStore:
     def save_summary(self, summary: dict) -> None:
         _write(self.root / "summary.json", summary)
 
+    def save_delivery_decision(self, decision: dict) -> Path:
+        path = self.root / "delivery_decision.json"
+        _write(path, decision)
+        return path
+
     # ---- 读（dashboard/报告用） ----
     def load_json(self, rel: str) -> Any:
         return json.loads((self.root / rel).read_text(encoding="utf-8"))

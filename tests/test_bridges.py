@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -73,6 +76,31 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
     assert report.in_sync is False
     assert "agentfit:spec" in report.changed
 
+    full_expected = json.loads(
+        (REPO / "bridges" / "agentteams" / "team.yaml").read_text(encoding="utf-8")
+    )
+    partial = {
+        "metadata": full_expected["metadata"],
+        "spec": {
+            "leader": {"name": full_expected["spec"]["leader"]["name"]},
+            "workers": [
+                {"name": worker["name"]} for worker in full_expected["spec"]["workers"]
+            ],
+        },
+    }
+    report = bridge.reconcile_status(full_expected, [partial])
+    assert report.changed == ()
+    assert report.unverified == ("agentfit:content",)
+
+    flattened = {
+        "metadata": {"name": "agentfit"},
+        "leaderName": full_expected["spec"]["leader"]["name"],
+        "workerNames": [worker["name"] for worker in full_expected["spec"]["workers"]],
+    }
+    report = bridge.reconcile_status(full_expected, {"teams": [flattened]})
+    assert report.changed == ()
+    assert report.unverified == ("agentfit:content", "agentfit:registry-hash")
+
 
 def test_agentteams_solution_export_requires_g3(tmp_path: Path) -> None:
     bridge = _load(
@@ -84,6 +112,29 @@ def test_agentteams_solution_export_requires_g3(tmp_path: Path) -> None:
     store.save_summary({"delivery_approved": False})
     with pytest.raises(SystemExit, match="G3"):
         bridge.export(str(tmp_path))
+
+
+def test_agentteams_exports_only_the_g3_approved_candidate(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+    trained = subprocess.run(
+        [
+            sys.executable, "-m", "agentfit", "train",
+            "--case", str(REPO / "examples" / "telecom-case.json"),
+            "--output", str(run_dir), "--auto-approve",
+        ],
+        cwd=REPO, env=env, capture_output=True, text=True,
+    )
+    assert trained.returncode == 0, trained.stderr
+    bridge = _load(
+        REPO / "bridges" / "agentteams" / "export_solution.py",
+        "agentfit_export_approved_solution",
+    )
+    config = bridge.export(str(run_dir))
+    decision = json.loads((run_dir / "delivery_decision.json").read_text(encoding="utf-8"))
+    assert config["source"]["solution_version"] == decision["final_solution_version"]
+    with pytest.raises(SystemExit, match="G3-approved"):
+        bridge.export(str(run_dir), decision["final_solution_version"] + 1)
 
 
 def _tau2_fixture() -> dict:

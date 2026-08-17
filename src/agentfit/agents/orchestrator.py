@@ -262,9 +262,15 @@ class Orchestrator:
         summary["delivery_approved"] = self.delivery_decision.approved
         summary["delivery_review_reason"] = self.delivery_decision.reason
         summary["delivery_reviewer"] = self.delivery_decision.reviewer
-        self._last_summary = summary
         if self.auditor:
+            from ..delivery.approval import create_delivery_decision
+            decision_artifact = create_delivery_decision(
+                self.auditor.store, self.delivery_decision, summary,
+            )
+            self.auditor.store.save_delivery_decision(decision_artifact)
+            summary["delivery_decision_hash"] = decision_artifact["decision_hash"]
             self.auditor.persist_summary(summary)
+        self._last_summary = summary
         return self.delivery_decision
 
     def train(self) -> list[EpochOutcome]:
