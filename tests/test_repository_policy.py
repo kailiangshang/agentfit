@@ -1,0 +1,73 @@
+"""Repository-level governance for the single-canonical architecture."""
+from __future__ import annotations
+
+import hashlib
+import re
+from pathlib import Path
+
+
+REPO = Path(__file__).resolve().parents[1]
+FROZEN_SUBMISSION = REPO / "competition" / "2026-08-16" / "submission"
+FROZEN_TREE_DIGEST = "98a412461d412003c51287b39e06d6388a74e3740d4f942a07c3fd1697e35a1f"
+LEGACY_ARCHITECTURE_DOCS = {
+    "agentfit-skeleton.md",
+    "agentfit-solution.md",
+    "agentfit-implementation.md",
+}
+
+
+def _tree_digest(root: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(root).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def test_preliminary_submission_is_frozen() -> None:
+    assert _tree_digest(FROZEN_SUBMISSION) == FROZEN_TREE_DIGEST
+
+
+def test_architecture_has_one_canonical_document() -> None:
+    assert (REPO / "docs" / "architecture.md").is_file()
+    leftovers = sorted(
+        path.name for path in (REPO / "docs").glob("*.md")
+        if path.name in LEGACY_ARCHITECTURE_DOCS
+    )
+    assert leftovers == [], f"重叠架构文档必须合并后删除: {leftovers}"
+
+
+def test_active_docs_do_not_carry_iteration_names() -> None:
+    violations: list[str] = []
+    patterns = (
+        re.compile(r"(?i)\bv\d+(?:[._-]\d+)*(?:-final)?\b"),
+        re.compile(r"(?i)\bfinal\b"),
+        re.compile(r"定稿不改|旧版本保留|可版本化重训练"),
+    )
+    for path in sorted((REPO / "docs").glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if any(pattern.search(line) for pattern in patterns):
+                violations.append(f"{path.relative_to(REPO)}:{line_no}: {line.strip()}")
+    assert violations == [], "活跃文档仍携带迭代名称:\n" + "\n".join(violations)
+
+
+def test_skills_are_stable_canonical_files() -> None:
+    skills = sorted((REPO / "src" / "agentfit" / "skills").glob("*.md"))
+    assert len(skills) == 11
+    violations = []
+    for path in skills:
+        text = path.read_text(encoding="utf-8")
+        if "## 步骤" not in text:
+            violations.append(f"{path.name}: 缺步骤")
+        if "## 版本" in text or "可版本化" in text:
+            violations.append(f"{path.name}: Skill 演化必须交给 Git")
+    assert violations == [], "\n".join(violations)
+
+
+def test_agentteams_bridge_uses_stable_deployment_names() -> None:
+    apply_text = (REPO / "bridges" / "agentteams" / "apply_team.py").read_text(encoding="utf-8")
+    export_text = (REPO / "bridges" / "agentteams" / "export_solution.py").read_text(encoding="utf-8")
+    assert "team-agentfit-v" not in apply_text
+    assert not re.search(r'"project"\s*:\s*f?"[^"\n]*-v\{', export_text)

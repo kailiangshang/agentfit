@@ -2,7 +2,7 @@
 
 1. src/agentfit 内禁止 import agentteams / tau2（桥接只允许在 bridges/）
 2. 实现文档 §十 声明的全部架构组件必须存在且可导入（架构级全量）
-3. 11 个 Skill 定义文件存在且带版本号（元层 L3 可版本化载体）
+3. 11 个 Skill 定义文件存在且使用稳定名称（演化由 Git 记录）
 """
 from __future__ import annotations
 
@@ -54,12 +54,13 @@ def test_architecture_level_complete():
         importlib.import_module(mod)   # 缺一个就 ImportError → 测试失败
 
 
-def test_skills_are_versioned_files():
+def test_skills_are_stable_files():
     skills = sorted((SRC / "skills").glob("*.md"))
     assert len(skills) == 11, f"应有 11 个 Skill 定义，实际 {len(skills)}"
     for skill in skills:
         content = skill.read_text(encoding="utf-8")
-        assert "## 步骤" in content and "## 版本" in content, f"{skill.name} 缺步骤或版本"
+        assert "## 步骤" in content, f"{skill.name} 缺步骤"
+        assert "## 版本" not in content and "可版本化" not in content, f"{skill.name} 不应自带迭代版本"
 
 
 def test_bridges_exist_outside_library():

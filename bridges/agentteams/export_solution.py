@@ -29,7 +29,7 @@ def export(run_dir: str, version: int | None = None) -> dict:
 
     # AgentTeams 项目配置（目标格式示例；按平台实际 schema 调整此映射，不动库）
     return {
-        "project": f"agentfit-{store.root.name}-v{v}",
+        "project": "agentfit",
         "agents": [{"id": a["id"], "role": a["role"], "knowledge": a["uses"]} for a in so["L4_topology"]["agents"]],
         "tools": [{"id": t["id"], "backend_atoms": t["wraps"],
                    "human_gate": t["human_gate"]["condition"] if t.get("human_gate") else None}

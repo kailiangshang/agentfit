@@ -2,7 +2,7 @@
 """桥接：应用 AgentFit 团队清单到本地 AgentTeams 并回读状态。
 
 用法：
-  python bridges/agentteams/apply_team.py --manifest bridges/agentteams/team-agentfit-v2.yaml
+  python bridges/agentteams/apply_team.py --manifest bridges/agentteams/team.yaml
   python bridges/agentteams/apply_team.py --status-only   # 只回读，输出 JSON
 
 库外脚本（src/agentfit 对 AgentTeams 零感知，守护见 tests/test_decoupling.py）。
