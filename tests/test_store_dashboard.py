@@ -6,7 +6,7 @@ from agentfit.agents.team import build_team
 from agentfit.dashboard import generate_dashboard
 from agentfit.data.sample_pool import SamplePool
 from agentfit.executors.simulator import SimulatorExecutor
-from agentfit.models.config import TrainingConfig
+from agentfit.models.config import AutoApprove, TrainingConfig
 
 from telecom_world import make_initial_solution, make_samples
 
@@ -15,7 +15,7 @@ def _train_with_store(tmp_path):
     samples = make_samples()
     run_dir = tmp_path / "run-001"
     orch = Orchestrator(make_initial_solution(), SamplePool(samples), SimulatorExecutor(),
-                        TrainingConfig(batch_size=21, max_epochs=3),
+                        TrainingConfig(batch_size=21, max_epochs=3, review_policy=AutoApprove()),
                         run_dir=str(run_dir), scenario="test-telecom")
     build_team(orch)
     orch.train()

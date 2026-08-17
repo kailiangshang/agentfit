@@ -13,7 +13,7 @@ from agentfit.data.sample_pool import SamplePool
 from agentfit.delivery.package import analyze_boundary, export_package
 from agentfit.executors.simulator import SimulatorExecutor
 from agentfit.log.report import generate_report
-from agentfit.models.config import TrainingConfig
+from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.monitoring.monitor import check_training_health, detect_drift
 from agentfit.solution.builder import build_initial
 from agentfit.solution.validator import validate_existence_dependencies
@@ -32,7 +32,7 @@ def test_full_chain_intake_to_delivery(tmp_path):
 
     # 训练（含 RunStore 落盘）
     orch = Orchestrator(initial, SamplePool(samples), SimulatorExecutor(),
-                        TrainingConfig(batch_size=21, max_epochs=5),
+                        TrainingConfig(batch_size=21, max_epochs=5, review_policy=AutoApprove()),
                         run_dir=str(run_dir), scenario="full-chain")
     build_team(orch)
     outcomes = orch.train()

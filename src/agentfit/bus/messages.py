@@ -80,7 +80,8 @@ class MessageBus:
                 continue
             res = handler(msg)
             self.traffic.append({"dir": "result", "task_id": msg.task_id,
-                                 "to": role, "status": res.status})
+                                 "to": role, "status": res.status,
+                                 "context_ref": msg.context_ref})
             results.append(res)
         if self._audit_sink is not None:
             self._audit_sink(msg)
@@ -88,4 +89,4 @@ class MessageBus:
 
     def context_chain(self, context_ref: str) -> list[dict[str, Any]]:
         """重建某个 context（如一个 epoch）的完整因果链。"""
-        return [t for t in self.traffic if t.get("context_ref") == context_ref or t["dir"] == "result"]
+        return [t for t in self.traffic if t.get("context_ref") == context_ref]

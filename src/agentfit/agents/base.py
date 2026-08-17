@@ -16,6 +16,7 @@ class AgentRuntime:
     name: str
     handled_types: tuple[MsgType, ...]
     handler: Handler
+    skills: tuple[str, ...] = ()
     llm_slots: list[str] = field(default_factory=list)     # 声明的 LLM 槽位（审计用）
     total_invocations: int = 0
     total_llm_calls: int = 0
@@ -30,6 +31,7 @@ class AgentRuntime:
 
 
 def make_agent(name: str, types: tuple[MsgType, ...], fn: Callable[[TaskMsg], Any],
+               skills: tuple[str, ...] = (),
                llm_slots: list[str] | None = None) -> AgentRuntime:
     """快速构造：fn 返回任意结果，包装成 ResultMsg。"""
 
@@ -39,4 +41,5 @@ def make_agent(name: str, types: tuple[MsgType, ...], fn: Callable[[TaskMsg], An
             return out
         return ResultMsg(task_id=msg.task_id, status="ok", output=out)
 
-    return AgentRuntime(name, types, handler, llm_slots or [])
+    return AgentRuntime(name=name, handled_types=types, handler=handler,
+                        skills=skills, llm_slots=llm_slots or [])

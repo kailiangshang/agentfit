@@ -3,7 +3,7 @@ from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
 from agentfit.data.sample_pool import SamplePool
 from agentfit.executors.simulator import SimulatorExecutor
-from agentfit.models.config import TrainingConfig
+from agentfit.models.config import AutoApprove, TrainingConfig
 
 from telecom_world import make_initial_solution, make_samples
 
@@ -11,7 +11,8 @@ from telecom_world import make_initial_solution, make_samples
 def test_run_ritual_produces_both_artifacts(tmp_path):
     run_dir = tmp_path / "ritual-run"
     orch = Orchestrator(make_initial_solution(), SamplePool(make_samples()),
-                        SimulatorExecutor(), TrainingConfig(batch_size=21, max_epochs=3),
+                        SimulatorExecutor(), TrainingConfig(batch_size=21, max_epochs=3,
+                                                            review_policy=AutoApprove()),
                         run_dir=str(run_dir), scenario="ritual")
     build_team(orch)
     orch.train()

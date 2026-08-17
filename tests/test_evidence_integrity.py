@@ -13,7 +13,7 @@ from agentfit.core.regularization import LambdaController, RegReport
 from agentfit.data.sample_pool import SamplePool
 from agentfit.delivery.package import analyze_boundary, export_package
 from agentfit.executors.simulator import SimulatorExecutor
-from agentfit.models.config import TrainingConfig
+from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.models.loss import Expected, Sample
 from agentfit.store.run_store import RunStore
 
@@ -106,7 +106,7 @@ def test_orchestrator_keeps_distinct_previous_solution_snapshot() -> None:
     solution = make_initial_solution()
     orchestrator = Orchestrator(
         solution, SamplePool(make_samples()), SimulatorExecutor(),
-        TrainingConfig(batch_size=21, max_epochs=1),
+        TrainingConfig(batch_size=21, max_epochs=1, review_policy=AutoApprove()),
     )
     build_team(orchestrator)
     orchestrator.train()

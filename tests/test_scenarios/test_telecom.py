@@ -9,7 +9,7 @@ from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
 from agentfit.data.sample_pool import SamplePool
 from agentfit.executors.simulator import SimulatorExecutor
-from agentfit.models.config import TrainingConfig
+from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.solution.validator import validate_existence_dependencies
 
 from telecom_world import make_initial_solution, make_samples
@@ -25,7 +25,8 @@ def _run(max_epochs: int = 5):
     baseline_rate = sum(results) / len(results)
 
     orch = Orchestrator(initial, pool, executor,
-                        TrainingConfig(batch_size=21, max_epochs=max_epochs))
+                        TrainingConfig(batch_size=21, max_epochs=max_epochs,
+                                       review_policy=AutoApprove()))
     build_team(orch)
     outcomes = orch.train()
     return orch, baseline_rate, outcomes

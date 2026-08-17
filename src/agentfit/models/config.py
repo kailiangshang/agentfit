@@ -2,26 +2,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
-
-
-class ReviewPolicy(Protocol):
-    """人审策略：G1/G2/G3 的可插拔裁决。生产用交互式，测试用自动。"""
-
-    def review_updates(self, proposals: list) -> bool: ...   # noqa: E704
+from ..gates.human import (BlockingHumanGate, GateType, HumanGatePolicy,
+                           ReviewDecision, ReviewRequest)
 
 
 class AutoApprove:
     """测试用：全部批准（人审槽位的 mock，不代表生产行为）。"""
 
+    def review(self, request: ReviewRequest) -> ReviewDecision:
+        return ReviewDecision(True, "explicit test approval", "test-policy")
+
     def review_updates(self, proposals: list) -> bool:
-        return True
-
-    def review_lambda(self, suggestion: dict) -> bool:
-        return True
-
-    def review_delivery(self, boundary: dict) -> bool:
-        return True
+        return self.review(ReviewRequest(GateType.G1, "updates", {"count": len(proposals)})).approved
 
 
 @dataclass
@@ -36,4 +28,4 @@ class TrainingConfig:
     lambda_level1_step: float = 0.2        # Level 1 自动调节上限 ±20%
     lambda_level1_cap: float = 0.5         # 累计变化上限 ±50%
     lambda_consecutive_rounds: int = 2     # 连续 N 轮超阈值触发 Level 1
-    review_policy: ReviewPolicy = field(default_factory=AutoApprove)
+    review_policy: HumanGatePolicy = field(default_factory=BlockingHumanGate)

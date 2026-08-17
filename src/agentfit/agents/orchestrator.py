@@ -18,6 +18,7 @@ from ..core.regression import RegressionPool, validate_regression
 from ..core.transaction import ChangeTransaction, ValidationError
 from ..data.sample_pool import SamplePool
 from ..executors.base import ExecutorBase
+from ..gates.human import GateType, ReviewDecision, ReviewRequest
 from ..log.training_log import EpochEntry, TrainingLog
 from ..models.config import TrainingConfig
 from ..models.solution import Solution
@@ -47,6 +48,7 @@ class Orchestrator:
         self.regression_pool = RegressionPool()
         self.lambda_ctl = LambdaController(initial=dict(solution.lambda_values))
         self.outcomes: list[EpochOutcome] = []
+        self.delivery_decision: ReviewDecision | None = None
         self._prev_solution = copy.deepcopy(solution)
         self.auditor = None
         if run_dir:
@@ -76,25 +78,64 @@ class Orchestrator:
                 loss_traces.append(self._send(MsgType.ATTRIBUTE, ctx, {"sample": s, "trace": t},
                                               lambda _, s=s, t=t: attribute_loss(s, t, self.solution)))
 
+        actionable_loss_traces = list(loss_traces)
+        low_confidence = [
+            trace for trace in loss_traces
+            if trace.confidence < self.config.attribution_confidence_floor
+        ]
+        if low_confidence:
+            decision = self.config.review_policy.review(ReviewRequest(
+                GateType.G1, "low-confidence attribution",
+                {"sample_ids": [trace.sample_id for trace in low_confidence],
+                 "confidence_floor": self.config.attribution_confidence_floor},
+            ))
+            if not decision.approved:
+                blocked_ids = {trace.sample_id for trace in low_confidence}
+                actionable_loss_traces = [
+                    trace for trace in loss_traces if trace.sample_id not in blocked_ids
+                ]
+                outcome.notes.append("Human Gate blocked low-confidence attribution")
+
         # ③ 聚合 + 正则（Validator/Auditor 计算）
         prev = self._prev_solution
         reg = merge_behavioral(compute_structural(self.solution),
                                compute_behavioral(self.solution, traces, prev))
-        agg = aggregate(loss_traces)
+        agg = aggregate(actionable_loss_traces)
 
         # ④ 更新建议（Architect）
         proposals, notes = self._send(MsgType.PROPOSE, ctx,
-                                      {"loss_traces": loss_traces},
-                                      lambda _: propose_updates(aggregate(loss_traces), self.pool.by_id(), self.solution))
-        outcome.notes = notes
+                                      {"loss_traces": actionable_loss_traces},
+                                      lambda _: propose_updates(aggregate(actionable_loss_traces), self.pool.by_id(), self.solution))
+        outcome.notes.extend(notes)
         outcome.proposals_count = len(proposals)
 
         # ⑤ λ 调节
-        new_lambdas, _level2 = self.lambda_ctl.observe(reg)
+        new_lambdas, lambda_events = self.lambda_ctl.observe(reg)
+        for event in lambda_events:
+            if event.get("gate") != GateType.G2.value:
+                continue
+            decision = self.config.review_policy.review(
+                ReviewRequest(GateType.G2, "lambda adjustment", event)
+            )
+            if decision.approved:
+                new_lambdas.update(event["proposed"])
+                self.lambda_ctl.initial = dict(new_lambdas)
+            else:
+                outcome.notes.append("Human Gate blocked G2 lambda adjustment")
         self.solution.lambda_values = new_lambdas
 
         # ⑥ 人审 G1（硬同步点；不批准 = 本轮空转）
-        approved = proposals if self.config.review_policy.review_updates(proposals) else []
+        g1_decision = self.config.review_policy.review(ReviewRequest(
+            GateType.G1, "solution updates",
+            {"count": len(proposals), "evidence_sample_ids": sorted({
+                sample_id
+                for proposal in proposals
+                for sample_id in (proposal.evidence_sample_ids or [])
+            })},
+        ))
+        approved = proposals if g1_decision.approved else []
+        if proposals and not g1_decision.approved:
+            outcome.notes.append("Human Gate blocked G1")
 
         passed = sum(1 for s, t in zip(batch, traces) if self.executor.evaluate(t, s.expected))
         outcome.pass_rate = passed / len(batch)
@@ -192,18 +233,24 @@ class Orchestrator:
             outcome = self.run_epoch(epoch)
             if outcome.converged or self.budget_exceeded():
                 break
+        series = self.log.pass_rate_series()
+        summary = {
+            "epochs_run": len(self.outcomes),
+            "final_pass_rate": series[-1] if series else None,
+            "final_solution_version": self.solution.version,
+            "lambda_values": dict(self.solution.lambda_values),
+            "total_cost_usd": round(self.total_cost(), 4),
+            "converged": bool(self.outcomes and self.outcomes[-1].converged),
+            "budget_exceeded": self.budget_exceeded(),
+            "log_chain_valid": self.log.verify(),
+        }
+        self.delivery_decision = self.config.review_policy.review(
+            ReviewRequest(GateType.G3, "delivery boundary", summary)
+        )
+        summary["delivery_approved"] = self.delivery_decision.approved
+        summary["delivery_review_reason"] = self.delivery_decision.reason
         if self.auditor:
-            series = self.log.pass_rate_series()
-            self.auditor.persist_summary({
-                "epochs_run": len(self.outcomes),
-                "final_pass_rate": series[-1] if series else None,
-                "final_solution_version": self.solution.version,
-                "lambda_values": dict(self.solution.lambda_values),
-                "total_cost_usd": round(self.total_cost(), 4),
-                "converged": bool(self.outcomes and self.outcomes[-1].converged),
-                "budget_exceeded": self.budget_exceeded(),
-                "log_chain_valid": self.log.verify(),
-            })
+            self.auditor.persist_summary(summary)
             # 运行完成仪制：训练结果 + 对 AgentFit 自身的建议
             from ..log.meta_review import generate_meta_review
             from ..log.report import generate_report

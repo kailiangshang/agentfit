@@ -151,14 +151,31 @@ class LambdaController:
                 self.over_threshold_streak[layer] = self.over_threshold_streak.get(layer, 0) + 1
             else:
                 self.over_threshold_streak[layer] = 0
-        # Level 1：连续 2 轮超阈值且累计变化未到 ±50% 的第一个层
-        for layer in ("L4", "L3", "L2", "L1"):
-            if self.over_threshold_streak.get(layer, 0) >= 2 and abs(self.cumulative.get(layer, 0)) < 0.5:
-                new_val = round(lambdas[layer] * 1.2, 4)
-                self.cumulative[layer] += 0.2
-                lambdas[layer] = new_val
-                level2_note = {"type": "lambda_L1_auto", "layer": layer, "from": self.initial[layer], "to": new_val}
-                self.initial = lambdas
-                return lambdas, [level2_note]
+        eligible = [
+            layer for layer in ("L4", "L3", "L2", "L1")
+            if self.over_threshold_streak.get(layer, 0) >= 2
+        ]
+        if len(eligible) > 1:
+            return lambdas, [{
+                "gate": "G2",
+                "layers": eligible,
+                "proposed": {layer: round(lambdas[layer] * 1.2, 4) for layer in eligible},
+                "reason": "multiple lambda changes require Human review",
+            }]
+        # Level 1：连续 2 轮超阈值且累计变化未到 ±50% 的单个层
+        if eligible:
+            layer = eligible[0]
+            if abs(self.cumulative.get(layer, 0)) >= 0.5:
+                return lambdas, [{
+                    "gate": "G2", "layers": [layer],
+                    "proposed": {layer: round(lambdas[layer] * 1.2, 4)},
+                    "reason": "cumulative lambda change reached automatic cap",
+                }]
+            new_val = round(lambdas[layer] * 1.2, 4)
+            self.cumulative[layer] += 0.2
+            lambdas[layer] = new_val
+            self.initial = lambdas
+            return lambdas, [{"type": "lambda_level1_auto", "layer": layer,
+                              "from": self.initial[layer] / 1.2, "to": new_val}]
         self.initial = lambdas
         return lambdas, level2

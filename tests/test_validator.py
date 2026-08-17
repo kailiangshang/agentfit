@@ -91,7 +91,7 @@ def test_lambda_level1_auto_after_two_rounds():
     ctl.observe(bad)
     lambdas, events = ctl.observe(bad)     # 连续第 2 轮 → 触发 Level 1
     assert lambdas["L3"] == round(0.3 * 1.2, 4)
-    assert events and events[0]["type"] == "lambda_L1_auto"
+    assert events and events[0]["type"] == "lambda_level1_auto"
 
 
 # ---------- 哈希链日志 ----------
