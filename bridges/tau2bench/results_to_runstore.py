@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -104,15 +105,32 @@ def simulation_to_episode(simulation: dict, task: TaskSample, *,
     return episode, trace
 
 
-def convert(results_path: Path, run_dir: str, label: str) -> None:
+def convert(results_path: Path, run_dir: str, label: str,
+            candidate_ref: str | None = None) -> None:
     data = json.loads(results_path.read_text(encoding="utf-8"))
     store = RunStore(run_dir)
-    candidate_ref = canonical_hash({"bridge": "tau2bench", "candidate": label})
+    candidate_ref = candidate_ref or canonical_hash({
+        "bridge": "tau2bench", "candidate": label,
+        "config": data.get("config") or data.get("info") or data.get("metadata") or {},
+    })
+    if not data.get("simulations"):
+        raise ValueError("τ² results contain no simulations")
+    task_by_id: dict[str, TaskSample] = {}
+    trial_counts: dict[str, int] = {}
+    for simulation in data["simulations"]:
+        task = simulation_to_task_sample(simulation)
+        previous = task_by_id.get(task.id)
+        if previous is not None and previous.content_hash != task.content_hash:
+            raise ValueError(f"τ² task id maps to conflicting content: {task.id}")
+        task_by_id.setdefault(task.id, task)
+        trial_counts[task.id] = trial_counts.get(task.id, 0) + 1
     store.init_run({"scenario": f"tau2-telecom-baseline:{label}", "executor": "tau2bench-bridge",
-                    "config": {"num_tasks": len(data["simulations"]), "num_trials": 1},
-                    "candidate_ref": candidate_ref})
+                    "config": {"num_tasks": len(task_by_id), "num_trials": max(trial_counts.values())},
+                    "candidate_ref": candidate_ref,
+                    "source_results_sha256": hashlib.sha256(results_path.read_bytes()).hexdigest()})
+    store.save_source_results(data)
 
-    task_samples = [simulation_to_task_sample(simulation) for simulation in data["simulations"]]
+    task_samples = list(task_by_id.values())
     store.save_task_samples(task_samples)
     store.save_samples([
         Sample(
@@ -122,9 +140,13 @@ def convert(results_path: Path, run_dir: str, label: str) -> None:
     ])
 
     per_task, total_cost = [], 0.0
-    for simulation, task in zip(data["simulations"], task_samples):
+    run_indices: dict[str, int] = {}
+    for simulation in data["simulations"]:
+        task = task_by_id[simulation_to_task_sample(simulation).id]
+        run_index = run_indices.get(task.id, 0)
+        run_indices[task.id] = run_index + 1
         episode, trace = simulation_to_episode(
-            simulation, task, candidate_ref=candidate_ref, run_index=0,
+            simulation, task, candidate_ref=candidate_ref, run_index=run_index,
         )
         trace_path = store.save_trace(episode.identity, trace)
         if episode.trace_ref != trace_path.relative_to(store.root).as_posix():
@@ -161,8 +183,10 @@ def main() -> None:
     parser.add_argument("results_json")
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--label", default="tau2-run")
+    parser.add_argument("--candidate-ref", default=None,
+                        help="64-character immutable candidate hash; otherwise derived from label and result config")
     args = parser.parse_args()
-    convert(Path(args.results_json), args.run_dir, args.label)
+    convert(Path(args.results_json), args.run_dir, args.label, args.candidate_ref)
     print(f"RunStore: {args.run_dir}")
 
 

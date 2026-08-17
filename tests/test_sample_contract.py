@@ -60,6 +60,27 @@ def test_sample_set_collection_requires_all_four_distinct_purposes() -> None:
         manifest_mod.SampleSetCollection(manifests=manifests[:3])
 
 
+def test_manifest_rejects_forged_hash_and_noncanonical_access_policy() -> None:
+    sample_mod, manifest_mod = _sample_module(), _manifest_module()
+    ref = _refs(sample_mod)[0]
+    purpose = manifest_mod.SampleSetPurpose.SEALED_HOLDOUT
+    freeze = manifest_mod.FreezeDecision(
+        reviewer="human-owner", approved=True,
+        decided_at="2026-08-17T14:00:00+08:00", reason="approved",
+    )
+    with pytest.raises(ValueError, match="canonical access policy"):
+        manifest_mod.SampleSetManifest.create(
+            purpose, (ref,),
+            manifest_mod.AccessPolicy(("architect",), allows_updates=True),
+            freeze,
+        )
+    with pytest.raises(ValueError, match="content_hash"):
+        manifest_mod.SampleSetManifest(
+            purpose, (ref,), manifest_mod.default_access_policy(purpose),
+            "f" * 64, freeze,
+        )
+
+
 def test_human_freeze_is_required_before_candidate_generation() -> None:
     sample_mod, manifest_mod = _sample_module(), _manifest_module()
     manifests = list(_frozen_manifests(sample_mod, manifest_mod))

@@ -68,6 +68,11 @@ class RunStore:
         _write(path, {"total": len(samples), "samples": samples})
         return path
 
+    def save_source_results(self, results: Any) -> Path:
+        path = self.root / "source_results.json"
+        _write(path, results)
+        return path
+
     def save_episode(self, episode: Any) -> Path:
         path = self.root / "episodes" / f"{episode.identity.key}.json"
         _write(path, episode)

@@ -63,8 +63,7 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
 
 
 def _tau2_fixture() -> dict:
-    return {
-        "simulations": [{
+    simulation = {
             "task_id": "[TASK]airplane_mode_on|user_abroad_roaming_enabled_off[PERSONA]traveler",
             "reward_info": {"reward": 0},
             "agent_cost": {"total_cost_usd": 0.02},
@@ -76,8 +75,8 @@ def _tau2_fixture() -> dict:
                     {"name": "toggle_airplane_mode"},
                 ],
             }],
-        }],
-    }
+        }
+    return {"simulations": [simulation]}
 
 
 def test_tau2_bridge_converts_task_trace_episode_and_runstore(tmp_path: Path) -> None:
@@ -104,6 +103,26 @@ def test_tau2_bridge_converts_task_trace_episode_and_runstore(tmp_path: Path) ->
     bridge.convert(source, str(run_dir), "fixture")
     store = RunStore(run_dir)
     assert (run_dir / "task_samples.json").is_file()
+    assert (run_dir / "source_results.json").is_file()
     assert len(list((run_dir / "episodes").glob("*.json"))) == 1
     assert len(list((run_dir / "traces").glob("*.json"))) == 1
     assert store.verify_hash_chain() is True
+
+
+def test_tau2_repeated_trials_keep_distinct_run_indices(tmp_path: Path) -> None:
+    bridge = _load(
+        REPO / "bridges" / "tau2bench" / "results_to_runstore.py",
+        "agentfit_tau2_repeated_results",
+    )
+    fixture = _tau2_fixture()
+    fixture["simulations"].append(dict(fixture["simulations"][0]))
+    source = tmp_path / "results.json"
+    source.write_text(json.dumps(fixture), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    bridge.convert(source, str(run_dir), "fixture")
+    episodes = [json.loads(path.read_text(encoding="utf-8"))
+                for path in (run_dir / "episodes").glob("*.json")]
+    assert len(episodes) == 2
+    assert {episode["identity"]["run_index"] for episode in episodes} == {0, 1}
+    run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert run["config"] == {"num_tasks": 1, "num_trials": 2}

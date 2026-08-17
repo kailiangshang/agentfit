@@ -116,3 +116,67 @@ def test_validate_recomputes_epoch_hash_chain(tmp_path: Path) -> None:
     validated = _run("validate", str(run_dir))
     assert validated.returncode != 0
     assert "hash chain" in validated.stderr
+
+
+def test_train_refuses_to_overwrite_existing_runstore(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    first = _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve")
+    assert first.returncode == 0, first.stderr
+    second = _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve")
+    assert second.returncode != 0
+    assert "output already exists" in second.stderr
+
+
+def test_validate_recomputes_sample_set_content_hash(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    trained = _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve")
+    assert trained.returncode == 0, trained.stderr
+    path = run_dir / "sample_sets.json"
+    manifests = json.loads(path.read_text(encoding="utf-8"))
+    manifests["manifests"][0]["content_hash"] = "f" * 64
+    path.write_text(json.dumps(manifests), encoding="utf-8")
+    validated = _run("validate", str(run_dir))
+    assert validated.returncode != 0
+    assert "sample-set content hash" in validated.stderr
+
+
+def test_validate_checks_exported_evidence_manifest(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    assert _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve").returncode == 0
+    assert _run("export", str(run_dir)).returncode == 0
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["delivery_approved"] = False
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    validated = _run("validate", str(run_dir))
+    assert validated.returncode != 0
+    assert "evidence manifest" in validated.stderr
+
+
+def test_each_distinct_sample_starts_at_run_index_zero(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    doc = json.loads(case.read_text(encoding="utf-8"))
+    doc["samples"].append({
+        "id": "sample-adaptation-extra",
+        "features": {"condition_extra": True},
+        "expected": {"actions": [{"tool": "safe_fix_extra", "params": {}}], "outcome": {}},
+        "requires_human": False,
+        "complexity": "simple",
+    })
+    doc["sample_sets"][0]["sample_ids"].append("sample-adaptation-extra")
+    doc["training"]["batch_size"] = 2
+    case.write_text(json.dumps(doc), encoding="utf-8")
+    trained = _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve")
+    assert trained.returncode == 0, trained.stderr
+    episodes = [json.loads(path.read_text(encoding="utf-8"))
+                for path in (run_dir / "episodes").glob("*.json")]
+    assert len(episodes) == 2
+    assert {episode["identity"]["run_index"] for episode in episodes} == {0}

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -18,10 +19,11 @@ from .log.report import generate_report
 from .models.config import AutoApprove, TrainingConfig
 from .models.loss import Expected, ExpectedAction, Sample
 from .models.manifest import (
-    FreezeDecision, SampleSetCollection, SampleSetManifest, SampleSetPurpose,
-    default_access_policy,
+    AccessPolicy, FreezeDecision, SampleSetCollection, SampleSetManifest,
+    SampleSetPurpose, default_access_policy,
 )
-from .models.sample import Episode, EvaluationIdentity, canonical_hash, task_sample_from_legacy
+from .models.sample import (Episode, EvaluationIdentity, SampleRef, canonical_hash,
+                            task_sample_from_legacy)
 from .models.solution import solution_from_dict
 from .solution.builder import build_candidate
 from .store.run_store import RunStore
@@ -31,24 +33,26 @@ class CliError(ValueError):
     pass
 
 
+def _sample_from_dict(item: dict[str, Any], *, group: str = "catalog") -> Sample:
+    actions = [ExpectedAction(**action) for action in item.get("expected", {}).get("actions", [])]
+    if not actions:
+        raise CliError(f"sample {item.get('id', '<missing>')} has no expected actions")
+    return Sample(
+        id=item["id"],
+        features=dict(item.get("features", {})),
+        expected=Expected(actions=actions, outcome=dict(item.get("expected", {}).get("outcome", {}))),
+        requires_human=bool(item.get("requires_human", False)),
+        complexity=item.get("complexity", "simple"),
+        group=group,
+    )
+
+
 def _read_case(path: Path) -> tuple[dict[str, Any], list[Sample], SampleSetCollection]:
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise CliError(f"invalid case: {exc}") from exc
-    samples: list[Sample] = []
-    for item in doc.get("samples", []):
-        actions = [ExpectedAction(**action) for action in item.get("expected", {}).get("actions", [])]
-        if not actions:
-            raise CliError(f"sample {item.get('id', '<missing>')} has no expected actions")
-        samples.append(Sample(
-            id=item["id"],
-            features=dict(item.get("features", {})),
-            expected=Expected(actions=actions, outcome=dict(item.get("expected", {}).get("outcome", {}))),
-            requires_human=bool(item.get("requires_human", False)),
-            complexity=item.get("complexity", "simple"),
-            group="catalog",
-        ))
+    samples = [_sample_from_dict(item) for item in doc.get("samples", [])]
     if not samples:
         raise CliError("case has no samples")
     by_id = {sample.id: sample for sample in samples}
@@ -85,6 +89,8 @@ def _adaptation_samples(samples: list[Sample], collection: SampleSetCollection) 
 
 
 def _train(args: argparse.Namespace) -> int:
+    if args.output.exists():
+        raise CliError(f"output already exists: {args.output}")
     doc, samples, collection = _read_case(args.case)
     adaptation = _adaptation_samples(samples, collection)
     solution = build_candidate(samples, collection)
@@ -107,10 +113,10 @@ def _train(args: argparse.Namespace) -> int:
     store.save_samples(samples)
     store.save_sample_manifests(collection)
     candidate_ref = canonical_hash(orchestrator.solution)
-    for run_index, sample in enumerate(adaptation):
+    for sample in adaptation:
         trace = executor.execute(orchestrator.solution, sample)
         sample_ref = task_sample_from_legacy(sample).ref
-        identity = EvaluationIdentity(candidate_ref, sample_ref, run_index)
+        identity = EvaluationIdentity(candidate_ref, sample_ref, 0)
         trace_path = store.save_trace(identity, trace)
         episode = Episode(
             identity=identity,
@@ -129,9 +135,85 @@ def _validate_sample_sets(store: RunStore) -> None:
     manifests = doc.get("manifests", [])
     if len(manifests) != 4 or {item.get("purpose") for item in manifests} != {p.value for p in SampleSetPurpose}:
         raise CliError("invalid RunStore: sample-set contract")
+    rebuilt = []
     for item in manifests:
-        if not item.get("content_hash") or not item.get("freeze", {}).get("approved"):
+        try:
+            purpose = SampleSetPurpose(item["purpose"])
+            refs = tuple(SampleRef(ref["sample_id"], ref["content_hash"])
+                         for ref in item["sample_refs"])
+            policy_data = item["access_policy"]
+            policy = AccessPolicy(
+                readers=tuple(policy_data["readers"]),
+                allows_updates=bool(policy_data.get("allows_updates", False)),
+                requires_candidate_freeze=bool(policy_data.get("requires_candidate_freeze", False)),
+            )
+            freeze = FreezeDecision(**item["freeze"]) if item.get("freeze") else None
+            manifest = SampleSetManifest.create(purpose, refs, policy, freeze)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CliError(f"invalid RunStore: sample-set structure: {exc}") from exc
+        if item.get("content_hash") != manifest.content_hash:
+            raise CliError("invalid RunStore: sample-set content hash mismatch")
+        if manifest.freeze is None or not manifest.freeze.approved:
             raise CliError("invalid RunStore: sample-set freeze evidence")
+        rebuilt.append(manifest)
+    try:
+        collection = SampleSetCollection(tuple(rebuilt))
+    except ValueError as exc:
+        raise CliError(f"invalid RunStore: sample-set contract: {exc}") from exc
+
+    try:
+        samples_doc = store.load_json("samples.json")
+        samples = [_sample_from_dict(item, group=item.get("group", "catalog"))
+                   for item in samples_doc.get("samples", [])]
+    except (KeyError, TypeError, CliError) as exc:
+        raise CliError(f"invalid RunStore: samples: {exc}") from exc
+    actual_refs = {sample.id: task_sample_from_legacy(sample).ref for sample in samples}
+    for manifest in collection.manifests:
+        for ref in manifest.sample_refs:
+            if ref.sample_id not in actual_refs or actual_refs[ref.sample_id] != ref:
+                raise CliError(f"invalid RunStore: sample reference mismatch: {ref.sample_id}")
+
+
+def _safe_artifact(root: Path, relative: str) -> Path:
+    rel = Path(relative)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise CliError("invalid RunStore: evidence path escapes root")
+    return root / rel
+
+
+def _validate_episodes(store: RunStore) -> None:
+    candidate_refs = set()
+    for version in store.solution_versions():
+        snapshot = store.load_json(f"solution_versions/v{version:03d}.json")["solution"]
+        candidate_refs.add(canonical_hash(solution_from_dict(snapshot)))
+    for path in sorted((store.root / "episodes").glob("*.json")):
+        episode = json.loads(path.read_text(encoding="utf-8"))
+        identity = episode.get("identity") or {}
+        if identity.get("candidate_ref") not in candidate_refs:
+            raise CliError("invalid RunStore: Episode candidate snapshot mismatch")
+        trace_path = _safe_artifact(store.root, str(episode.get("trace_ref", "")))
+        if not trace_path.is_file():
+            raise CliError("invalid RunStore: Episode trace missing")
+        trace = json.loads(trace_path.read_text(encoding="utf-8"))
+        sample_id = (identity.get("sample_ref") or {}).get("sample_id")
+        if trace.get("sample_id") != sample_id:
+            raise CliError("invalid RunStore: Episode trace sample mismatch")
+        if episode.get("evidence_hash") != canonical_hash(trace):
+            raise CliError("invalid RunStore: Episode evidence hash mismatch")
+
+
+def _validate_evidence_manifest(store: RunStore) -> None:
+    path = store.root / "evidence_package" / "manifest.json"
+    if not path.is_file():
+        return
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    files = manifest.get("files")
+    if not isinstance(files, dict) or manifest.get("content_hash") != canonical_hash(files):
+        raise CliError("invalid RunStore: evidence manifest content hash mismatch")
+    for relative, expected in files.items():
+        artifact = _safe_artifact(store.root, relative)
+        if not artifact.is_file() or hashlib.sha256(artifact.read_bytes()).hexdigest() != expected:
+            raise CliError(f"invalid RunStore: evidence manifest mismatch: {relative}")
 
 
 def _assert_valid_runstore(path: Path) -> RunStore:
@@ -146,6 +228,8 @@ def _assert_valid_runstore(path: Path) -> RunStore:
         raise CliError("invalid RunStore: hash chain verification failed")
     if not store.solution_versions():
         raise CliError("invalid RunStore: candidate snapshot missing")
+    _validate_episodes(store)
+    _validate_evidence_manifest(store)
     return store
 
 

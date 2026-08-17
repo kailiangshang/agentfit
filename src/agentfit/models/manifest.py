@@ -59,13 +59,24 @@ class SampleSetManifest:
     content_hash: str
     freeze: FreezeDecision | None = None
 
+    def __post_init__(self) -> None:
+        if not self.sample_refs:
+            raise ValueError("sample set cannot be empty")
+        if self.access_policy != default_access_policy(self.purpose):
+            raise ValueError(f"{self.purpose.value} must use its canonical access policy")
+        expected = canonical_hash({
+            "purpose": self.purpose,
+            "sample_refs": self.sample_refs,
+            "access_policy": self.access_policy,
+        })
+        if self.content_hash != expected:
+            raise ValueError("SampleSetManifest content_hash does not match content")
+
     @classmethod
     def create(cls, purpose: SampleSetPurpose, sample_refs: tuple[SampleRef, ...],
                access_policy: AccessPolicy,
                freeze: FreezeDecision | None) -> "SampleSetManifest":
         refs = tuple(sample_refs)
-        if not refs:
-            raise ValueError("sample set cannot be empty")
         content_hash = canonical_hash({
             "purpose": purpose,
             "sample_refs": refs,
