@@ -35,13 +35,17 @@ L1  Solid 层       固定原子能力: API + 数据库 + 人工审核
 ```bash
 uv venv .venv --python 3.12
 uv pip install -e ".[dev]"
+read -rsp "G3 demo signing key (at least 32 bytes): " AGENTFIT_G3_SIGNING_KEY
+echo
+export AGENTFIT_G3_SIGNING_KEY
+export AGENTFIT_G3_KEY_ID=local-demo
 agentfit train --case examples/telecom-case.json --output output/telecom-demo --auto-approve
 agentfit validate output/telecom-demo
 agentfit report output/telecom-demo
 agentfit export output/telecom-demo
 ```
 
-这里的自动批准仅用于本地确定性演示。当前已经实现核心闭环、四集合评价调度、G3 交付门禁、可信 RunStore 和离线桥接合同；完整材料编译、生产认知适配器和真实平台效果仍按[开发计划](development-plan.md)推进。
+这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现核心闭环、四集合评价调度、签名 G3 交付门禁、可信 RunStore 和离线桥接合同；完整材料编译、生产认知适配器和真实平台效果仍按[开发计划](development-plan.md)推进。
 
 参与开发前请阅读仓库根目录的 [CONTRIBUTING](../CONTRIBUTING.md) 和 [SECURITY](../SECURITY.md)。
 

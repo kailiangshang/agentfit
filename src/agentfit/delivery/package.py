@@ -11,7 +11,9 @@ from ..models.solution import Solution
 from ..store.run_store import RunStore
 
 
-def export_package(solution: Solution, run_dir: str | Path, monitoring_config: dict | None = None) -> Path:
+def export_package(solution: Solution, run_dir: str | Path,
+                   monitoring_config: dict | None = None,
+                   delivery_conditions: list[str] | tuple[str, ...] | None = None) -> Path:
     """导出可部署方案包（solution_package/，与 RunStore 同级消费）。"""
     store = RunStore(run_dir)
     pkg = {
@@ -23,6 +25,7 @@ def export_package(solution: Solution, run_dir: str | Path, monitoring_config: d
         "routing_rules": [{"id": r.id, "condition": r.condition, "dispatches_to": r.dispatches_to}
                           for r in solution.L3_knowledge if r.type == "routing_rule" and not r.superseded],
         "human_gates": [asdict(tool.human_gate) for tool in solution.L2_tools if tool.human_gate],
+        "delivery_conditions": list(delivery_conditions or ()),
         "monitoring_config": monitoring_config or {"pass_rate_alert": "-5%", "drift_alert": "15%", "retrain": "manual"},
         "boundary_analysis": analyze_boundary(store.root),
     }

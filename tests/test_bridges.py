@@ -114,9 +114,16 @@ def test_agentteams_solution_export_requires_g3(tmp_path: Path) -> None:
         bridge.export(str(tmp_path))
 
 
-def test_agentteams_exports_only_the_g3_approved_candidate(tmp_path: Path) -> None:
+def test_agentteams_exports_only_the_g3_approved_candidate(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AGENTFIT_G3_SIGNING_KEY", "agentfit-test-key-not-for-production-0001")
+    monkeypatch.setenv("AGENTFIT_G3_KEY_ID", "pytest")
     run_dir = tmp_path / "run"
-    env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(REPO / "src"),
+        "AGENTFIT_G3_SIGNING_KEY": "agentfit-test-key-not-for-production-0001",
+        "AGENTFIT_G3_KEY_ID": "pytest",
+    }
     trained = subprocess.run(
         [
             sys.executable, "-m", "agentfit", "train",
@@ -133,6 +140,7 @@ def test_agentteams_exports_only_the_g3_approved_candidate(tmp_path: Path) -> No
     config = bridge.export(str(run_dir))
     decision = json.loads((run_dir / "delivery_decision.json").read_text(encoding="utf-8"))
     assert config["source"]["solution_version"] == decision["final_solution_version"]
+    assert config["delivery_conditions"] == decision["review_conditions"]
     with pytest.raises(SystemExit, match="G3-approved"):
         bridge.export(str(run_dir), decision["final_solution_version"] + 1)
 

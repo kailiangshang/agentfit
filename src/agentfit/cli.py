@@ -385,7 +385,10 @@ def _export(args: argparse.Namespace) -> int:
     snapshot = store.load_json(f"solution_versions/v{approved_version:03d}.json")["solution"]
     solution = solution_from_dict(snapshot)
     write_boundary(store.root)
-    print(export_package(solution, store.root))
+    print(export_package(
+        solution, store.root,
+        delivery_conditions=decision.get("review_conditions", []),
+    ))
     print(export_evidence_package(store.root))
     return 0
 

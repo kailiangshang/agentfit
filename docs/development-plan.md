@@ -13,7 +13,7 @@
 | Skill Registry 与认知角色装配 | 已实现 | `src/agentfit/skills/registry.py`、`src/agentfit/agents/team.py` |
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
 | RunStore、报告、Dashboard、方案包、证据包 | 已实现 | `src/agentfit/store/`、`src/agentfit/delivery/` |
-| 稳定核心 CLI | 已实现四集合评价与 G3 交付门禁 | `agentfit train/validate/report/export` |
+| 稳定核心 CLI | 已实现四集合评价与签名 G3 交付门禁 | `agentfit train/validate/report/export` |
 | AgentTeams 生成、状态与漂移桥接 | 已实现离线合同 | `bridges/agentteams/` |
 | τ²-bench TaskSample、Trace、Episode 转换 | 已实现离线合同 | `bridges/tau2bench/` |
 

@@ -9,8 +9,12 @@ from ..gates.human import (BlockingHumanGate, GateType, HumanGatePolicy,
 class AutoApprove:
     """测试用：全部批准（人审槽位的 mock，不代表生产行为）。"""
 
+    def __init__(self, delivery_conditions: tuple[str, ...] = ()):
+        self.delivery_conditions = tuple(delivery_conditions)
+
     def review(self, request: ReviewRequest) -> ReviewDecision:
-        return ReviewDecision(True, "explicit test approval", "test-policy")
+        conditions = self.delivery_conditions if request.gate == GateType.G3 else ()
+        return ReviewDecision(True, "explicit test approval", "test-policy", conditions)
 
     def review_updates(self, proposals: list) -> bool:
         return self.review(ReviewRequest(GateType.G1, "updates", {"count": len(proposals)})).approved

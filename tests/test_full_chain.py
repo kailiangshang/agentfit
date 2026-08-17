@@ -29,7 +29,9 @@ from agentfit.store.run_store import RunStore
 from telecom_world import make_samples
 
 
-def test_full_chain_intake_to_delivery(tmp_path):
+def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTFIT_G3_SIGNING_KEY", "agentfit-test-key-not-for-production-0001")
+    monkeypatch.setenv("AGENTFIT_G3_KEY_ID", "pytest")
     samples = make_samples()
     run_dir = tmp_path / "full-chain"
 
@@ -66,7 +68,13 @@ def test_full_chain_intake_to_delivery(tmp_path):
     # 训练（含 RunStore 落盘、归因、更新和回归）。
     executor = SimulatorExecutor()
     orch = Orchestrator(initial, SamplePool(adaptation), executor,
-                        TrainingConfig(batch_size=18, max_epochs=5, review_policy=AutoApprove()),
+                        TrainingConfig(
+                            batch_size=18,
+                            max_epochs=5,
+                            review_policy=AutoApprove(
+                                delivery_conditions=("human confirmation before write",),
+                            ),
+                        ),
                         run_dir=str(run_dir), scenario="full-chain")
     build_team(orch)
     outcomes = orch.train()
@@ -118,15 +126,19 @@ def test_full_chain_intake_to_delivery(tmp_path):
         "evaluation_by_purpose": evaluation_by_purpose,
     })
     assert decision.approved is True
+    assert decision.conditions == ("human confirmation before write",)
     finalized = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
     assert finalized["delivery_approved"] is True
+    assert finalized["delivery_conditions"] == ["human confirmation before write"]
 
     # 交付：方案包 + 边界分析
     write_boundary(run_dir)
-    pkg = export_package(orch.solution, run_dir)
+    pkg = export_package(orch.solution, run_dir, delivery_conditions=decision.conditions)
     evidence = export_evidence_package(run_dir)
     boundary = analyze_boundary(run_dir)
-    assert pkg.exists() and evidence.exists() and "routing_rules" in json.loads(pkg.read_text())
+    package = json.loads(pkg.read_text())
+    assert pkg.exists() and evidence.exists() and "routing_rules" in package
+    assert package["delivery_conditions"] == ["human confirmation before write"]
     assert boundary["coverage"] >= 0.9
     assert boundary["recommended_delivery"] in ("全自动", "部分自动")
 

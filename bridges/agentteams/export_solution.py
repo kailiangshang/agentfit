@@ -40,6 +40,7 @@ def export(run_dir: str, version: int | None = None) -> dict:
                   for t in so["L2_tools"]],
         "routing": [{"id": r["id"], "condition": r["condition"], "target": r["dispatches_to"]}
                     for r in so["L3_knowledge"] if r["type"] == "routing_rule" and not r.get("superseded")],
+        "delivery_conditions": list(decision.get("review_conditions", [])),
         "source": {"run_dir": str(store.root), "solution_version": v},
     }
 

@@ -7,12 +7,19 @@ import subprocess
 import sys
 from pathlib import Path
 
+from agentfit.models.sample import canonical_hash
+
 
 REPO = Path(__file__).resolve().parents[1]
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(REPO / "src"),
+        "AGENTFIT_G3_SIGNING_KEY": "agentfit-test-key-not-for-production-0001",
+        "AGENTFIT_G3_KEY_ID": "pytest",
+    }
     return subprocess.run(
         [sys.executable, "-m", "agentfit", *args],
         cwd=REPO, env=env, capture_output=True, text=True,
@@ -78,10 +85,15 @@ def test_train_validate_report_and_export_round_trip(tmp_path: Path) -> None:
     assert len(list((run_dir / "traces").glob("*.json"))) == 4
     assert (run_dir / "summary.json").is_file()
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    decision = json.loads((run_dir / "delivery_decision.json").read_text(encoding="utf-8"))
     assert set(summary["evaluation_by_purpose"]) == {
         "adaptation", "validation", "sealed_holdout", "stress_and_failure",
     }
     assert summary["delivery_approved"] is True
+    assert decision["signature_algorithm"] == "hmac-sha256"
+    assert decision["key_id"] == "pytest"
+    assert len(decision["signature"]) == 64
+    assert "agentfit-test-key-not-for-production" not in json.dumps(decision)
 
     validated = _run("validate", str(run_dir))
     assert validated.returncode == 0, validated.stderr
@@ -99,6 +111,7 @@ def test_train_validate_report_and_export_round_trip(tmp_path: Path) -> None:
     boundary = json.loads((run_dir / "boundary.json").read_text(encoding="utf-8"))
     assert package["package_manifest"]["content_hash"]
     assert package["agent_config"]["topology"]["agents"]
+    assert package["delivery_conditions"] == []
     assert "summary.json" in evidence["files"]
     assert boundary["evidence_source"] == "episodes"
 
@@ -132,6 +145,23 @@ def test_train_refuses_to_overwrite_existing_runstore(tmp_path: Path) -> None:
     second = _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve")
     assert second.returncode != 0
     assert "output already exists" in second.stderr
+
+
+def test_auto_approve_requires_external_signing_key(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    _write_case(case)
+    env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+    env.pop("AGENTFIT_G3_SIGNING_KEY", None)
+    env.pop("AGENTFIT_G3_KEY_ID", None)
+    result = subprocess.run(
+        [
+            sys.executable, "-m", "agentfit", "train",
+            "--case", str(case), "--output", str(tmp_path / "run"), "--auto-approve",
+        ],
+        cwd=REPO, env=env, capture_output=True, text=True,
+    )
+    assert result.returncode != 0
+    assert "AGENTFIT_G3_SIGNING_KEY" in result.stderr
 
 
 def test_validate_recomputes_sample_set_content_hash(tmp_path: Path) -> None:
@@ -214,6 +244,35 @@ def test_g3_approval_cannot_be_forged_by_flipping_summary_bit(tmp_path: Path) ->
     validated = _run("validate", str(run_dir))
     assert validated.returncode != 0
     assert "delivery decision" in validated.stderr
+    exported = _run("export", str(run_dir))
+    assert exported.returncode != 0
+
+
+def test_g3_approval_rejects_coordinated_unsigned_edits(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    assert _run("train", "--case", str(case), "--output", str(run_dir)).returncode == 0
+
+    decision_path = run_dir / "delivery_decision.json"
+    decision = json.loads(decision_path.read_text(encoding="utf-8"))
+    decision["approved"] = True
+    unsigned = {
+        key: value for key, value in decision.items()
+        if key not in {"decision_hash", "signature"}
+    }
+    decision["decision_hash"] = canonical_hash(unsigned)
+    decision_path.write_text(json.dumps(decision), encoding="utf-8")
+
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["delivery_approved"] = True
+    summary["delivery_decision_hash"] = decision["decision_hash"]
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    validated = _run("validate", str(run_dir))
+    assert validated.returncode != 0
+    assert "signature" in validated.stderr
     exported = _run("export", str(run_dir))
     assert exported.returncode != 0
 

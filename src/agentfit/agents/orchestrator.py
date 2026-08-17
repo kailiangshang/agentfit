@@ -262,6 +262,7 @@ class Orchestrator:
         summary["delivery_approved"] = self.delivery_decision.approved
         summary["delivery_review_reason"] = self.delivery_decision.reason
         summary["delivery_reviewer"] = self.delivery_decision.reviewer
+        summary["delivery_conditions"] = list(self.delivery_decision.conditions)
         if self.auditor:
             from ..delivery.approval import create_delivery_decision
             decision_artifact = create_delivery_decision(

@@ -73,7 +73,10 @@ def test_boundary_counts_successful_human_episode_as_human_required(tmp_path: Pa
 
 
 def test_solution_package_contains_structured_topology(tmp_path: Path) -> None:
-    path = export_package(make_initial_solution(), tmp_path)
+    path = export_package(
+        make_initial_solution(), tmp_path,
+        delivery_conditions=["human confirmation before write"],
+    )
     package = json.loads(path.read_text(encoding="utf-8"))
     topology = package["agent_config"]["topology"]
     assert topology["agents"][0] == {
@@ -82,6 +85,7 @@ def test_solution_package_contains_structured_topology(tmp_path: Path) -> None:
         "uses": ["rule_roaming", "rule_airplane"],
     }
     assert topology["edges"] == []
+    assert package["delivery_conditions"] == ["human confirmation before write"]
 
 
 def test_tau2_ingestion_writes_a_real_valid_hash_chain(tmp_path: Path) -> None:

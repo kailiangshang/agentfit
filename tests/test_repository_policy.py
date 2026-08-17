@@ -117,6 +117,7 @@ def test_documented_cli_and_example_are_executable_contracts() -> None:
     assert "python -m agentfit.train" not in scenario
     for command in ("agentfit train", "agentfit validate", "agentfit report", "agentfit export"):
         assert command in scenario
+    assert "AGENTFIT_G3_SIGNING_KEY" in scenario
     assert (REPO / "examples" / "telecom-case.json").is_file()
     for artifact in ("sample_sets.json", "summary.json", "boundary.json",
                      "delivery_decision.json",

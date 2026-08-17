@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,10 +13,27 @@ from ..models.solution import solution_from_dict
 from ..store.run_store import RunStore
 
 
-EVIDENCE_ROOT_FILES = {"run.json", "samples.json", "sample_sets.json"}
+EVIDENCE_ROOT_FILES = {
+    "run.json", "samples.json", "sample_sets.json", "task_samples.json", "source_results.json",
+}
 EVIDENCE_DIRECTORIES = {
     "epochs", "loss_traces", "messages", "solution_versions", "traces", "episodes",
 }
+SIGNING_KEY_ENV = "AGENTFIT_G3_SIGNING_KEY"
+KEY_ID_ENV = "AGENTFIT_G3_KEY_ID"
+
+
+def _signing_material() -> tuple[bytes, str] | None:
+    raw = os.environ.get(SIGNING_KEY_ENV)
+    if raw is None:
+        return None
+    key = raw.encode("utf-8")
+    if len(key) < 32:
+        raise ValueError(f"{SIGNING_KEY_ENV} must contain at least 32 bytes")
+    key_id = os.environ.get(KEY_ID_ENV, "").strip()
+    if not key_id:
+        raise ValueError(f"{KEY_ID_ENV} is required with the G3 signing key")
+    return key, key_id
 
 
 def final_evidence_hash(store: RunStore) -> str:
@@ -35,6 +54,9 @@ def create_delivery_decision(store: RunStore, decision: Any, summary: dict[str, 
     evaluations = summary.get("evaluation_by_purpose")
     if not isinstance(candidate_ref, str) or not isinstance(final_version, int) or not isinstance(evaluations, dict):
         raise ValueError("complete final evaluation evidence is required before G3")
+    signing = _signing_material() if decision.approved else None
+    if decision.approved and signing is None:
+        raise ValueError(f"approved G3 requires external {SIGNING_KEY_ENV}")
     payload = {
         "approved": bool(decision.approved),
         "reviewer": str(decision.reviewer),
@@ -43,12 +65,19 @@ def create_delivery_decision(store: RunStore, decision: Any, summary: dict[str, 
         "candidate_ref": candidate_ref,
         "final_solution_version": final_version,
         "evidence_hash": final_evidence_hash(store),
-        "conditions": {
+        "review_conditions": list(decision.conditions),
+        "evidence_scope": {
             "candidate_frozen": summary.get("candidate_frozen") is True,
             "evaluation_by_purpose": evaluations,
         },
+        "signature_algorithm": "hmac-sha256" if signing else "unsigned",
+        "key_id": signing[1] if signing else "",
     }
     payload["decision_hash"] = canonical_hash(payload)
+    payload["signature"] = (
+        hmac.new(signing[0], payload["decision_hash"].encode("ascii"), hashlib.sha256).hexdigest()
+        if signing else ""
+    )
     return payload
 
 
@@ -60,9 +89,26 @@ def verify_delivery_decision(store: RunStore, summary: dict[str, Any] | None = N
         raise ValueError("delivery decision artifact is missing") from exc
     if not isinstance(decision, dict):
         raise ValueError("delivery decision artifact is invalid")
-    payload = {key: value for key, value in decision.items() if key != "decision_hash"}
+    payload = {
+        key: value for key, value in decision.items()
+        if key not in {"decision_hash", "signature"}
+    }
     if decision.get("decision_hash") != canonical_hash(payload):
         raise ValueError("delivery decision hash mismatch")
+    algorithm = decision.get("signature_algorithm")
+    if algorithm == "hmac-sha256":
+        signing = _signing_material()
+        if signing is None:
+            raise ValueError(f"delivery decision signature requires {SIGNING_KEY_ENV}")
+        if decision.get("key_id") != signing[1]:
+            raise ValueError("delivery decision signature key id mismatch")
+        expected_signature = hmac.new(
+            signing[0], decision["decision_hash"].encode("ascii"), hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(str(decision.get("signature", "")), expected_signature):
+            raise ValueError("delivery decision signature mismatch")
+    elif algorithm != "unsigned" or decision.get("approved"):
+        raise ValueError("approved delivery decision signature is missing")
     if decision.get("evidence_hash") != final_evidence_hash(store):
         raise ValueError("delivery decision evidence hash mismatch")
     summary_keys = {
@@ -79,11 +125,13 @@ def verify_delivery_decision(store: RunStore, summary: dict[str, Any] | None = N
         raise ValueError("delivery decision candidate mismatch")
     if decision.get("final_solution_version") != summary.get("final_solution_version"):
         raise ValueError("delivery decision solution version mismatch")
-    conditions = decision.get("conditions") or {}
-    if conditions.get("candidate_frozen") is not True:
+    evidence_scope = decision.get("evidence_scope") or {}
+    if evidence_scope.get("candidate_frozen") is not True:
         raise ValueError("delivery decision requires a frozen candidate")
-    if conditions.get("evaluation_by_purpose") != summary.get("evaluation_by_purpose"):
+    if evidence_scope.get("evaluation_by_purpose") != summary.get("evaluation_by_purpose"):
         raise ValueError("delivery decision evaluation mismatch")
+    if decision.get("review_conditions", []) != summary.get("delivery_conditions", []):
+        raise ValueError("delivery decision review conditions mismatch")
     if not decision.get("reviewer") or not decision.get("reason") or not decision.get("decided_at"):
         raise ValueError("delivery decision review evidence is incomplete")
 

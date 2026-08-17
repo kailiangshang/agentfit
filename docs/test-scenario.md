@@ -15,6 +15,15 @@ uv pip install -e ".[dev]"
 
 `examples/telecom-case.json` 包含四个互不重叠的样本及四类已冻结 SampleSetManifest。`--auto-approve` 只用于本地确定性演示；生产默认 Human Gate 会阻断未明确批准的变更和交付。
 
+获批的 G3 决策必须由运行环境中的外部密钥签名。密钥不得写入仓库、RunStore、命令参数或日志；训练、验证和导出进程需要由本地 secret manager 注入同一个密钥与 key id。本地演示可在当前 shell 隐式输入：
+
+```bash
+read -rsp "G3 demo signing key (at least 32 bytes): " AGENTFIT_G3_SIGNING_KEY
+echo
+export AGENTFIT_G3_SIGNING_KEY
+export AGENTFIT_G3_KEY_ID=local-demo
+```
+
 ```bash
 agentfit train \
   --case examples/telecom-case.json \
@@ -48,7 +57,7 @@ output/telecom-demo/
 └── evidence_package/manifest.json
 ```
 
-`agentfit validate` 会从磁盘重新计算 epoch 哈希链、四类冻结样本的 Episode 覆盖和最终候选身份，不接受 `summary.json` 中未经验证的布尔值。`delivery_decision.json` 将 Human G3 结果绑定到获评测候选、四集合指标和决策前证据哈希；核心与 AgentTeams 导出共用该门禁。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
+`agentfit validate` 会从磁盘重新计算 epoch 哈希链、四类冻结样本的 Episode 覆盖和最终候选身份，不接受 `summary.json` 中未经验证的布尔值。`delivery_decision.json` 将 Human G3 结果、交付条件、获评测候选、四集合指标和决策前证据哈希绑定，并使用外部密钥生成 HMAC-SHA256；核心与 AgentTeams 导出共用该门禁并携带交付条件。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
 
 本地命令只用 adaptation 集合驱动方案更新；候选冻结后会分别为四类集合生成 Episode 和指标，再请求 G3。validation、sealed_holdout 和 stress_and_failure 只用于评价，不把结果反向写入方案。当前 Executor 仍是确定性模拟器，因此这些结果只能证明合同和调度闭环，不得描述为真实模型泛化效果。
 
