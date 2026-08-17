@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, is_dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +26,10 @@ from ..models.solution import Solution
 
 def _dump(obj: Any) -> Any:
     if is_dataclass(obj):
-        return asdict(obj)
-    if isinstance(obj, list):
+        return _dump(asdict(obj))
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, (list, tuple)):
         return [_dump(o) for o in obj]
     if isinstance(obj, dict):
         return {k: _dump(v) for k, v in obj.items()}
@@ -53,6 +56,16 @@ class RunStore:
             "groups": {g: [s.id for s in samples if s.group == g] for g in {s.group for s in samples}},
             "samples": samples,
         })
+
+    def save_sample_manifests(self, collection: Any) -> Path:
+        path = self.root / "sample_sets.json"
+        _write(path, collection)
+        return path
+
+    def save_episode(self, episode: Any) -> Path:
+        path = self.root / "episodes" / f"{episode.identity.key}.json"
+        _write(path, episode)
+        return path
 
     def save_solution_version(self, solution: Solution, note: str = "") -> None:
         path = self.root / "solution_versions" / f"v{solution.version:03d}.json"

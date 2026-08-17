@@ -8,8 +8,30 @@ from __future__ import annotations
 
 from ..data.clustering import cluster_samples
 from ..models.loss import Sample
+from ..models.manifest import SampleSetCollection, SampleSetPurpose
+from ..models.sample import task_sample_from_legacy
 from ..models.solution import (Agent, CapabilityTool, Knowledge, Solution,
                                SolidAtom, Topology)
+
+
+def build_candidate(samples: list[Sample], sample_sets: SampleSetCollection,
+                    coverage: float = 0.5, seed: int = 7) -> Solution:
+    """Build a candidate only from Human-frozen adaptation samples."""
+    sample_sets.assert_ready_for_candidate_generation()
+    adaptation = sample_sets.by_purpose(SampleSetPurpose.ADAPTATION)
+    adaptation.require_access("architect", candidate_frozen=False, for_update=True)
+
+    by_id = {sample.id: sample for sample in samples}
+    selected: list[Sample] = []
+    for ref in adaptation.sample_refs:
+        sample = by_id.get(ref.sample_id)
+        if sample is None:
+            raise ValueError(f"adaptation sample is missing: {ref.sample_id}")
+        actual_ref = task_sample_from_legacy(sample).ref
+        if actual_ref.content_hash != ref.content_hash:
+            raise ValueError(f"adaptation sample hash mismatch: {ref.sample_id}")
+        selected.append(sample)
+    return build_initial(selected, coverage=coverage, seed=seed)
 
 
 def build_initial(samples: list[Sample], coverage: float = 0.5,
