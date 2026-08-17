@@ -63,6 +63,11 @@ class RunStore:
         _write(path, collection)
         return path
 
+    def save_task_samples(self, samples: list[Any]) -> Path:
+        path = self.root / "task_samples.json"
+        _write(path, {"total": len(samples), "samples": samples})
+        return path
+
     def save_episode(self, episode: Any) -> Path:
         path = self.root / "episodes" / f"{episode.identity.key}.json"
         _write(path, episode)

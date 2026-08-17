@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -19,6 +18,9 @@ sys.path.insert(0, str(REPO / "src"))
 
 from agentfit.store.run_store import RunStore  # noqa: E402
 from agentfit.log.training_log import EpochEntry, TrainingLog  # noqa: E402
+from agentfit.models.loss import Expected, Sample, Trace, TraceStep  # noqa: E402
+from agentfit.models.sample import (Episode, EvaluationIdentity, TaskSample,  # noqa: E402
+                                    canonical_hash)
 
 # tau2 telecom 根因 → 布尔特征（聚类展示用）
 FEATURE_MAP = {
@@ -32,33 +34,107 @@ FEATURE_MAP = {
 }
 
 
+def _cost(value) -> float:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return float((value or {}).get("total_cost_usd", 0))
+
+
+def _features(simulation: dict) -> dict[str, bool]:
+    task_id = str(simulation.get("task_id", ""))
+    return {feature: True for cause, feature in FEATURE_MAP.items() if cause in task_id}
+
+
+def simulation_to_task_sample(simulation: dict) -> TaskSample:
+    """Convert one τ² task/run record into the canonical semantic Sample."""
+    task_id = str(simulation.get("task_id") or canonical_hash(simulation)[:16])
+    features = _features(simulation)
+    return TaskSample(
+        id=task_id,
+        observation_refs=(),
+        input_data={"task_id": task_id, "features": features},
+        expected=Expected(),
+        evaluator="tau2_reward",
+        constraints={"source": "tau2-bench"},
+        complexity="compound" if len(features) >= 2 else "simple",
+    )
+
+
+def _tool_names(simulation: dict) -> list[str]:
+    calls = list(simulation.get("tool_calls") or [])
+    for message in simulation.get("messages") or []:
+        calls.extend(message.get("tool_calls") or [])
+    names = []
+    for call in calls:
+        if isinstance(call, str):
+            names.append(call)
+        elif isinstance(call, dict):
+            name = call.get("name") or (call.get("function") or {}).get("name")
+            if name:
+                names.append(str(name))
+    return names
+
+
+def simulation_to_episode(simulation: dict, task: TaskSample, *,
+                          candidate_ref: str, run_index: int,
+                          trace_ref: str | None = None) -> tuple[Episode, Trace]:
+    reward = (simulation.get("reward_info") or {}).get("reward", 0)
+    error = simulation.get("error") or simulation.get("exception")
+    result = "ERROR" if error else "PASS" if reward == 1 else "FAIL"
+    trace = Trace(
+        sample_id=task.id,
+        result="PASS" if result == "PASS" else "FAIL",
+        steps=[TraceStep(layer="L2", element_id=name, action="tool_call", ok=True)
+               for name in _tool_names(simulation)],
+        cost_usd=_cost(simulation.get("agent_cost")) + _cost(simulation.get("user_cost")),
+    )
+    if error:
+        trace.steps.append(TraceStep(
+            layer="L2", element_id="tau2_runtime", action="error", ok=False,
+            error=str(error),
+        ))
+    identity = EvaluationIdentity(candidate_ref, task.ref, run_index)
+    episode = Episode(
+        identity=identity,
+        trace_ref=trace_ref or f"traces/{identity.key}.json",
+        result=result,
+        cost_usd=trace.cost_usd,
+        evidence_hash=canonical_hash(simulation),
+    )
+    return episode, trace
+
+
 def convert(results_path: Path, run_dir: str, label: str) -> None:
     data = json.loads(results_path.read_text(encoding="utf-8"))
     store = RunStore(run_dir)
+    candidate_ref = canonical_hash({"bridge": "tau2bench", "candidate": label})
     store.init_run({"scenario": f"tau2-telecom-baseline:{label}", "executor": "tau2bench-bridge",
                     "config": {"num_tasks": len(data["simulations"]), "num_trials": 1},
-                    "solution_version_start": 0})
+                    "candidate_ref": candidate_ref})
 
-    # 样本（特征从根因组合解析；基线无四层方案，expected 留空）
-    from agentfit.models.loss import Expected, Sample
-    samples = []
-    for i, sim in enumerate(data["simulations"]):
-        causes = sim["task_id"].split("]")[1].split("[PERSONA")[0]
-        features = {FEATURE_MAP[c]: True for c in causes.split("|") if c in FEATURE_MAP}
-        samples.append(Sample(id=f"task-{i:02d}", features=features, expected=Expected(),
-                              complexity="compound" if len(features) >= 2 else "simple",
-                              group="control"))
-    store.save_samples(samples)
+    task_samples = [simulation_to_task_sample(simulation) for simulation in data["simulations"]]
+    store.save_task_samples(task_samples)
+    store.save_samples([
+        Sample(
+            id=task.id, features=dict(task.input_data.get("features", {})), expected=task.expected,
+            complexity=task.complexity, group="control",
+        ) for task in task_samples
+    ])
 
     per_task, total_cost = [], 0.0
-    for i, sim in enumerate(data["simulations"]):
-        reward = (sim.get("reward_info") or {}).get("reward", 0)
-        def _cost(c):
-            return c if isinstance(c, (int, float)) else (c or {}).get("total_cost_usd", 0)
-        cost = _cost(sim.get("agent_cost")) + _cost(sim.get("user_cost"))
-        total_cost += cost
-        per_task.append({"sample_id": f"task-{i:02d}", "task_id": sim["task_id"],
-                         "pass": reward == 1, "reward": reward, "cost_usd": round(cost, 4)})
+    for simulation, task in zip(data["simulations"], task_samples):
+        episode, trace = simulation_to_episode(
+            simulation, task, candidate_ref=candidate_ref, run_index=0,
+        )
+        trace_path = store.save_trace(episode.identity, trace)
+        if episode.trace_ref != trace_path.relative_to(store.root).as_posix():
+            raise ValueError("τ² trace reference does not match persisted trace")
+        store.save_episode(episode)
+        total_cost += episode.cost_usd
+        reward = (simulation.get("reward_info") or {}).get("reward", 0)
+        per_task.append({"sample_id": task.id, "task_id": simulation.get("task_id"),
+                         "pass": episode.result == "PASS", "reward": reward,
+                         "cost_usd": round(episode.cost_usd, 4)})
 
     passed = sum(1 for t in per_task if t["pass"])
     log = TrainingLog()
@@ -71,6 +147,7 @@ def convert(results_path: Path, run_dir: str, label: str) -> None:
         note="baseline 裸跑（无 AgentFit 训练）",
     ))
     store.save_epoch(1, log.entries[0], [])
+    store.save_messages(1, [])
     store.save_summary({"epochs_run": 1, "final_pass_rate": passed / len(per_task),
                         "final_solution_version": 0, "lambda_values": {},
                         "total_cost_usd": round(total_cost, 4), "converged": True,

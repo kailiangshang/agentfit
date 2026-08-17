@@ -14,10 +14,85 @@ import argparse
 import json
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
+from typing import Any, NamedTuple
 
 CONTROLLER_CANDIDATES = ("agentteams-controller", "hiclaw-controller")
+
+
+class DriftReport(NamedTuple):
+    missing: tuple[str, ...]
+    unexpected: tuple[str, ...]
+    changed: tuple[str, ...]
+    unverified: tuple[str, ...]
+
+    @property
+    def in_sync(self) -> bool:
+        return not (self.missing or self.unexpected or self.changed or self.unverified)
+
+
+def _items(payload: Any) -> list[dict]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ("items", "teams"):
+        if isinstance(payload.get(key), list):
+            return [item for item in payload[key] if isinstance(item, dict)]
+    return [payload]
+
+
+def _name(item: dict) -> str:
+    return str((item.get("metadata") or {}).get("name") or item.get("name") or "")
+
+
+def _workers(item: dict) -> tuple[str, ...] | None:
+    spec = item.get("spec")
+    if not isinstance(spec, dict):
+        return None
+    names = []
+    leader = spec.get("leader") or {}
+    if leader.get("name"):
+        names.append(leader["name"])
+    names.extend(worker["name"] for worker in spec.get("workers", []) if worker.get("name"))
+    return tuple(sorted(names))
+
+
+def reconcile_status(expected: dict, actual: Any) -> DriftReport:
+    """Compare only AgentFit-owned Teams; unrelated deployments are out of scope."""
+    expected_name = _name(expected)
+    actual_items = _items(actual)
+    by_name = {_name(item): item for item in actual_items if _name(item)}
+    missing = (expected_name,) if expected_name not in by_name else ()
+    unexpected = tuple(sorted(
+        name for name in by_name if name.startswith("agentfit") and name != expected_name
+    ))
+    changed: list[str] = []
+    unverified: list[str] = []
+    current = by_name.get(expected_name)
+    if current is not None:
+        current_workers = _workers(current)
+        if current_workers is None:
+            unverified.append(f"{expected_name}:content")
+        elif current_workers != _workers(expected):
+            changed.append(f"{expected_name}:workers")
+        expected_hash = (expected.get("metadata") or {}).get("annotations", {}).get("agentfit.io/registry-hash")
+        actual_hash = (current.get("metadata") or {}).get("annotations", {}).get("agentfit.io/registry-hash")
+        if current_workers is not None and expected_hash and actual_hash != expected_hash:
+            changed.append(f"{expected_name}:registry-hash")
+    return DriftReport(missing, unexpected, tuple(changed), tuple(unverified))
+
+
+def load_manifest(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        try:
+            import yaml
+        except ImportError as exc:
+            raise SystemExit("Team manifest is not JSON-compatible YAML; install PyYAML") from exc
+        return yaml.safe_load(text)
 
 
 def find_controller() -> str:
@@ -48,7 +123,7 @@ def get_teams(controller: str, cli: str) -> list[dict]:
     out = subprocess.run(["docker", "exec", controller, cli, "get", "teams", "-o", "json"],
                          capture_output=True, text=True)
     if out.returncode == 0 and out.stdout.strip().startswith(("[", "{")):
-        return json.loads(out.stdout)
+        return _items(json.loads(out.stdout))
     # 无 -o json 支持时解析表格
     rows = []
     for line in (out.stdout or "").splitlines():
@@ -73,7 +148,12 @@ def main() -> None:
         applied = apply_manifest(controller, cli, Path(args.manifest))
         print(applied)
     teams = get_teams(controller, cli)
-    payload = {"controller": controller, "cli": cli, "applied": applied, "teams": teams}
+    expected_path = Path(args.manifest) if args.manifest else Path(__file__).with_name("team.yaml")
+    drift = reconcile_status(load_manifest(expected_path), teams)
+    payload = {
+        "controller": controller, "cli": cli, "applied": applied, "teams": teams,
+        "drift": {**drift._asdict(), "in_sync": drift.in_sync},
+    }
     print(json.dumps(payload, ensure_ascii=False, indent=1))
     if args.output:
         out_path = Path(args.output)
