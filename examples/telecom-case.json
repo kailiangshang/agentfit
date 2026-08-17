@@ -1,0 +1,40 @@
+{
+  "scenario": "telecom-demo",
+  "samples": [
+    {
+      "id": "roaming-fix",
+      "features": {"abroad": true, "roaming_off": true},
+      "expected": {"actions": [{"tool": "safe_toggle_roaming", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "airplane-validation",
+      "features": {"airplane": true},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "sim-holdout",
+      "features": {"sim_ok": false},
+      "expected": {"actions": [{"tool": "safe_run_sim_diagnostics", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "compound-stress",
+      "features": {"abroad": true, "roaming_off": true, "airplane": true},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}, {"tool": "safe_toggle_roaming", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "compound"
+    }
+  ],
+  "sample_sets": [
+    {"purpose": "adaptation", "sample_ids": ["roaming-fix"], "freeze": {"reviewer": "demo-owner", "approved": true, "decided_at": "2026-08-17T15:00:00+08:00", "reason": "local demonstration fixture"}},
+    {"purpose": "validation", "sample_ids": ["airplane-validation"], "freeze": {"reviewer": "demo-owner", "approved": true, "decided_at": "2026-08-17T15:00:00+08:00", "reason": "local demonstration fixture"}},
+    {"purpose": "sealed_holdout", "sample_ids": ["sim-holdout"], "freeze": {"reviewer": "demo-owner", "approved": true, "decided_at": "2026-08-17T15:00:00+08:00", "reason": "local demonstration fixture"}},
+    {"purpose": "stress_and_failure", "sample_ids": ["compound-stress"], "freeze": {"reviewer": "demo-owner", "approved": true, "decided_at": "2026-08-17T15:00:00+08:00", "reason": "local demonstration fixture"}}
+  ],
+  "training": {"batch_size": 1, "max_epochs": 1}
+}

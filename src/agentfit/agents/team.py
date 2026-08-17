@@ -1,6 +1,6 @@
 """六角色装配：把角色运行时挂到总线（元层 L4 拓扑的运行时形态）。
 
-分工与确定性边界见 docs/agentfit-implementation.md §一：
+分工与确定性边界见 docs/architecture.md：
 - Steward/Attributor/Architect：认知角色（内核确定性实现，LLM 槽位接口留待生产接入）
 - Orchestrator/Validator/Auditor：确定性官员
 """

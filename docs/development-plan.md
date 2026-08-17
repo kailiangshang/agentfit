@@ -1,176 +1,81 @@
-# AgentFit 稳定收敛与闭环开发计划
+# AgentFit 开发计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `test-driven-development` task-by-task. Every behavior change must show RED before GREEN.
+本文档只描述当前正本之后仍需推进的工作。完成项由 Git 历史和测试证明，不在仓库中保留并行方案副本。
 
-**Goal:** 将现有算法原型收敛为单正本、证据可信、平台解耦且可端到端验证的 Agent 方案训练系统。
+## 当前可运行基线
 
-**Architecture:** `src/agentfit` 持有稳定领域合同、确定性训练内核和通用适配器接口；`bridges` 负责 AgentTeams 与 τ²-bench 转换。活构件稳定命名，运行快照用内容哈希和 run ID 标识。
+| 能力 | 当前状态 | 证据 |
+|---|---|---|
+| 四层 Solution 与存在依赖验证 | 已实现 | `src/agentfit/models/solution.py`、`src/agentfit/solution/validator.py` |
+| SourceObservation、TaskSample、Episode | 已实现合同 | `src/agentfit/models/sample.py` |
+| 四类冻结 SampleSetManifest | 已实现合同与访问门禁 | `src/agentfit/models/manifest.py` |
+| 训练、归因、建议、事务、回归、正则 | 已实现确定性内核 | `src/agentfit/core/`、`src/agentfit/agents/orchestrator.py` |
+| Skill Registry 与认知角色装配 | 已实现 | `src/agentfit/skills/registry.py`、`src/agentfit/agents/team.py` |
+| 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
+| RunStore、报告、Dashboard、方案包、证据包 | 已实现 | `src/agentfit/store/`、`src/agentfit/delivery/` |
+| 稳定核心 CLI | 已实现 | `agentfit train/validate/report/export` |
+| AgentTeams 生成、状态与漂移桥接 | 已实现离线合同 | `bridges/agentteams/` |
+| τ²-bench TaskSample、Trace、Episode 转换 | 已实现离线合同 | `bridges/tau2bench/` |
 
-**Tech Stack:** Python 3.10+、dataclasses、pytest、JSON/YAML、AgentTeams 桥接脚本、τ²-bench 桥接脚本。
+这张表只代表模块和离线测试存在，不代表真实平台运行、真实业务效果或最终泛化已经完成。
 
-## Global Constraints
+## 最高优先级工作
 
-- `competition/2026-08-16/submission/` 冻结，不得修改。
-- 不在 `src/agentfit` 中导入 AgentTeams、τ²-bench 或供应商 SDK。
-- 活构件只有稳定名称；Git 记录演化。
-- 协议、包、依赖版本和不可变运行证据身份可以保留。
-- 所有结论必须能从 RunStore 真实证据重算。
-- 生产 Human Gate 默认阻断；自动批准只允许显式测试注入。
+### 材料编译闭环
 
----
+把文件、流程、日志和人工描述转成可追溯的 `SourceObservation`，再编译为 `TaskSample`。需要补齐：
 
-### Task 1: 单正本与冻结门禁
+- 材料解析器和 Observation Store；
+- Observation 到 TaskSample 的证据引用；
+- 样本冲突、缺失和重复检查；
+- Human G0 的冻结交互，而不只接受已经批准的 JSON。
 
-**Files:**
-- Modify: `docs/README.md`
-- Delete after consolidation: `docs/agentfit-skeleton.md`
-- Delete after consolidation: `docs/agentfit-solution.md`
-- Delete after consolidation: `docs/agentfit-implementation.md`
-- Modify: `src/agentfit/skills/*.md`
-- Modify: `tests/test_decoupling.py`
-- Create: `tests/test_repository_policy.py`
+完成定义：任意 TaskSample 都能回溯到原始材料片段，修改材料会改变内容哈希并使旧冻结失效。
 
-**Interfaces:**
-- Consumes: Git tracked-file list and the frozen submission tree.
-- Produces: `find_policy_violations(repo: Path) -> list[str]` and a single architecture document.
+### 四集合评价生命周期
 
-- [ ] Write failing tests that reject version/stage suffixes in active filenames, forbidden active prose, duplicate architecture documents and changes to the frozen path.
-- [ ] Run `pytest tests/test_repository_policy.py tests/test_decoupling.py -q` and confirm failures identify the existing documents, Skill metadata and bridge example.
-- [ ] Consolidate active architecture prose into `docs/architecture.md`, remove overlapping documents, remove Skill version sections, and update README links.
-- [ ] Replace the old “Skill must carry a version” test with Registry/loadability and stable-name assertions.
-- [ ] Re-run focused tests and the full suite.
-- [ ] Commit the independently reviewable policy change.
+当前 CLI 只用 adaptation 训练，并生成 adaptation Episode；validation、sealed holdout 和 stress 集合已有合同，但尚未形成完整运行调度。下一步需要：
 
-### Task 2: 可信证据缺陷
+- 显式 Candidate Freeze；
+- validation 只做选择和回归，不直接生成规则；
+- Candidate Freeze 后才允许 sealed holdout 和 stress 运行；
+- 四集合指标分别报告，不把训练通过率当泛化结果；
+- G3 必须发生在最终评价之后。
 
-**Files:**
-- Modify: `src/agentfit/core/regularization.py`
-- Modify: `src/agentfit/core/proposals.py`
-- Modify: `src/agentfit/agents/orchestrator.py`
-- Modify: `src/agentfit/delivery/package.py`
-- Modify: `bridges/tau2bench/results_to_runstore.py`
-- Create: `tests/test_evidence_integrity.py`
+完成定义：报告中的每个结果都由 `candidate_ref + sample_ref + run_index` 对应的 Episode 重算。
 
-**Interfaces:**
-- Produces: `stable_element_id(prefix: str, payload: object) -> str`.
-- Produces: structured solution-package JSON and honest hash-chain status.
+### 生产认知适配器
 
-- [ ] Write a failing λ test proving empty over-threshold lists never increment a streak.
-- [ ] Write a cross-process deterministic-ID test for equivalent proposal evidence.
-- [ ] Write a boundary test proving `requires_human=True` is reported as Human-required even when the Episode succeeds.
-- [ ] Write a package-schema test proving agents and topology edges are JSON objects, not strings.
-- [ ] Write a τ² conversion test proving an empty or invalid hash chain cannot be marked valid.
-- [ ] Implement the minimum fixes, re-run each RED test to GREEN, then run all tests.
-- [ ] Commit the evidence-integrity change.
+Steward、Attributor、Architect 已有稳定角色与 Skill，核心也已在 `src/agentfit/adapters/protocols.py` 留出平台无关合同，但当前认知实现仍以确定性内核为主。下一步需要在桥接侧实现并注入：
 
-### Task 3: 样本、Manifest 与评价身份
+- LLM 调用与模型清单；
+- 检索与证据引用；
+- 沙箱工具执行；
+- 预算、超时、重试、结构化输出和错误分类。
 
-**Files:**
-- Create: `src/agentfit/models/sample.py`
-- Create: `src/agentfit/models/manifest.py`
-- Modify: `src/agentfit/models/loss.py`
-- Modify: `src/agentfit/data/sample_pool.py`
-- Modify: `src/agentfit/store/run_store.py`
-- Create: `tests/test_sample_contract.py`
+完成定义：更换 LiteLLM、直连 API 或 AgentTeams 时，`src/agentfit` 的领域合同和训练状态机不改变。
 
-**Interfaces:**
-- Produces: `SourceObservation`, `TaskSample`, `Episode`, `SampleRef`.
-- Produces: `SampleSetManifest`, `AccessPolicy`, `FreezeDecision`.
-- Produces: `EvaluationIdentity(candidate_ref, sample_ref, run_index)`.
+### 真实桥接验证
 
-- [ ] Write failing construction and validation tests for all contract types.
-- [ ] Require exactly four distinct set purposes and immutable content hashes.
-- [ ] Require Human Freeze before candidate generation and enforce sealed-holdout access after candidate freeze.
-- [ ] Persist manifest references and evaluation identity in RunStore.
-- [ ] Add compatibility conversion from current `Sample` inputs without weakening the new contract.
-- [ ] Run contract tests and the full suite, then commit.
+- AgentTeams：先用 `--status-only` 输出精确 drift，再由维护者确认 apply 或删除；不得按前缀批量删除。
+- τ²-bench：保留原始 results、模型和成本 provenance，再转换为 TaskSample、Trace、Episode。
+- 每次真实运行使用独立 RunStore，不覆盖 smoke 或历史证据。
 
-### Task 4: 元层角色、Skill Registry 与 Human Gate
+完成定义：平台运行、核心模拟器和 bench 结果各有独立证据，任何一种都不冒充另外一种。
 
-**Files:**
-- Create: `src/agentfit/agents/steward.py`
-- Create: `src/agentfit/agents/attributor.py`
-- Create: `src/agentfit/agents/architect.py`
-- Create: `src/agentfit/agents/validator.py`
-- Create: `src/agentfit/skills/registry.py`
-- Create: `src/agentfit/gates/human.py`
-- Modify: `src/agentfit/agents/team.py`
-- Modify: `src/agentfit/agents/orchestrator.py`
-- Create: `tests/test_runtime_contract.py`
+## 后续工作
 
-**Interfaces:**
-- Produces: `SkillRegistry.load() -> dict[str, SkillDefinition]`.
-- Produces: `HumanGatePolicy.review(request: ReviewRequest) -> ReviewDecision`.
-- Produces: role handlers with typed TaskMsg/ResultMsg boundaries.
+- 扩展材料类型、行业 Sample Compiler 和安全策略；
+- 增加多模型、多目标和多次运行的统计比较；
+- 建立方案资产目录、漂移监控和回归触发器；
+- 增加发布包兼容性、迁移和长期维护策略；
+- 在真实项目中验证成本、延迟、安全和维护性，而不只优化通过率。
 
-- [ ] Write failing tests proving Skill files are loaded once and role manifests derive from Registry output.
-- [ ] Write failing tests for G0/G1/G2/G3 default-block behavior and explicit test approval.
-- [ ] Write failing tests for low-confidence, topology and budget escalation.
-- [ ] Split the four embedded role handlers into focused modules and wire them through MessageBus.
-- [ ] Make payload references and context chains epoch-correct.
-- [ ] Run focused tests and full suite, then commit.
+## 每次合入门禁
 
-### Task 5: 核心 CLI 与结构化交付
-
-**Files:**
-- Create: `src/agentfit/cli.py`
-- Create: `src/agentfit/__main__.py`
-- Create: `src/agentfit/delivery/boundary.py`
-- Modify: `src/agentfit/delivery/package.py`
-- Modify: `pyproject.toml`
-- Create: `tests/test_cli.py`
-
-**Interfaces:**
-- Produces: `agentfit validate`, `agentfit train`, `agentfit report`, `agentfit export`.
-- Produces: canonical `solution_package`, `evidence_package`, and bridge input manifest.
-
-- [ ] Write failing CLI help, invalid-input and simulator-run tests.
-- [ ] Implement the stable command surface without platform-specific imports.
-- [ ] Export structured L1-L4 objects, gates, provenance and content hashes.
-- [ ] Generate boundary analysis from Samples and Episodes rather than failure-only traces.
-- [ ] Run CLI tests and full suite, then commit.
-
-### Task 6: AgentTeams 与 τ²-bench 桥接闭环
-
-**Files:**
-- Create: `bridges/agentteams/render_team.py`
-- Modify: `bridges/agentteams/team.yaml`
-- Modify: `bridges/agentteams/apply_team.py`
-- Modify: `bridges/agentteams/export_solution.py`
-- Modify: `bridges/agentteams/import_results.py`
-- Modify: `bridges/tau2bench/run_bench.py`
-- Modify: `bridges/tau2bench/results_to_runstore.py`
-- Create: `tests/test_bridges.py`
-
-**Interfaces:**
-- Produces: stable Team manifest `metadata.name=agentfit` from canonical Registry data.
-- Produces: `reconcile_status(expected, actual) -> DriftReport`.
-- Produces: τ² TaskSample/Episode converters and RunStore ingestion.
-
-- [ ] Write failing tests for stable deployment names, generated role/Skill content and deployment drift.
-- [ ] Write failing fixture-driven τ² conversion tests for task, reward, trace, cost and compound failures.
-- [ ] Remove deployment version suffixes and stale manifest examples.
-- [ ] Render the Team manifest and compare it with the checked-in canonical bridge output.
-- [ ] Run fixture tests without requiring Docker.
-- [ ] Reconcile the live AgentTeams deployment only after read-only drift output identifies exact deletions and creations.
-- [ ] Run a real bridge smoke, capture immutable evidence and commit.
-
-### Task 7: 全链验收与开源维护
-
-**Files:**
-- Modify: `tests/test_full_chain.py`
-- Modify: `docs/README.md`
-- Modify: `docs/test-scenario.md`
-- Create: `CONTRIBUTING.md`
-- Create: `SECURITY.md`
-
-**Interfaces:**
-- Consumes all prior task interfaces.
-- Produces a reproducible local simulator path and separately evidenced real-platform path.
-
-- [ ] Extend the full-chain test through material, freeze, candidate, Episode, attribution, update, regression and delivery.
-- [ ] Add repository-policy, contract, bridge-fixture and frozen-submission gates to the standard test command.
-- [ ] Replace nonexistent commands and aspirational output trees in user documentation with verified commands and artifacts.
-- [ ] Run compile, full tests, repository scans, manifest validation and Git diff checks.
-- [ ] Perform an independent code review against `docs/architecture.md`; fix all Critical and Important findings.
-- [ ] Commit and push the complete main branch after confirming remote fast-forward safety.
+1. 活构件稳定命名，原位修改，Git 记录演化。
+2. `competition/2026-08-16/submission/` 摘要不变。
+3. 行为变更先有失败测试，再实现通过。
+4. 核心不导入 AgentTeams、τ²-bench 或供应商 SDK。
+5. 报告从 RunStore 重算；空证据、未运行阶段和人工处理不得伪装成自动成功。
+6. 运行 `pytest`、桥接生成物检查、编译检查和 `git diff --check`。

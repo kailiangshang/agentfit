@@ -53,6 +53,17 @@ def test_active_docs_do_not_carry_iteration_names() -> None:
     assert violations == [], "活跃文档仍携带迭代名称:\n" + "\n".join(violations)
 
 
+def test_active_artifact_filenames_are_stable() -> None:
+    pattern = re.compile(r"(?i)(?:^|[-_.])(v\d+(?:[._-]\d+)*|draft|final|stage[-_]?\d*)(?:$|[-_.])")
+    violations = []
+    for root_name in ("src", "docs", "bridges", "examples"):
+        root = REPO / root_name
+        for path in sorted(item for item in root.rglob("*") if item.is_file()):
+            if pattern.search(path.stem):
+                violations.append(path.relative_to(REPO).as_posix())
+    assert violations == [], "活构件文件名携带迭代标签:\n" + "\n".join(violations)
+
+
 def test_skills_are_stable_canonical_files() -> None:
     skills = sorted((REPO / "src" / "agentfit" / "skills").glob("*.md"))
     assert len(skills) == 11
@@ -71,3 +82,32 @@ def test_agentteams_bridge_uses_stable_deployment_names() -> None:
     export_text = (REPO / "bridges" / "agentteams" / "export_solution.py").read_text(encoding="utf-8")
     assert "team-agentfit-v" not in apply_text
     assert not re.search(r'"project"\s*:\s*f?"[^"\n]*-v\{', export_text)
+
+
+def test_active_sources_only_reference_canonical_architecture() -> None:
+    violations = []
+    for root in (REPO / "src", REPO / "docs"):
+        for path in sorted(root.rglob("*")):
+            if not path.is_file() or path.suffix not in {".py", ".md"}:
+                continue
+            text = path.read_text(encoding="utf-8")
+            for legacy in LEGACY_ARCHITECTURE_DOCS:
+                if legacy in text:
+                    violations.append(f"{path.relative_to(REPO)} references {legacy}")
+    assert violations == [], "已删除架构副本仍被引用:\n" + "\n".join(violations)
+
+
+def test_documented_cli_and_example_are_executable_contracts() -> None:
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+    assert "python -m agentfit.train" not in scenario
+    for command in ("agentfit train", "agentfit validate", "agentfit report", "agentfit export"):
+        assert command in scenario
+    assert (REPO / "examples" / "telecom-case.json").is_file()
+    for artifact in ("sample_sets.json", "summary.json", "boundary.json",
+                     "solution_package/package.json", "evidence_package/manifest.json"):
+        assert artifact in scenario
+
+
+def test_open_source_maintenance_contracts_exist() -> None:
+    assert (REPO / "CONTRIBUTING.md").is_file()
+    assert (REPO / "SECURITY.md").is_file()

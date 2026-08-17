@@ -1,7 +1,7 @@
 """架构守护测试：解耦约束 + 架构级全量（防推倒重来的机制保证）。
 
 1. src/agentfit 内禁止 import agentteams / tau2（桥接只允许在 bridges/）
-2. 实现文档 §十 声明的全部架构组件必须存在且可导入（架构级全量）
+2. 架构正本声明的全部结构模块必须存在且可导入（架构级全量）
 3. 11 个 Skill 定义文件存在且使用稳定名称（演化由 Git 记录）
 """
 from __future__ import annotations
@@ -35,11 +35,13 @@ def test_no_platform_dependency_inside_library():
 
 
 def test_architecture_level_complete():
-    """实现文档 §十 的全量组件清单——架构级全量，子模块允许简版。"""
+    """架构正本的全量结构清单——子模块可逐步增强，但边界不能缺失。"""
     required_modules = [
         "agentfit.bus.messages", "agentfit.agents.base", "agentfit.agents.orchestrator",
-        "agentfit.agents.team", "agentfit.agents.auditor",
+        "agentfit.agents.team", "agentfit.agents.auditor", "agentfit.agents.steward",
+        "agentfit.agents.attributor", "agentfit.agents.architect", "agentfit.agents.validator",
         "agentfit.models.solution", "agentfit.models.loss", "agentfit.models.config",
+        "agentfit.models.sample", "agentfit.models.manifest",
         "agentfit.core.attribution", "agentfit.core.transaction", "agentfit.core.regularization",
         "agentfit.core.aggregation", "agentfit.core.proposals", "agentfit.core.regression",
         "agentfit.data.sample_pool", "agentfit.data.clustering",
@@ -47,11 +49,22 @@ def test_architecture_level_complete():
         "agentfit.solution.validator", "agentfit.solution.builder",
         "agentfit.log.training_log", "agentfit.log.report",
         "agentfit.store.run_store", "agentfit.dashboard.generate",
-        "agentfit.monitoring.monitor", "agentfit.delivery.package",
+        "agentfit.monitoring.monitor", "agentfit.delivery.package", "agentfit.delivery.boundary",
+        "agentfit.skills.registry", "agentfit.gates.human", "agentfit.adapters.protocols",
+        "agentfit.cli",
     ]
     import importlib
     for mod in required_modules:
         importlib.import_module(mod)   # 缺一个就 ImportError → 测试失败
+
+
+def test_platform_neutral_adapter_protocols_are_reserved():
+    import importlib
+
+    protocols = importlib.import_module("agentfit.adapters.protocols")
+    for name in ("CognitiveAdapter", "RetrievalAdapter", "SandboxAdapter"):
+        contract = getattr(protocols, name)
+        assert getattr(contract, "_is_protocol", False), f"{name} 必须是平台无关 Protocol"
 
 
 def test_skills_are_stable_files():

@@ -1,6 +1,6 @@
 """消息总线：元层六角色协同的唯一合法通道。
 
-设计对应 docs/agentfit-implementation.md §三：
+设计对应 docs/architecture.md：
 - TaskMsg / ResultMsg 是唯一消息格式，payload 走引用不走值
 - context_ref 串起同一 epoch 的全部消息（因果链锚点）
 - 角色运行时禁止直呼，一切经总线按路由表转发
