@@ -1,4 +1,4 @@
-"""对象层数据结构：被训练的四层方案。字段定义对应 docs/agentfit-implementation.md §七。"""
+"""对象层数据结构：被训练的四层方案。规范见 docs/architecture.md。"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -110,3 +110,34 @@ class Solution:
 
     def experiences(self) -> list[Knowledge]:
         return [k for k in self.L3_knowledge if k.type == "experience" and not k.superseded]
+
+
+def solution_from_dict(data: dict[str, Any]) -> Solution:
+    """Restore a canonical Solution snapshot from RunStore JSON."""
+    topology_data = data.get("L4_topology") or {}
+    topology = Topology(
+        agents=[Agent(**item) for item in topology_data.get("agents", [])],
+        edges=[TopologyEdge(**item) for item in topology_data.get("edges", [])],
+        human_gate_positions=list(topology_data.get("human_gate_positions", [])),
+        trigger_mode=topology_data.get("trigger_mode", "passive"),
+    )
+    tools = []
+    for item in data.get("L2_tools", []):
+        payload = dict(item)
+        gate = payload.get("human_gate")
+        payload["human_gate"] = HumanGate(**gate) if gate else None
+        tools.append(CapabilityTool(**payload))
+    knowledge = []
+    for item in data.get("L3_knowledge", []):
+        payload = dict(item)
+        steps = payload.get("steps")
+        payload["steps"] = [ChainStep(**step) for step in steps] if steps else None
+        knowledge.append(Knowledge(**payload))
+    return Solution(
+        version=int(data.get("version", 0)),
+        L1_atoms=[SolidAtom(**item) for item in data.get("L1_atoms", [])],
+        L2_tools=tools,
+        L3_knowledge=knowledge,
+        L4_topology=topology,
+        lambda_values=dict(data.get("lambda_values") or {"L1": 0.1, "L2": 0.2, "L3": 0.3, "L4": 0.4}),
+    )

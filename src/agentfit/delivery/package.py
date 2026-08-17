@@ -1,9 +1,12 @@
-"""交付（简版）：方案打包 + 适用边界分析。对应 test-scenario.md §六交付树。"""
+"""Canonical solution and evidence package export."""
 from __future__ import annotations
 
 from dataclasses import asdict
+import hashlib
+import json
 from pathlib import Path
 
+from ..models.sample import canonical_hash
 from ..models.solution import Solution
 from ..store.run_store import RunStore
 
@@ -21,41 +24,39 @@ def export_package(solution: Solution, run_dir: str | Path, monitoring_config: d
                           for r in solution.L3_knowledge if r.type == "routing_rule" and not r.superseded],
         "human_gates": [asdict(tool.human_gate) for tool in solution.L2_tools if tool.human_gate],
         "monitoring_config": monitoring_config or {"pass_rate_alert": "-5%", "drift_alert": "15%", "retrain": "manual"},
+        "boundary_analysis": analyze_boundary(store.root),
+    }
+    pkg["package_manifest"] = {
+        "schema": "agentfit.solution-package",
+        "content_hash": canonical_hash(pkg),
     }
     out = store.root / "solution_package" / "package.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(__import__("json").dumps(pkg, ensure_ascii=False, indent=1), encoding="utf-8")
+    out.write_text(json.dumps(pkg, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
 
 
 def analyze_boundary(run_dir: str | Path) -> dict:
-    """适用边界：哪些能自动 / 哪些留人工 / 为什么（LossTrace + 样本统计）。"""
-    store = RunStore(run_dir)
-    human_samples, eval_errors, automated = [], [], []
-    for e in store.epochs():
-        lt_dir = store.root / "loss_traces" / f"epoch_{e:03d}"
-        if not lt_dir.is_dir():
+    """Compatibility import for callers of the original package module."""
+    from .boundary import analyze_boundary as _analyze
+    return _analyze(run_dir)
+
+
+def export_evidence_package(run_dir: str | Path) -> Path:
+    """Hash every immutable run artifact into a separate evidence manifest."""
+    root = Path(run_dir)
+    files: dict[str, str] = {}
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        relative = path.relative_to(root).as_posix()
+        if relative.startswith(("solution_package/", "evidence_package/")):
             continue
-        for p in lt_dir.glob("*.json"):
-            lt = store.load_json(f"loss_traces/epoch_{e:03d}/{p.name}")
-            if lt["root_cause_layer"] == "human":
-                human_samples.append(lt["sample_id"])
-            elif lt["root_cause_layer"] == "eval_error":
-                eval_errors.append(lt["sample_id"])
-    samples = store.load_json("samples.json") if (store.root / "samples.json").exists() else {"total": 0, "samples": []}
-    human_samples.extend(
-        sample["id"] for sample in samples.get("samples", [])
-        if sample.get("requires_human", False)
-    )
-    human_unique = sorted(set(human_samples))
-    eval_unique = sorted(set(eval_errors))
-    unresolved = set(human_unique) | set(eval_unique)
-    auto = max(0, samples.get("total", 0) - len(unresolved))
-    coverage = auto / max(1, samples.get("total", 1))
-    delivery = ("全自动" if coverage >= 0.95 and not human_unique else
-                "部分自动" if coverage >= 0.7 else
-                "降级" if coverage >= 0.5 else "保留人工")
-    return {"automated": auto, "human_required": human_unique,
-            "eval_errors": eval_unique, "coverage": round(coverage, 3),
-            "recommended_delivery": delivery,
-            "reason": f"自动化覆盖 {coverage:.0%}；人工项均有归因证据"}
+        files[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest = {
+        "schema": "agentfit.evidence-package",
+        "files": files,
+        "content_hash": canonical_hash(files),
+    }
+    out = root / "evidence_package" / "manifest.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    return out

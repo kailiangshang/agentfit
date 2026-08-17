@@ -14,6 +14,7 @@ Dashboard / 报告 / 审计取证三个消费者共同读这里。
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import asdict, is_dataclass
 from enum import Enum
@@ -67,6 +68,11 @@ class RunStore:
         _write(path, episode)
         return path
 
+    def save_trace(self, identity: Any, trace: Any) -> Path:
+        path = self.root / "traces" / f"{identity.key}.json"
+        _write(path, trace)
+        return path
+
     def save_solution_version(self, solution: Solution, note: str = "") -> None:
         path = self.root / "solution_versions" / f"v{solution.version:03d}.json"
         _write(path, {"version": solution.version, "note": note, "solution": solution})
@@ -93,6 +99,25 @@ class RunStore:
     def solution_versions(self) -> list[int]:
         d = self.root / "solution_versions"
         return sorted(int(p.stem[1:]) for p in d.glob("v*.json")) if d.is_dir() else []
+
+    def verify_hash_chain(self) -> bool:
+        """Recompute the persisted epoch chain; never trust summary metadata."""
+        epochs = self.epochs()
+        if not epochs:
+            return False
+        previous = "GENESIS"
+        for epoch in epochs:
+            record = self.load_json(f"epochs/epoch_{epoch:03d}.json")
+            if not isinstance(record, dict) or not isinstance(record.get("entry"), dict):
+                return False
+            canonical = json.dumps(
+                record["entry"], sort_keys=True, ensure_ascii=False, default=str,
+            )
+            expected = hashlib.sha256((previous + canonical).encode("utf-8")).hexdigest()
+            if record.get("previous_hash") != previous or record.get("hash") != expected:
+                return False
+            previous = expected
+        return True
 
     def dashboard_payload(self) -> dict:
         """一次性聚合全部呈现数据。"""
