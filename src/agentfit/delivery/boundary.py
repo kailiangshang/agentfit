@@ -36,23 +36,14 @@ def analyze_boundary(run_dir: str | Path) -> dict:
         untested = sorted(set(by_id) - set(outcomes))
         evidence_source = "episodes"
     else:
-        human_required, eval_errors = [], []
-        for epoch in store.epochs():
-            loss_dir = store.root / "loss_traces" / f"epoch_{epoch:03d}"
-            for path in loss_dir.glob("*.json") if loss_dir.is_dir() else ():
-                trace = json.loads(path.read_text(encoding="utf-8"))
-                if trace.get("root_cause_layer") == "human":
-                    human_required.append(trace["sample_id"])
-                elif trace.get("root_cause_layer") == "eval_error":
-                    eval_errors.append(trace["sample_id"])
-        human_required = sorted(set(human_required) | {
+        human_required = sorted({
             sample_id for sample_id, sample in by_id.items()
             if sample.get("requires_human", False)
         })
-        failed = sorted(set(eval_errors))
-        automated = sorted(set(by_id) - set(human_required) - set(failed))
-        untested = []
-        evidence_source = "legacy_epoch_fallback"
+        failed = []
+        automated = []
+        untested = sorted(set(by_id) - set(human_required))
+        evidence_source = "no_episode_evidence"
 
     coverage = len(automated) / max(1, len(by_id))
     delivery = (

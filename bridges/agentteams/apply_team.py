@@ -58,6 +58,27 @@ def _workers(item: dict) -> tuple[str, ...] | None:
     return tuple(sorted(names))
 
 
+def _owned_spec(item: dict) -> dict | None:
+    spec = item.get("spec")
+    if not isinstance(spec, dict):
+        return None
+
+    def role_payload(role: dict) -> dict:
+        keys = ("name", "model", "runtime", "state", "identity", "soul")
+        return {key: role.get(key) for key in keys if key in role}
+
+    return {
+        "teamName": spec.get("teamName"),
+        "description": spec.get("description"),
+        "peerMentions": spec.get("peerMentions"),
+        "leader": role_payload(spec.get("leader") or {}),
+        "workers": sorted(
+            (role_payload(worker) for worker in spec.get("workers", [])),
+            key=lambda worker: worker.get("name", ""),
+        ),
+    }
+
+
 def reconcile_status(expected: dict, actual: Any) -> DriftReport:
     """Compare only AgentFit-owned Teams; unrelated deployments are out of scope."""
     expected_name = _name(expected)
@@ -74,8 +95,8 @@ def reconcile_status(expected: dict, actual: Any) -> DriftReport:
         current_workers = _workers(current)
         if current_workers is None:
             unverified.append(f"{expected_name}:content")
-        elif current_workers != _workers(expected):
-            changed.append(f"{expected_name}:workers")
+        elif _owned_spec(current) != _owned_spec(expected):
+            changed.append(f"{expected_name}:spec")
         expected_hash = (expected.get("metadata") or {}).get("annotations", {}).get("agentfit.io/registry-hash")
         actual_hash = (current.get("metadata") or {}).get("annotations", {}).get("agentfit.io/registry-hash")
         if current_workers is not None and expected_hash and actual_hash != expected_hash:

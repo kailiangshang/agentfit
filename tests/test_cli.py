@@ -74,9 +74,14 @@ def test_train_validate_report_and_export_round_trip(tmp_path: Path) -> None:
     )
     assert trained.returncode == 0, trained.stderr
     assert (run_dir / "sample_sets.json").is_file()
-    assert len(list((run_dir / "episodes").glob("*.json"))) == 1
-    assert len(list((run_dir / "traces").glob("*.json"))) == 1
+    assert len(list((run_dir / "episodes").glob("*.json"))) == 4
+    assert len(list((run_dir / "traces").glob("*.json"))) == 4
     assert (run_dir / "summary.json").is_file()
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert set(summary["evaluation_by_purpose"]) == {
+        "adaptation", "validation", "sealed_holdout", "stress_and_failure",
+    }
+    assert summary["delivery_approved"] is True
 
     validated = _run("validate", str(run_dir))
     assert validated.returncode == 0, validated.stderr
@@ -178,5 +183,43 @@ def test_each_distinct_sample_starts_at_run_index_zero(tmp_path: Path) -> None:
     assert trained.returncode == 0, trained.stderr
     episodes = [json.loads(path.read_text(encoding="utf-8"))
                 for path in (run_dir / "episodes").glob("*.json")]
-    assert len(episodes) == 2
+    assert len(episodes) == 5
     assert {episode["identity"]["run_index"] for episode in episodes} == {0}
+
+
+def test_export_requires_g3_delivery_approval(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    trained = _run("train", "--case", str(case), "--output", str(run_dir))
+    assert trained.returncode == 0, trained.stderr
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["delivery_approved"] is False
+    exported = _run("export", str(run_dir))
+    assert exported.returncode != 0
+    assert "G3" in exported.stderr
+
+
+def test_validate_recomputes_summary_and_episode_result(tmp_path: Path) -> None:
+    case = tmp_path / "case.json"
+    _write_case(case)
+
+    summary_run = tmp_path / "summary-run"
+    assert _run("train", "--case", str(case), "--output", str(summary_run), "--auto-approve").returncode == 0
+    summary_path = summary_run / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["final_pass_rate"] = 0.123
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    validated = _run("validate", str(summary_run))
+    assert validated.returncode != 0
+    assert "summary" in validated.stderr
+
+    episode_run = tmp_path / "episode-run"
+    assert _run("train", "--case", str(case), "--output", str(episode_run), "--auto-approve").returncode == 0
+    episode_path = next((episode_run / "episodes").glob("*.json"))
+    episode = json.loads(episode_path.read_text(encoding="utf-8"))
+    episode["result"] = "FAIL" if episode["result"] == "PASS" else "PASS"
+    episode_path.write_text(json.dumps(episode), encoding="utf-8")
+    validated = _run("validate", str(episode_run))
+    assert validated.returncode != 0
+    assert "Episode result" in validated.stderr

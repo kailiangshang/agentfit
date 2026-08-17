@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from dataclasses import dataclass, field
 
 from ..bus.messages import MessageBus, MsgType, ResultMsg, TaskMsg
@@ -21,6 +22,7 @@ from ..executors.base import ExecutorBase
 from ..gates.human import GateType, ReviewDecision, ReviewRequest
 from ..log.training_log import EpochEntry, TrainingLog
 from ..models.config import TrainingConfig
+from ..models.manifest import SampleSetPurpose
 from ..models.solution import Solution
 
 
@@ -227,6 +229,44 @@ class Orchestrator:
             return results[0].output
         return fn(msg)
 
+    def finalize_delivery(self, evidence: dict | None = None) -> ReviewDecision:
+        """Run G3 only after the caller has persisted final evaluation evidence."""
+        purposes = {purpose.value for purpose in SampleSetPurpose}
+        evaluations = evidence.get("evaluation_by_purpose") if isinstance(evidence, dict) else None
+        candidate_ref = evidence.get("candidate_ref") if isinstance(evidence, dict) else None
+        complete = (
+            evidence is not None
+            and evidence.get("candidate_frozen") is True
+            and isinstance(candidate_ref, str)
+            and re.fullmatch(r"[0-9a-f]{64}", candidate_ref) is not None
+            and isinstance(evaluations, dict)
+            and set(evaluations) == purposes
+        )
+        if complete:
+            for metrics in evaluations.values():
+                if not isinstance(metrics, dict):
+                    complete = False
+                    break
+                total = metrics.get("total")
+                outcomes = sum(metrics.get(key, 0) for key in ("passed", "failed", "errors"))
+                if not isinstance(total, int) or total <= 0 or outcomes != total:
+                    complete = False
+                    break
+        if not complete:
+            raise ValueError("complete final evaluation evidence is required before G3")
+        summary = dict(getattr(self, "_last_summary", {}))
+        summary.update(evidence or {})
+        self.delivery_decision = self.config.review_policy.review(
+            ReviewRequest(GateType.G3, "delivery boundary", summary)
+        )
+        summary["delivery_approved"] = self.delivery_decision.approved
+        summary["delivery_review_reason"] = self.delivery_decision.reason
+        summary["delivery_reviewer"] = self.delivery_decision.reviewer
+        self._last_summary = summary
+        if self.auditor:
+            self.auditor.persist_summary(summary)
+        return self.delivery_decision
+
     def train(self) -> list[EpochOutcome]:
         self._traffic_cursor = 0
         for epoch in range(1, self.config.max_epochs + 1):
@@ -244,13 +284,13 @@ class Orchestrator:
             "budget_exceeded": self.budget_exceeded(),
             "log_chain_valid": self.log.verify(),
         }
-        self.delivery_decision = self.config.review_policy.review(
-            ReviewRequest(GateType.G3, "delivery boundary", summary)
-        )
-        summary["delivery_approved"] = self.delivery_decision.approved
-        summary["delivery_review_reason"] = self.delivery_decision.reason
+        self._last_summary = summary
+        summary["delivery_approved"] = False
+        summary["delivery_review_reason"] = "G3 deferred until final evaluation evidence is persisted"
+        summary["delivery_reviewer"] = "unassigned"
         if self.auditor:
             self.auditor.persist_summary(summary)
+        if self.auditor:
             # 运行完成仪制：训练结果 + 对 AgentFit 自身的建议
             from ..log.meta_review import generate_meta_review
             from ..log.report import generate_report

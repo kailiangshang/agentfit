@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -51,6 +54,31 @@ def _frozen_manifests(sample_mod, manifest_mod):
 def test_canonical_hash_is_independent_of_mapping_order() -> None:
     sample_mod = _sample_module()
     assert sample_mod.canonical_hash({"a": 1, "b": 2}) == sample_mod.canonical_hash({"b": 2, "a": 1})
+
+
+def test_canonical_hash_is_stable_for_sets_across_hash_seeds() -> None:
+    code = "from agentfit.models.sample import canonical_hash; print(canonical_hash({'values': {'alpha', 'beta', 'gamma'}}))"
+    repo = Path(__file__).resolve().parents[1]
+    values = []
+    for seed in ("1", "2", "3"):
+        result = subprocess.run(
+            [sys.executable, "-c", code], cwd=repo,
+            env={**os.environ, "PYTHONPATH": str(repo / "src"), "PYTHONHASHSEED": seed},
+            capture_output=True, text=True, check=True,
+        )
+        values.append(result.stdout.strip())
+    assert len(set(values)) == 1
+
+
+@pytest.mark.parametrize("value", [
+    object(),
+    {object(): "unstable-key"},
+    float("nan"),
+    float("inf"),
+])
+def test_canonical_hash_rejects_non_json_evidence(value: object) -> None:
+    with pytest.raises((TypeError, ValueError)):
+        _sample_module().canonical_hash(value)
 
 
 def test_sample_set_collection_requires_all_four_distinct_purposes() -> None:

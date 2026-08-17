@@ -8,7 +8,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 FROZEN_SUBMISSION = REPO / "competition" / "2026-08-16" / "submission"
-FROZEN_TREE_DIGEST = "98a412461d412003c51287b39e06d6388a74e3740d4f942a07c3fd1697e35a1f"
+FROZEN_TREE_DIGEST = "b63a2210ce0d395d550e6981dedd92792ef9fe8b4e4e66e5dd7016efa0a1abfa"
 LEGACY_ARCHITECTURE_DOCS = {
     "agentfit-skeleton.md",
     "agentfit-solution.md",
@@ -18,11 +18,23 @@ LEGACY_ARCHITECTURE_DOCS = {
 
 def _tree_digest(root: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+    for path in sorted(
+        p for p in root.rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts and p.suffix not in {".pyc", ".pyo"}
+    ):
         digest.update(path.relative_to(root).as_posix().encode())
         digest.update(b"\0")
         digest.update(hashlib.sha256(path.read_bytes()).digest())
     return digest.hexdigest()
+
+
+def test_tree_digest_ignores_generated_caches(tmp_path: Path) -> None:
+    (tmp_path / "artifact.txt").write_text("canonical", encoding="utf-8")
+    expected = _tree_digest(tmp_path)
+    cache = tmp_path / "__pycache__"
+    cache.mkdir()
+    (cache / "artifact.cpython-312.pyc").write_bytes(b"generated")
+    assert _tree_digest(tmp_path) == expected
 
 
 def test_preliminary_submission_is_frozen() -> None:

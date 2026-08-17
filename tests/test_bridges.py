@@ -5,8 +5,11 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 from agentfit.models.sample import canonical_hash
 from agentfit.store.run_store import RunStore
+from telecom_world import make_initial_solution
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -60,6 +63,27 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
 
     actual = [expected, {"metadata": {"name": "unrelated-team"}}]
     assert bridge.reconcile_status(expected, actual).in_sync is True
+
+    changed = json.loads(json.dumps(expected))
+    changed["spec"]["leader"]["model"] = "other-model"
+    changed["spec"]["workers"][0]["soul"] = "drifted"
+    changed["spec"]["workers"][1]["runtime"] = "other-runtime"
+    changed["spec"]["peerMentions"] = True
+    report = bridge.reconcile_status(expected, [changed])
+    assert report.in_sync is False
+    assert "agentfit:spec" in report.changed
+
+
+def test_agentteams_solution_export_requires_g3(tmp_path: Path) -> None:
+    bridge = _load(
+        REPO / "bridges" / "agentteams" / "export_solution.py",
+        "agentfit_export_solution",
+    )
+    store = RunStore(tmp_path)
+    store.save_solution_version(make_initial_solution())
+    store.save_summary({"delivery_approved": False})
+    with pytest.raises(SystemExit, match="G3"):
+        bridge.export(str(tmp_path))
 
 
 def _tau2_fixture() -> dict:

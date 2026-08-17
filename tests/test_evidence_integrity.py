@@ -65,9 +65,11 @@ def test_boundary_counts_successful_human_episode_as_human_required(tmp_path: Pa
     ])
     boundary = analyze_boundary(tmp_path)
     assert boundary["human_required"] == ["human"]
-    assert boundary["automated"] == 1
-    assert boundary["coverage"] == 0.5
-    assert boundary["recommended_delivery"] == "降级"
+    assert boundary["automated"] == 0
+    assert boundary["untested"] == ["automatic"]
+    assert boundary["coverage"] == 0.0
+    assert boundary["recommended_delivery"] == "保留人工"
+    assert boundary["evidence_source"] == "no_episode_evidence"
 
 
 def test_solution_package_contains_structured_topology(tmp_path: Path) -> None:

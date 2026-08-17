@@ -41,7 +41,7 @@ agentfit report output/telecom-demo
 agentfit export output/telecom-demo
 ```
 
-这里的自动批准仅用于本地确定性演示。当前已经实现核心闭环、可信 RunStore 和离线桥接合同；完整材料编译、四集合评价调度和真实平台效果仍按[开发计划](development-plan.md)推进。
+这里的自动批准仅用于本地确定性演示。当前已经实现核心闭环、四集合评价调度、G3 交付门禁、可信 RunStore 和离线桥接合同；完整材料编译、生产认知适配器和真实平台效果仍按[开发计划](development-plan.md)推进。
 
 参与开发前请阅读仓库根目录的 [CONTRIBUTING](../CONTRIBUTING.md) 和 [SECURITY](../SECURITY.md)。
 

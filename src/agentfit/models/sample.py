@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import Enum
@@ -24,18 +25,34 @@ def _jsonable(value: Any) -> Any:
         return _jsonable(asdict(value))
     if isinstance(value, Enum):
         return value.value
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("canonical evidence cannot contain NaN or Infinity")
+        return value
     if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple, set)):
+        if any(not isinstance(key, str) for key in value):
+            raise TypeError("canonical evidence mapping keys must be strings")
+        return {key: _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
-    return value
+    if isinstance(value, (set, frozenset)):
+        items = [_jsonable(item) for item in value]
+        return sorted(
+            items,
+            key=lambda item: json.dumps(
+                item, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+            ),
+        )
+    raise TypeError(f"unsupported canonical evidence type: {type(value).__name__}")
 
 
 def canonical_hash(value: Any) -> str:
     """Hash canonical JSON so mapping order never changes evidence identity."""
     payload = json.dumps(
         _jsonable(value), ensure_ascii=False, sort_keys=True,
-        separators=(",", ":"), default=str,
+        separators=(",", ":"), allow_nan=False,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

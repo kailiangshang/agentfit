@@ -113,24 +113,59 @@ def _train(args: argparse.Namespace) -> int:
     store.save_samples(samples)
     store.save_sample_manifests(collection)
     candidate_ref = canonical_hash(orchestrator.solution)
-    for sample in adaptation:
-        trace = executor.execute(orchestrator.solution, sample)
-        sample_ref = task_sample_from_legacy(sample).ref
-        identity = EvaluationIdentity(candidate_ref, sample_ref, 0)
-        trace_path = store.save_trace(identity, trace)
-        episode = Episode(
-            identity=identity,
-            trace_ref=trace_path.relative_to(store.root).as_posix(),
-            result=trace.result,
-            cost_usd=trace.cost_usd,
-            evidence_hash=canonical_hash(trace),
-        )
-        store.save_episode(episode)
+    by_id = {sample.id: sample for sample in samples}
+    actors = {
+        SampleSetPurpose.ADAPTATION: "architect",
+        SampleSetPurpose.VALIDATION: "validator",
+        SampleSetPurpose.SEALED_HOLDOUT: "auditor",
+        SampleSetPurpose.STRESS_AND_FAILURE: "auditor",
+    }
+    evaluation_by_purpose: dict[str, dict[str, Any]] = {}
+    for manifest in collection.manifests:
+        manifest.require_access(actors[manifest.purpose], candidate_frozen=True)
+        results = []
+        for sample_ref in manifest.sample_refs:
+            sample = by_id[sample_ref.sample_id]
+            trace = executor.execute(orchestrator.solution, sample)
+            identity = EvaluationIdentity(candidate_ref, sample_ref, 0)
+            trace_path = store.save_trace(identity, trace)
+            episode = Episode(
+                identity=identity,
+                trace_ref=trace_path.relative_to(store.root).as_posix(),
+                result=trace.result,
+                cost_usd=trace.cost_usd,
+                evidence_hash=canonical_hash(trace),
+            )
+            store.save_episode(episode)
+            results.append(episode)
+        evaluation_by_purpose[manifest.purpose.value] = _purpose_metrics(results)
+    orchestrator.finalize_delivery({
+        "candidate_ref": candidate_ref,
+        "candidate_frozen": True,
+        "evaluation_by_purpose": evaluation_by_purpose,
+    })
     print(args.output)
     return 0
 
 
-def _validate_sample_sets(store: RunStore) -> None:
+def _purpose_metrics(episodes: list[Episode] | list[dict]) -> dict[str, Any]:
+    results = [episode.result if isinstance(episode, Episode) else episode["result"]
+               for episode in episodes]
+    costs = [episode.cost_usd if isinstance(episode, Episode) else float(episode.get("cost_usd", 0))
+             for episode in episodes]
+    total = len(results)
+    passed = results.count("PASS")
+    return {
+        "total": total,
+        "passed": passed,
+        "failed": results.count("FAIL"),
+        "errors": results.count("ERROR"),
+        "pass_rate": passed / total if total else None,
+        "cost_usd": round(sum(costs), 4),
+    }
+
+
+def _validate_sample_sets(store: RunStore) -> SampleSetCollection:
     doc = store.load_json("sample_sets.json")
     manifests = doc.get("manifests", [])
     if len(manifests) != 4 or {item.get("purpose") for item in manifests} != {p.value for p in SampleSetPurpose}:
@@ -172,6 +207,7 @@ def _validate_sample_sets(store: RunStore) -> None:
         for ref in manifest.sample_refs:
             if ref.sample_id not in actual_refs or actual_refs[ref.sample_id] != ref:
                 raise CliError(f"invalid RunStore: sample reference mismatch: {ref.sample_id}")
+    return collection
 
 
 def _safe_artifact(root: Path, relative: str) -> Path:
@@ -181,11 +217,12 @@ def _safe_artifact(root: Path, relative: str) -> Path:
     return root / rel
 
 
-def _validate_episodes(store: RunStore) -> None:
+def _validate_episodes(store: RunStore) -> list[dict]:
     candidate_refs = set()
     for version in store.solution_versions():
         snapshot = store.load_json(f"solution_versions/v{version:03d}.json")["solution"]
         candidate_refs.add(canonical_hash(solution_from_dict(snapshot)))
+    episodes = []
     for path in sorted((store.root / "episodes").glob("*.json")):
         episode = json.loads(path.read_text(encoding="utf-8"))
         identity = episode.get("identity") or {}
@@ -198,8 +235,55 @@ def _validate_episodes(store: RunStore) -> None:
         sample_id = (identity.get("sample_ref") or {}).get("sample_id")
         if trace.get("sample_id") != sample_id:
             raise CliError("invalid RunStore: Episode trace sample mismatch")
+        if episode.get("result") != trace.get("result"):
+            raise CliError("invalid RunStore: Episode result does not match Trace")
         if episode.get("evidence_hash") != canonical_hash(trace):
             raise CliError("invalid RunStore: Episode evidence hash mismatch")
+        episodes.append(episode)
+    if not episodes:
+        raise CliError("invalid RunStore: no Episode evidence")
+    return episodes
+
+
+def _evaluation_from_episodes(collection: SampleSetCollection,
+                              episodes: list[dict]) -> dict[str, dict[str, Any]]:
+    purpose_by_ref = {
+        (ref.sample_id, ref.content_hash): manifest.purpose
+        for manifest in collection.manifests for ref in manifest.sample_refs
+    }
+    grouped: dict[SampleSetPurpose, list[dict]] = {purpose: [] for purpose in SampleSetPurpose}
+    for episode in episodes:
+        ref = episode["identity"]["sample_ref"]
+        purpose = purpose_by_ref.get((ref.get("sample_id"), ref.get("content_hash")))
+        if purpose is None:
+            raise CliError("invalid RunStore: Episode references sample outside frozen sets")
+        grouped[purpose].append(episode)
+    return {purpose.value: _purpose_metrics(grouped[purpose]) for purpose in SampleSetPurpose}
+
+
+def _validate_summary(store: RunStore, collection: SampleSetCollection,
+                      episodes: list[dict]) -> None:
+    summary = store.load_json("summary.json")
+    entries = [store.load_json(f"epochs/epoch_{epoch:03d}.json")["entry"]
+               for epoch in store.epochs()]
+    valid_entries = [entry for entry in entries if not entry.get("rolled_back")]
+    expected = {
+        "epochs_run": len(entries),
+        "final_pass_rate": valid_entries[-1]["pass_rate"] if valid_entries else None,
+        "final_solution_version": store.solution_versions()[-1],
+        "lambda_values": entries[-1]["lambda_values"] if entries else {},
+        "total_cost_usd": round(sum(float(entry.get("cost_usd", 0)) for entry in entries), 4),
+        "log_chain_valid": True,
+        "evaluation_by_purpose": _evaluation_from_episodes(collection, episodes),
+    }
+    candidate_refs = {episode["identity"]["candidate_ref"] for episode in episodes}
+    if len(candidate_refs) != 1:
+        raise CliError("invalid RunStore: final evaluation mixes candidate identities")
+    expected["candidate_ref"] = next(iter(candidate_refs))
+    expected["candidate_frozen"] = True
+    for key, value in expected.items():
+        if summary.get(key) != value:
+            raise CliError(f"invalid RunStore: summary mismatch: {key}")
 
 
 def _validate_evidence_manifest(store: RunStore) -> None:
@@ -223,12 +307,13 @@ def _assert_valid_runstore(path: Path) -> RunStore:
     if any(not (path / name).is_file() for name in required):
         raise CliError("invalid RunStore: required artifacts missing")
     store = RunStore(path)
-    _validate_sample_sets(store)
+    collection = _validate_sample_sets(store)
     if not store.verify_hash_chain():
         raise CliError("invalid RunStore: hash chain verification failed")
     if not store.solution_versions():
         raise CliError("invalid RunStore: candidate snapshot missing")
-    _validate_episodes(store)
+    episodes = _validate_episodes(store)
+    _validate_summary(store, collection, episodes)
     _validate_evidence_manifest(store)
     return store
 
@@ -248,6 +333,8 @@ def _report(args: argparse.Namespace) -> int:
 
 def _export(args: argparse.Namespace) -> int:
     store = _assert_valid_runstore(args.run_dir)
+    if not store.load_json("summary.json").get("delivery_approved"):
+        raise CliError("G3 delivery approval is required before export")
     latest = store.solution_versions()[-1]
     snapshot = store.load_json(f"solution_versions/v{latest:03d}.json")["solution"]
     solution = solution_from_dict(snapshot)
@@ -280,6 +367,6 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args = build_parser().parse_args(argv)
         return int(args.handler(args))
-    except (CliError, ValueError, KeyError) as exc:
+    except (CliError, ValueError, KeyError, TypeError, AttributeError, OSError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

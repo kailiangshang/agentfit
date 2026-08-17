@@ -49,7 +49,7 @@ output/telecom-demo/
 
 `agentfit validate` 会从磁盘重新计算 epoch 哈希链，不接受 `summary.json` 中未经验证的布尔值。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
 
-当前限制：本地命令只用 adaptation 集合训练并为该集合生成 Episode；其他三个集合的完整评价调度仍是开发计划中的最高优先级工作，因此不得把本地通过率描述为泛化结果。
+本地命令只用 adaptation 集合驱动方案更新；候选冻结后会分别为四类集合生成 Episode 和指标，再请求 G3。validation、sealed_holdout 和 stress_and_failure 只用于评价，不把结果反向写入方案。当前 Executor 仍是确定性模拟器，因此这些结果只能证明合同和调度闭环，不得描述为真实模型泛化效果。
 
 ## AgentTeams 桥接
 

@@ -13,7 +13,7 @@
 | Skill Registry 与认知角色装配 | 已实现 | `src/agentfit/skills/registry.py`、`src/agentfit/agents/team.py` |
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
 | RunStore、报告、Dashboard、方案包、证据包 | 已实现 | `src/agentfit/store/`、`src/agentfit/delivery/` |
-| 稳定核心 CLI | 已实现 | `agentfit train/validate/report/export` |
+| 稳定核心 CLI | 已实现四集合评价与 G3 交付门禁 | `agentfit train/validate/report/export` |
 | AgentTeams 生成、状态与漂移桥接 | 已实现离线合同 | `bridges/agentteams/` |
 | τ²-bench TaskSample、Trace、Episode 转换 | 已实现离线合同 | `bridges/tau2bench/` |
 
@@ -32,15 +32,15 @@
 
 完成定义：任意 TaskSample 都能回溯到原始材料片段，修改材料会改变内容哈希并使旧冻结失效。
 
-### 四集合评价生命周期
+### 真实评价生命周期
 
-当前 CLI 只用 adaptation 训练，并生成 adaptation Episode；validation、sealed holdout 和 stress 集合已有合同，但尚未形成完整运行调度。下一步需要：
+当前 CLI 只用 adaptation 驱动方案更新；候选冻结后分别为 adaptation、validation、sealed holdout 和 stress_and_failure 生成 Episode，按集合报告指标，最后才请求 G3。这个本地确定性闭环不代表真实模型泛化已经得到验证。下一步需要：
 
-- 显式 Candidate Freeze；
-- validation 只做选择和回归，不直接生成规则；
-- Candidate Freeze 后才允许 sealed holdout 和 stress 运行；
-- 四集合指标分别报告，不把训练通过率当泛化结果；
-- G3 必须发生在最终评价之后。
+- 用生产 Executor 替换确定性模拟器，同时保持四集合访问边界；
+- 对同一候选和样本执行多次独立运行，保留每个 `run_index`；
+- 固化模型、Prompt、工具、依赖、预算和随机性清单；
+- 从真实 Episode 重算分集合指标、置信区间、成本和失败分布；
+- 验证 validation、sealed holdout 和 stress 结果不会反向进入方案更新。
 
 完成定义：报告中的每个结果都由 `candidate_ref + sample_ref + run_index` 对应的 Episode 重算。
 

@@ -123,7 +123,7 @@ def test_message_context_chain_does_not_mix_epochs() -> None:
     assert all(item["context_ref"] == "epoch1" for item in chain)
 
 
-def test_low_confidence_attribution_and_delivery_reach_human_gate() -> None:
+def test_training_defers_delivery_gate_until_final_evidence() -> None:
     human = _import("agentfit.gates.human")
     from agentfit.agents.orchestrator import Orchestrator
     from agentfit.agents.team import build_team
@@ -150,6 +150,19 @@ def test_low_confidence_attribution_and_delivery_reach_human_gate() -> None:
     orchestrator.train()
     subjects = [request.subject for request in gate.requests]
     assert "low-confidence attribution" in subjects
+    assert "delivery boundary" not in subjects
+    with pytest.raises(ValueError, match="final evaluation evidence"):
+        orchestrator.finalize_delivery()
+    from agentfit.models.sample import canonical_hash
+    orchestrator.finalize_delivery({
+        "candidate_ref": canonical_hash(orchestrator.solution),
+        "candidate_frozen": True,
+        "evaluation_by_purpose": {
+            purpose: {"total": 1, "passed": 1, "failed": 0, "errors": 0}
+            for purpose in ("adaptation", "validation", "sealed_holdout", "stress_and_failure")
+        },
+    })
+    subjects = [request.subject for request in gate.requests]
     assert "delivery boundary" in subjects
 
 

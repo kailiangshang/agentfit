@@ -72,6 +72,9 @@ def test_full_chain_intake_to_delivery(tmp_path):
     outcomes = orch.train()
     assert outcomes[-1].pass_rate >= 0.9, f"全链路训练后应 ≥90%，实际 {outcomes[-1].pass_rate}"
     assert orch.solution.version > 0
+    deferred = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert deferred["delivery_approved"] is False
+    assert "deferred" in deferred["delivery_review_reason"]
 
     # Candidate Freeze 后按各集合访问规则生成可追溯 Episode。
     store = RunStore(run_dir)
@@ -85,8 +88,10 @@ def test_full_chain_intake_to_delivery(tmp_path):
         SampleSetPurpose.SEALED_HOLDOUT: "auditor",
         SampleSetPurpose.STRESS_AND_FAILURE: "auditor",
     }
+    evaluation_by_purpose = {}
     for manifest in collection.manifests:
         manifest.require_access(actors[manifest.purpose], candidate_frozen=True)
+        results = []
         for ref in manifest.sample_refs:
             sample = by_id[ref.sample_id]
             trace = executor.execute(orch.solution, sample)
@@ -96,7 +101,25 @@ def test_full_chain_intake_to_delivery(tmp_path):
                 identity, trace_path.relative_to(store.root).as_posix(), trace.result,
                 trace.cost_usd, canonical_hash(trace),
             ))
+            results.append(trace)
+        passed = sum(trace.result == "PASS" for trace in results)
+        evaluation_by_purpose[manifest.purpose.value] = {
+            "total": len(results),
+            "passed": passed,
+            "failed": sum(trace.result == "FAIL" for trace in results),
+            "errors": sum(trace.result == "ERROR" for trace in results),
+            "pass_rate": passed / len(results),
+            "cost_usd": round(sum(trace.cost_usd for trace in results), 4),
+        }
     assert len(list((run_dir / "episodes").glob("*.json"))) == len(samples)
+    decision = orch.finalize_delivery({
+        "candidate_ref": candidate_ref,
+        "candidate_frozen": True,
+        "evaluation_by_purpose": evaluation_by_purpose,
+    })
+    assert decision.approved is True
+    finalized = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert finalized["delivery_approved"] is True
 
     # 交付：方案包 + 边界分析
     write_boundary(run_dir)
