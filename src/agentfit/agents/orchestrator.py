@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 
 from ..bus.messages import MessageBus, MsgType, ResultMsg, TaskMsg
@@ -46,7 +47,7 @@ class Orchestrator:
         self.regression_pool = RegressionPool()
         self.lambda_ctl = LambdaController(initial=dict(solution.lambda_values))
         self.outcomes: list[EpochOutcome] = []
-        self._prev_solution = solution
+        self._prev_solution = copy.deepcopy(solution)
         self.auditor = None
         if run_dir:
             from ..agents.auditor import Auditor
@@ -100,6 +101,7 @@ class Orchestrator:
 
         # ⑦ 原子应用（机械）+ ⑧ 回归验证
         if approved:
+            previous_solution = copy.deepcopy(self.solution)
             tx = ChangeTransaction(self.solution, approved)
             try:
                 candidate = tx.execute()
@@ -110,7 +112,6 @@ class Orchestrator:
                     self.auditor.record_transaction(tx, rolled_back=True, reason="依赖验证失败")
                 candidate = None
             if candidate is not None:
-                self._prev_solution = self.solution
                 reg_results = {s.id: self.executor.evaluate(self.executor.execute(candidate, s), s.expected)
                                for s in self.regression_pool.samples}
                 forgot = self.regression_pool.forget_check(reg_results)
@@ -121,6 +122,7 @@ class Orchestrator:
                     if self.auditor:
                         self.auditor.record_transaction(tx, rolled_back=True, reason=f"回归遗忘 {forgot}")
                 else:
+                    self._prev_solution = previous_solution
                     self.solution = candidate
                     if self.auditor:
                         self.auditor.record_transaction(tx, rolled_back=False)

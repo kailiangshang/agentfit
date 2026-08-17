@@ -145,10 +145,11 @@ class LambdaController:
         """每轮调用：返回 (新λ, Level2建议列表)。每轮最多自动调 1 个 λ。"""
         lambdas = dict(self.initial)
         level2: list[dict] = []
-        for layer, metrics in report.over_threshold.items():
-            self.over_threshold_streak[layer] = self.over_threshold_streak.get(layer, 0) + 1
-        for layer in list(self.over_threshold_streak):
-            if layer not in report.over_threshold:
+        for layer in ("L1", "L2", "L3", "L4"):
+            metrics = report.over_threshold.get(layer, [])
+            if metrics:
+                self.over_threshold_streak[layer] = self.over_threshold_streak.get(layer, 0) + 1
+            else:
                 self.over_threshold_streak[layer] = 0
         # Level 1：连续 2 轮超阈值且累计变化未到 ±50% 的第一个层
         for layer in ("L4", "L3", "L2", "L1"):

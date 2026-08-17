@@ -18,6 +18,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "src"))
 
 from agentfit.store.run_store import RunStore  # noqa: E402
+from agentfit.log.training_log import EpochEntry, TrainingLog  # noqa: E402
 
 # tau2 telecom 根因 → 布尔特征（聚类展示用）
 FEATURE_MAP = {
@@ -60,18 +61,20 @@ def convert(results_path: Path, run_dir: str, label: str) -> None:
                          "pass": reward == 1, "reward": reward, "cost_usd": round(cost, 4)})
 
     passed = sum(1 for t in per_task if t["pass"])
-    store.save_epoch(1, {
-        "entry": {"epoch": 1, "solution_version": 0, "pass_rate": passed / len(per_task),
-                  "loss_distribution": {}, "updates_applied": [], "regularization": {},
-                  "behavioral": {}, "regression": {"tested": 0, "passed": 0},
-                  "lambda_values": {"L1": 0.1, "L2": 0.2, "L3": 0.3, "L4": 0.4},
-                  "cost_usd": round(total_cost, 4), "rolled_back": False,
-                  "note": "baseline 裸跑（无 AgentFit 训练）"},
-        "hash": "", "previous_hash": "GENESIS"}, [])
+    log = TrainingLog()
+    log.append(EpochEntry(
+        epoch=1, solution_version=0, pass_rate=passed / len(per_task),
+        loss_distribution={}, updates_applied=[], regularization={}, behavioral={},
+        regression={"tested": 0, "passed": 0},
+        lambda_values={"L1": 0.1, "L2": 0.2, "L3": 0.3, "L4": 0.4},
+        cost_usd=round(total_cost, 4), rolled_back=False,
+        note="baseline 裸跑（无 AgentFit 训练）",
+    ))
+    store.save_epoch(1, log.entries[0], [])
     store.save_summary({"epochs_run": 1, "final_pass_rate": passed / len(per_task),
                         "final_solution_version": 0, "lambda_values": {},
                         "total_cost_usd": round(total_cost, 4), "converged": True,
-                        "budget_exceeded": False, "log_chain_valid": True,
+                        "budget_exceeded": False, "log_chain_valid": log.verify(),
                         "baseline": True, "per_task": per_task,
                         "transactions_committed": [], "transactions_rolled_back": []})
 

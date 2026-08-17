@@ -10,11 +10,21 @@
 from __future__ import annotations
 
 from collections import Counter
+import hashlib
+import json
 
 from ..core.aggregation import AggregatedLoss
 from ..core.transaction import UpdateProposal
 from ..models.loss import Sample
 from ..models.solution import Agent, Knowledge, Solution, Topology
+
+
+def stable_element_id(prefix: str, payload: object) -> str:
+    """Build a reproducible identifier from canonical content."""
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":"), default=str)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:12]
+    return f"{prefix}_{digest}"
 
 
 def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, Sample],
@@ -68,6 +78,7 @@ def _rule_from_evidence(evidence: list[Sample], solution: Solution, replace_id: 
     for key, val in evidence[0].features.items():
         if isinstance(val, bool) and all(s.features.get(key) is val for s in evidence):
             bool_keys.append(key if val else f"NOT {key}")
+    bool_keys.sort()
     actions = list(evidence[0].expected.actions)
     tool_counter = Counter(a.tool for s in evidence for a in s.expected.actions)
     if not tool_counter:
@@ -77,7 +88,7 @@ def _rule_from_evidence(evidence: list[Sample], solution: Solution, replace_id: 
     if len(actions) > 1:      # 多动作 → 排查链（任务拆解）
         if any(solution.tool(a.tool) is None for a in actions):
             return None       # 链上任何工具缺失 → 级联下移，不盲建
-        chain_id = replace_id or f"chain_{abs(hash(tuple(bool_keys))) % 10000}"
+        chain_id = replace_id or stable_element_id("chain", bool_keys)
         from ..models.solution import ChainStep
         return Knowledge(id=chain_id, type="chain", condition=condition,
                          steps=[ChainStep(tool=a.tool) for a in actions],
@@ -86,6 +97,6 @@ def _rule_from_evidence(evidence: list[Sample], solution: Solution, replace_id: 
     target_tool = tool_counter.most_common(1)[0][0]
     if solution.tool(target_tool) is None:
         return None            # 目标工具不存在 → 级联下移场景，此处不盲建（保持最小实现）
-    rule_id = replace_id or f"rule_{target_tool}_{abs(hash(tuple(bool_keys))) % 10000}"
+    rule_id = replace_id or stable_element_id(f"rule_{target_tool}", bool_keys)
     return Knowledge(id=rule_id, type="routing_rule", condition=condition, dispatches_to=target_tool,
                      description=f"训练归纳：{[s.id for s in evidence[:3]]}")
