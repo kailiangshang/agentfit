@@ -22,6 +22,7 @@ from ..executors.base import ExecutorBase
 from ..gates.human import GateType, ReviewDecision, ReviewRequest
 from ..log.training_log import EpochEntry, TrainingLog
 from ..models.config import TrainingConfig
+from ..models.loss import Trace
 from ..models.manifest import SampleSetPurpose
 from ..models.evidence import CandidateManifest
 from ..models.sample import Episode, EvaluationIdentity, TaskSample, canonical_hash
@@ -286,18 +287,10 @@ class Orchestrator:
     def _execute_recorded(
         self, solution: Solution, sample: TaskSample, epoch: int, phase: str,
     ):
-        trace = self.executor.execute(solution, sample)
-        if not trace.runtime_ref:
-            trace.runtime_ref = self.runtime_ref
+        trace, identity = self.execute_evaluation(solution, sample)
         if not self.auditor:
             return trace
 
-        manifest = CandidateManifest.for_solution(solution)
-        self.auditor.store.save_training_candidate_manifest(manifest)
-        counter_key = (manifest.candidate_ref, sample.content_hash)
-        run_index = self._run_indices.get(counter_key, 0)
-        self._run_indices[counter_key] = run_index + 1
-        identity = EvaluationIdentity(manifest.candidate_ref, sample.ref, run_index)
         trace_path = self.auditor.store.save_training_trace(epoch, phase, identity, trace)
         episode = Episode(
             identity=identity,
@@ -310,6 +303,22 @@ class Orchestrator:
         )
         self.auditor.store.save_training_episode(epoch, phase, episode)
         return trace
+
+    def execute_evaluation(
+        self, solution: Solution, sample: TaskSample,
+    ) -> tuple[Trace, EvaluationIdentity]:
+        """Execute once and allocate the run-wide evaluation identity."""
+        trace = self.executor.execute(solution, sample)
+        if not trace.runtime_ref:
+            trace.runtime_ref = self.runtime_ref
+        manifest = CandidateManifest.for_solution(solution)
+        if self.auditor:
+            self.auditor.store.save_training_candidate_manifest(manifest)
+        counter_key = (manifest.candidate_ref, sample.content_hash)
+        run_index = self._run_indices.get(counter_key, 0)
+        self._run_indices[counter_key] = run_index + 1
+        identity = EvaluationIdentity(manifest.candidate_ref, sample.ref, run_index)
+        return trace, identity
 
     def _send(self, msg_type: MsgType, ctx: str, payload: dict, fn) -> object:
         """发消息经总线（角色处理 + Auditor 留痕）；无注册角色时回退本地确定性内核。"""

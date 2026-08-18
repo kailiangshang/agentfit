@@ -209,3 +209,19 @@ def test_acceptance_result_enforces_global_cost_and_risk_thresholds() -> None:
     assert any("sealed_holdout.risk_events" in item for item in result.failures)
     assert any("stress_and_failure.cost_usd" in item for item in result.failures)
     assert any("total_evaluation_cost_usd" in item for item in result.failures)
+
+
+def test_acceptance_rejects_unobserved_runtime_cost() -> None:
+    from agentfit.models.objective import evaluate_acceptance
+
+    evaluation = _evaluation()
+    evaluation[SampleSetPurpose.ADAPTATION.value]["cost_observed"] = False
+
+    result = evaluate_acceptance(_objective(), evaluation)
+
+    assert result.met is False
+    assert result.criteria_met[SampleSetPurpose.ADAPTATION.value] is False
+    assert any(
+        "adaptation.cost_usd unavailable" in item
+        for item in result.failures
+    )

@@ -12,7 +12,13 @@ from agentfit.materials.compiler import compile_material_bundle
 from agentfit.models.loss import Expected, ExpectedAction
 from agentfit.models.manifest import AccessPolicy, FreezeDecision, SampleSetManifest, SampleSetPurpose
 from agentfit.models.project import CapabilityInventory
-from agentfit.models.sample import ObservationRef, SampleRef, TaskSample, canonical_hash
+from agentfit.models.sample import (
+    EvaluationIdentity,
+    ObservationRef,
+    SampleRef,
+    TaskSample,
+    canonical_hash,
+)
 from agentfit.models.solution import CapabilityTool, SolidAtom
 
 
@@ -508,7 +514,9 @@ def test_validate_checks_exported_evidence_manifest(tmp_path: Path) -> None:
     assert "evidence manifest" in validated.stderr
 
 
-def test_each_distinct_sample_starts_at_run_index_zero(tmp_path: Path) -> None:
+def test_final_evaluation_continues_run_index_per_candidate_and_sample(
+    tmp_path: Path,
+) -> None:
     case = tmp_path / "case.json"
     run_dir = tmp_path / "run"
     _write_case(case)
@@ -521,10 +529,68 @@ def test_each_distinct_sample_starts_at_run_index_zero(tmp_path: Path) -> None:
     case.write_text(json.dumps(doc), encoding="utf-8")
     trained = _run("train", "--case", str(case), "--output", str(run_dir), "--auto-approve")
     assert trained.returncode == 0, trained.stderr
-    episodes = [json.loads(path.read_text(encoding="utf-8"))
-                for path in (run_dir / "episodes").glob("*.json")]
-    assert len(episodes) == 5
-    assert {episode["identity"]["run_index"] for episode in episodes} == {0}
+    final_episodes = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in (run_dir / "episodes").glob("*.json")
+    ]
+    training_episodes = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in (run_dir / "training_episodes").rglob("*.json")
+    ]
+    assert len(final_episodes) == 5
+    by_evaluation_unit: dict[tuple[str, str], list[int]] = {}
+    for episode in training_episodes + final_episodes:
+        identity = episode["identity"]
+        key = (
+            identity["candidate_ref"],
+            identity["sample_ref"]["content_hash"],
+        )
+        by_evaluation_unit.setdefault(key, []).append(identity["run_index"])
+    assert all(
+        sorted(indices) == list(range(len(indices)))
+        for indices in by_evaluation_unit.values()
+    )
+    assert any(
+        episode["identity"]["run_index"] > 0
+        for episode in final_episodes
+    )
+
+
+def test_validate_rejects_final_evaluation_index_reused_from_training(
+    tmp_path: Path,
+) -> None:
+    case = tmp_path / "case.json"
+    run_dir = tmp_path / "run"
+    _write_case(case)
+    assert _run(
+        "train", "--case", str(case), "--output", str(run_dir), "--auto-approve",
+    ).returncode == 0
+    episode_path = next(
+        path
+        for path in (run_dir / "episodes").glob("*.json")
+        if json.loads(path.read_text(encoding="utf-8"))["identity"]["run_index"] > 0
+    )
+    episode = json.loads(episode_path.read_text(encoding="utf-8"))
+    identity = episode["identity"]
+    reused = EvaluationIdentity(
+        identity["candidate_ref"],
+        SampleRef(**identity["sample_ref"]),
+        0,
+    )
+    old_trace = run_dir / episode["trace_ref"]
+    new_trace = run_dir / "traces" / f"{reused.key}.json"
+    old_trace.rename(new_trace)
+    identity["run_index"] = 0
+    episode["trace_ref"] = new_trace.relative_to(run_dir).as_posix()
+    episode_path.unlink()
+    (run_dir / "episodes" / f"{reused.key}.json").write_text(
+        json.dumps(episode), encoding="utf-8",
+    )
+
+    validated = _run("validate", str(run_dir))
+
+    assert validated.returncode != 0
+    assert "global evaluation run indices" in validated.stderr
 
 
 def test_export_requires_g3_delivery_approval(tmp_path: Path) -> None:

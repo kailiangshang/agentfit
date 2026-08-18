@@ -29,6 +29,7 @@ L1  Solid 层       最小原子能力合同 + 输入输出 + 作用语义
 | [架构](architecture.md) | 唯一架构正本：双层架构、样本合同、训练闭环、桥接和验证门禁 |
 | [开发计划](development-plan.md) | 稳定收敛、可信证据、运行闭环与真实桥接的实施顺序 |
 | [测试场景](test-scenario.md) | Telecom 故障诊断全链路执行方案 |
+| [AgentTeams 真实联动](agentteams-live-validation.md) | 已完成的真实模型/Matrix/Worker 往返、证据边界与复现方式 |
 
 ## 快速验证
 
@@ -46,9 +47,9 @@ agentfit report output/telecom-demo
 agentfit export output/telecom-demo
 ```
 
-当前严格示例会被 G3 拒绝导出：它只用一个 adaptation 样本构建最简候选，validation、sealed holdout 和 stress_and_failure 的 100% 门槛不会被满足。`validate` 和 `report` 应成功，`export` 应返回非零状态；这用于证明门禁不会把 adaptation 的 100% 冒充全局验收。要产生可部署包，必须先补足 adaptation 证据或改进候选，使四集合 Objective 真正通过，而不是降低演示阈值。
+当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过；本地确定性运行会完成 adaptation 更新，并在 adaptation、validation 和 sealed holdout 达到 3/3，但最简候选在两个复合 stress 样本上失败，因此 stress_and_failure 只有 1/3。`validate` 和 `report` 应成功，`export` 应返回非零状态；这证明单轮训练通过率或部分评价集合通过不能冒充全局验收。要产生可部署包，必须用失败 Trace 改进候选并重新验证四集合，而不是降低演示阈值。
 
-这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现材料编译、核心闭环、四集合评价调度、Objective/Acceptance、签名 G3 交付门禁、训练/外部评价分型的 RunStore 和离线桥接合同；生产认知适配器和真实平台效果仍按[开发计划](development-plan.md)推进。
+这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现材料编译、核心闭环、四集合评价调度、Objective/Acceptance、签名 G3 交付门禁、训练/外部评价分型的 RunStore，以及 AgentTeams 上真实 DeepSeek/Matrix/隔离 Worker 的 12 样本 adaptation 更新和四集合往返。当前真实运行因 stress 协议 ERROR 与成本不可观测被 G3 拒绝，只证明桥接、更新和证据门禁可运行，不代表业务副作用或最终泛化已经完成；后续收敛按[开发计划](development-plan.md)推进。
 
 参与开发前请阅读仓库根目录的 [CONTRIBUTING](../CONTRIBUTING.md) 和 [SECURITY](../SECURITY.md)。
 

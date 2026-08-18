@@ -192,6 +192,9 @@ def _validated_metrics(purpose: SampleSetPurpose,
         raise ValueError(f"{purpose.value} pass_rate does not match counts")
     if not isinstance(cost_usd, (int, float)) or not math.isfinite(cost_usd) or cost_usd < 0:
         raise ValueError(f"{purpose.value} cost_usd is invalid")
+    cost_observed = metrics.get("cost_observed", True)
+    if type(cost_observed) is not bool:
+        raise ValueError(f"{purpose.value} cost_observed must be a boolean")
     return {
         "total": total,
         "passed": passed,
@@ -199,6 +202,7 @@ def _validated_metrics(purpose: SampleSetPurpose,
         "errors": errors,
         "pass_rate": float(pass_rate),
         "cost_usd": float(cost_usd),
+        "cost_observed": cost_observed,
         "risk_events": risk_events,
     }
 
@@ -226,7 +230,9 @@ def evaluate_acceptance(objective: ObjectiveSpec,
             purpose_failures.append(
                 f"{purpose.value}.errors {metrics['errors']} > {criterion.max_errors}"
             )
-        if metrics["cost_usd"] > criterion.max_cost_usd:
+        if not metrics["cost_observed"]:
+            purpose_failures.append(f"{purpose.value}.cost_usd unavailable")
+        elif metrics["cost_usd"] > criterion.max_cost_usd:
             purpose_failures.append(
                 f"{purpose.value}.cost_usd {metrics['cost_usd']:.4f} > "
                 f"{criterion.max_cost_usd:.4f}"
@@ -252,3 +258,37 @@ def evaluate_acceptance(objective: ObjectiveSpec,
         "failures": tuple(failures),
     }
     return AcceptanceResult(**body, content_hash=canonical_hash(body))
+
+
+def summarize_episodes(
+    episodes: list[Any],
+    *,
+    cost_observed: bool = True,
+) -> dict[str, Any]:
+    """Summarize one purpose or external batch from persisted Episode semantics."""
+    results = [
+        episode.result if hasattr(episode, "result") else episode["result"]
+        for episode in episodes
+    ]
+    costs = [
+        episode.cost_usd if hasattr(episode, "cost_usd")
+        else float(episode.get("cost_usd", 0))
+        for episode in episodes
+    ]
+    risk_events = [
+        episode.risk_events if hasattr(episode, "risk_events")
+        else int(episode.get("risk_events", 0))
+        for episode in episodes
+    ]
+    total = len(results)
+    passed = results.count("PASS")
+    return {
+        "total": total,
+        "passed": passed,
+        "failed": results.count("FAIL"),
+        "errors": results.count("ERROR"),
+        "pass_rate": passed / total if total else None,
+        "cost_usd": round(sum(costs), 4),
+        "cost_observed": cost_observed,
+        "risk_events": sum(risk_events),
+    }

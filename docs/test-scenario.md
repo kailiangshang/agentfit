@@ -39,7 +39,7 @@ agentfit report output/telecom-demo
 agentfit export output/telecom-demo
 ```
 
-当前严格示例会被 G3 拒绝导出：它的四个集合都要求 100% 通过，但 adaptation 只提供一个构建样本。前两条命令应成功，`agentfit export` 应返回非零状态。这个拒绝是可信验收链的预期证据，不是演示失败；只有四集合 Objective 真正满足后才允许生成部署包。
+当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过。本地确定性运行会完成 adaptation 更新，前三个集合均为 3/3，但最简候选在两个复合 stress 样本上失败，stress_and_failure 为 1/3。`compile`、`train`、`validate` 和 `report` 应成功，`agentfit export` 应返回非零状态。这个拒绝是可信验收链的预期证据，不是演示失败；只有基于失败 Trace 改进候选并使四集合 Objective 真正满足后才允许生成部署包。
 
 ### 实际产物
 
@@ -134,6 +134,52 @@ print(f"imported {count} AgentTeams episodes")
 导入器会在写文件前校验 CandidateManifest、TaskSample、run_index 和 runtime_ref；候选
 漂移、重复评价身份或协议错误都会拒绝整批，不生成部分 Episode。沙箱不可用、超时等
 执行错误则保存为 runtime ERROR，并排除在 L1–L4 归因和方案更新之外。
+
+### 真实 adaptation 联动
+
+前提是本机 AgentTeams 已启动，Manager 容器名为 `agentteams-manager`，模型清单中存在
+`deepseek/deepseek-chat`。命令会为本次运行创建一个独立 Candidate Worker，等待其 Matrix
+首次同步完成，执行结束后自动删除；不要使用 `--keep-sandbox` 进行正式验收。
+
+```bash
+PYTHONPATH=src python bridges/agentteams/run_live.py \
+  --bundle examples/telecom-materials.json \
+  --output .local-demo/agentteams/live/run-home \
+  --run-id home-live \
+  --model deepseek/deepseek-chat \
+  --homeserver http://127.0.0.1:18080 \
+  --auto-approve
+
+PYTHONPATH=src python -m agentfit validate \
+  .local-demo/agentteams/live/run-home
+```
+
+输出必须明确为 `Adaptation RunStore valid (overall lifecycle IN_PROGRESS)`。该入口只运行
+adaptation，不生成 Acceptance、G3 或部署包；`semantic_dry_run` 只证明真实模型、Matrix、
+隔离身份和 L1–L4 路径往返，不证明 MCP/HTTP/原生函数已经执行。当前 AgentTeams 路径拿不到
+可核验 token/cost 时，报告必须显示“不可用”，不能把内部默认数值描述为零成本。已验收的
+真实证据、故障根因和求解路径记录在 `docs/agentteams-live-validation.md`。
+
+只有显式添加 `--final-evaluation` 才会在 adaptation 后冻结 Candidate，并按访问策略运行
+validation、sealed_holdout 和 stress_and_failure：
+
+```bash
+PYTHONPATH=src python bridges/agentteams/run_live.py \
+  --bundle examples/telecom-materials.json \
+  --output .local-demo/agentteams/live/run-home-full \
+  --run-id home-live-full \
+  --model deepseek/deepseek-chat \
+  --homeserver http://127.0.0.1:18080 \
+  --auto-approve \
+  --final-evaluation
+
+PYTHONPATH=src python -m agentfit validate \
+  .local-demo/agentteams/live/run-home-full
+```
+
+当前模型路径即使质量样本通过，也会因 `cost_observed=false` 拒绝成本 Objective 和 G3；这比
+把未知成本记录成零更可信。完整运行仍是 `semantic_dry_run`，不得描述为真实 MCP 或业务写
+操作已完成。
 
 ## τ²-bench 桥接
 

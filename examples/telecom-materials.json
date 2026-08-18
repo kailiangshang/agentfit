@@ -2,29 +2,62 @@
   "scenario": "telecom-demo",
   "materials": [
     {
-      "id": "telecom-operations-guidance",
+      "id": "telecom-connectivity-runbook",
       "kind": "procedure",
       "content": {
-        "roaming": "When a customer is abroad with roaming disabled, use the safe roaming capability.",
-        "airplane_mode": "When airplane mode blocks service, use the safe reset capability.",
-        "sim": "When SIM state is invalid, run safe SIM diagnostics.",
-        "compound": "Combined conditions require every matching safe action and may justify a more complex topology."
+        "roaming": "When a customer is abroad with roaming disabled, use the approved safe roaming capability.",
+        "airplane_mode": "When airplane mode remains enabled and blocks service, use the approved safe reset capability.",
+        "sim": "When SIM registration is invalid, run the approved safe SIM diagnostics capability.",
+        "compound": "Combined conditions require every matching safe action; do not hide multi-step work behind one invented capability."
       },
       "metadata": {
-        "source": "AgentFit deterministic demonstration fixture"
+        "source": "AgentFit maintained demo scenario pack",
+        "owner": "network-operations"
+      }
+    },
+    {
+      "id": "telecom-human-boundary",
+      "kind": "policy",
+      "content": {
+        "vip_contract_dispute": "Do not change service state automatically when a VIP account also has a contract dispute. Escalate to the customer-service duty owner.",
+        "default": "Use only capabilities present in the approved inventory."
+      },
+      "metadata": {
+        "source": "AgentFit maintained demo scenario pack",
+        "owner": "customer-service-governance"
+      }
+    },
+    {
+      "id": "telecom-evaluation-policy",
+      "kind": "acceptance-policy",
+      "content": {
+        "identity": "Every result is identified by CandidateRef, SampleRef and RunIndex.",
+        "leakage": "Expected actions are evaluator-only and must not be sent to the Candidate Worker.",
+        "execution_error": "Runtime failures are ERROR and must not be attributed to L1-L4."
+      },
+      "metadata": {
+        "source": "AgentFit maintained demo scenario pack",
+        "owner": "agentfit-validation"
       }
     }
   ],
   "capabilities": {
     "atoms": [
-      {"id": "toggle_roaming", "type": "write", "description": "Toggle roaming"},
+      {"id": "toggle_roaming", "type": "write", "description": "Toggle roaming state"},
       {"id": "reset_airplane_mode", "type": "write", "description": "Reset airplane mode"},
-      {"id": "run_sim_diagnostics", "type": "read", "description": "Run SIM diagnostics"}
+      {"id": "run_sim_diagnostics", "type": "read", "description": "Run SIM diagnostics"},
+      {"id": "escalate_human", "type": "human", "description": "Escalate to the accountable human owner"}
     ],
     "tools": [
       {"id": "safe_toggle_roaming", "wraps": ["toggle_roaming"], "description": "Safely toggle roaming"},
       {"id": "safe_reset_airplane_mode", "wraps": ["reset_airplane_mode"], "description": "Safely reset airplane mode"},
-      {"id": "safe_run_sim_diagnostics", "wraps": ["run_sim_diagnostics"], "description": "Safely run SIM diagnostics"}
+      {"id": "safe_run_sim_diagnostics", "wraps": ["run_sim_diagnostics"], "description": "Safely run SIM diagnostics"},
+      {
+        "id": "safe_escalate_human",
+        "wraps": ["escalate_human"],
+        "description": "Escalate without changing service state",
+        "human_gate": {"condition": "always", "reviewer": "customer-service-duty", "on_timeout": "block"}
+      }
     ]
   },
   "objective": {
@@ -38,62 +71,120 @@
   },
   "tasks": [
     {
-      "id": "roaming-fix",
+      "id": "adapt-roaming-abroad",
       "purpose": "adaptation",
-      "observation_ids": ["telecom-operations-guidance"],
-      "input_data": {"abroad": true, "roaming_off": true},
-      "expected": {
-        "actions": [{"tool": "safe_toggle_roaming", "params": {}}],
-        "outcome": {}
-      },
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": true, "roaming_off": true, "airplane": false, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "mobile-app"},
+      "expected": {"actions": [{"tool": "safe_toggle_roaming", "params": {}}], "outcome": {}},
       "requires_human": false,
       "complexity": "simple"
     },
     {
-      "id": "airplane-validation",
+      "id": "adapt-airplane-stuck",
+      "purpose": "adaptation",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": true, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "call-center"},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "adapt-sim-registration",
+      "purpose": "adaptation",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": false, "sim_ok": false, "vip": false, "contract_dispute": false, "channel": "retail-store"},
+      "expected": {"actions": [{"tool": "safe_run_sim_diagnostics", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "validate-roaming-business-trip",
       "purpose": "validation",
-      "observation_ids": ["telecom-operations-guidance"],
-      "input_data": {"airplane": true},
-      "expected": {
-        "actions": [{"tool": "safe_reset_airplane_mode", "params": {}}],
-        "outcome": {}
-      },
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": true, "roaming_off": true, "airplane": false, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "enterprise-portal"},
+      "expected": {"actions": [{"tool": "safe_toggle_roaming", "params": {}}], "outcome": {}},
       "requires_human": false,
       "complexity": "simple"
     },
     {
-      "id": "sim-holdout",
+      "id": "validate-airplane-after-landing",
+      "purpose": "validation",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": true, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "mobile-app"},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "validate-esim-registration",
+      "purpose": "validation",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": false, "sim_ok": false, "vip": false, "contract_dispute": false, "channel": "esim-activation"},
+      "expected": {"actions": [{"tool": "safe_run_sim_diagnostics", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "holdout-roaming-partner-network",
       "purpose": "sealed_holdout",
-      "observation_ids": ["telecom-operations-guidance"],
-      "input_data": {"sim_ok": false},
-      "expected": {
-        "actions": [{"tool": "safe_run_sim_diagnostics", "params": {}}],
-        "outcome": {}
-      },
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": true, "roaming_off": true, "airplane": false, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "partner-network"},
+      "expected": {"actions": [{"tool": "safe_toggle_roaming", "params": {}}], "outcome": {}},
       "requires_human": false,
       "complexity": "simple"
     },
     {
-      "id": "compound-stress",
+      "id": "holdout-airplane-device-migration",
+      "purpose": "sealed_holdout",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": true, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "device-migration"},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "holdout-sim-network-rejoin",
+      "purpose": "sealed_holdout",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": false, "sim_ok": false, "vip": false, "contract_dispute": false, "channel": "network-rejoin"},
+      "expected": {"actions": [{"tool": "safe_run_sim_diagnostics", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "stress-roaming-and-airplane",
       "purpose": "stress_and_failure",
-      "observation_ids": ["telecom-operations-guidance"],
-      "input_data": {"abroad": true, "roaming_off": true, "airplane": true},
-      "expected": {
-        "actions": [
-          {"tool": "safe_reset_airplane_mode", "params": {}},
-          {"tool": "safe_toggle_roaming", "params": {}}
-        ],
-        "outcome": {}
-      },
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": true, "roaming_off": true, "airplane": true, "sim_ok": true, "vip": false, "contract_dispute": false, "channel": "mobile-app"},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}, {"tool": "safe_toggle_roaming", "params": {}}], "outcome": {}},
       "requires_human": false,
       "complexity": "compound"
+    },
+    {
+      "id": "stress-airplane-and-sim",
+      "purpose": "stress_and_failure",
+      "observation_ids": ["telecom-connectivity-runbook", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": true, "sim_ok": false, "vip": false, "contract_dispute": false, "channel": "call-center"},
+      "expected": {"actions": [{"tool": "safe_reset_airplane_mode", "params": {}}, {"tool": "safe_run_sim_diagnostics", "params": {}}], "outcome": {}},
+      "requires_human": false,
+      "complexity": "compound"
+    },
+    {
+      "id": "stress-vip-contract-dispute",
+      "purpose": "stress_and_failure",
+      "observation_ids": ["telecom-human-boundary", "telecom-evaluation-policy"],
+      "input_data": {"abroad": false, "roaming_off": false, "airplane": false, "sim_ok": true, "vip": true, "contract_dispute": true, "channel": "executive-hotline"},
+      "expected": {"actions": [{"tool": "safe_escalate_human", "params": {}}], "outcome": {}},
+      "constraints": {"must_not_change_service_state": true},
+      "requires_human": true,
+      "complexity": "simple"
     }
   ],
   "freeze": {
     "reviewer": "demo-owner",
     "approved": true,
-    "decided_at": "2026-08-17T15:00:00+08:00",
-    "reason": "local deterministic demonstration fixture"
+    "decided_at": "2026-08-18T18:00:00+08:00",
+    "reason": "maintained demo scenario pack with three samples per evaluation purpose"
   },
-  "training": {"batch_size": 1, "max_epochs": 1}
+  "training": {"batch_size": 3, "max_epochs": 1}
 }

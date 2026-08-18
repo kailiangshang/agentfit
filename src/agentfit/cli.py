@@ -29,7 +29,7 @@ from .models.manifest import (
 )
 from .models.objective import (
     AcceptanceResult, ObjectiveSpec, acceptance_result_from_dict,
-    evaluate_acceptance, objective_spec_from_dict,
+    evaluate_acceptance, objective_spec_from_dict, summarize_episodes,
 )
 from .models.project import CapabilityInventory, capability_inventory_from_dict
 from .models.sample import (
@@ -210,10 +210,11 @@ def _train(args: argparse.Namespace) -> int:
         results = []
         for sample_ref in manifest.sample_refs:
             sample = by_id[sample_ref.sample_id]
-            trace = executor.execute(orchestrator.solution, sample)
-            if not trace.runtime_ref:
-                trace.runtime_ref = orchestrator.runtime_ref
-            identity = EvaluationIdentity(candidate_ref, sample_ref, 0)
+            trace, identity = orchestrator.execute_evaluation(
+                orchestrator.solution, sample,
+            )
+            if identity.candidate_ref != candidate_ref or identity.sample_ref != sample_ref:
+                raise CliError("final evaluation identity drift")
             trace_path = store.save_trace(identity, trace)
             episode = Episode(
                 identity=identity,
@@ -226,7 +227,7 @@ def _train(args: argparse.Namespace) -> int:
             )
             store.save_episode(episode)
             results.append(episode)
-        evaluation_by_purpose[manifest.purpose.value] = _purpose_metrics(results)
+        evaluation_by_purpose[manifest.purpose.value] = summarize_episodes(results)
     acceptance = evaluate_acceptance(objective, evaluation_by_purpose)
     store.save_acceptance(acceptance)
     orchestrator.finalize_delivery({
@@ -240,26 +241,6 @@ def _train(args: argparse.Namespace) -> int:
     })
     print(args.output)
     return 0
-
-
-def _purpose_metrics(episodes: list[Episode] | list[dict]) -> dict[str, Any]:
-    results = [episode.result if isinstance(episode, Episode) else episode["result"]
-               for episode in episodes]
-    costs = [episode.cost_usd if isinstance(episode, Episode) else float(episode.get("cost_usd", 0))
-             for episode in episodes]
-    risk_events = [episode.risk_events if isinstance(episode, Episode)
-                   else int(episode.get("risk_events", 0)) for episode in episodes]
-    total = len(results)
-    passed = results.count("PASS")
-    return {
-        "total": total,
-        "passed": passed,
-        "failed": results.count("FAIL"),
-        "errors": results.count("ERROR"),
-        "pass_rate": passed / total if total else None,
-        "cost_usd": round(sum(costs), 4),
-        "risk_events": sum(risk_events),
-    }
 
 
 def _validate_sample_sets(store: RunStore) -> SampleSetCollection:
@@ -554,34 +535,72 @@ def _validate_episodes(store: RunStore,
     return episodes
 
 
-def _evaluation_from_episodes(collection: SampleSetCollection,
-                              episodes: list[dict]) -> dict[str, dict[str, Any]]:
+def _evaluation_from_episodes(
+    collection: SampleSetCollection,
+    episodes: list[dict],
+    *,
+    cost_observed: bool = True,
+) -> dict[str, dict[str, Any]]:
     purpose_by_ref = {
         (ref.sample_id, ref.content_hash): manifest.purpose
         for manifest in collection.manifests for ref in manifest.sample_refs
     }
     grouped: dict[SampleSetPurpose, list[dict]] = {purpose: [] for purpose in SampleSetPurpose}
-    expected_identities = {
-        (ref.sample_id, ref.content_hash, 0)
+    expected_sample_refs = {
+        (ref.sample_id, ref.content_hash)
         for manifest in collection.manifests for ref in manifest.sample_refs
     }
-    actual_identities = set()
+    actual_sample_refs = set()
     for episode in episodes:
         ref = episode["identity"]["sample_ref"]
-        actual_identities.add((
-            ref.get("sample_id"), ref.get("content_hash"), episode["identity"].get("run_index"),
-        ))
+        actual_sample_refs.add((ref.get("sample_id"), ref.get("content_hash")))
         purpose = purpose_by_ref.get((ref.get("sample_id"), ref.get("content_hash")))
         if purpose is None:
             raise CliError("invalid RunStore: Episode references sample outside frozen sets")
         grouped[purpose].append(episode)
-    if actual_identities != expected_identities or len(episodes) != len(expected_identities):
+    if (
+        actual_sample_refs != expected_sample_refs
+        or len(episodes) != len(expected_sample_refs)
+    ):
         raise CliError("invalid RunStore: every frozen sample requires exactly one completed Episode")
-    return {purpose.value: _purpose_metrics(grouped[purpose]) for purpose in SampleSetPurpose}
+    return {
+        purpose.value: summarize_episodes(
+            grouped[purpose], cost_observed=cost_observed,
+        )
+        for purpose in SampleSetPurpose
+    }
 
 
-def _validate_summary(store: RunStore, collection: SampleSetCollection,
-                      episodes: list[dict], acceptance: AcceptanceResult) -> None:
+def _validate_global_evaluation_indices(
+    store: RunStore,
+    final_episodes: list[dict],
+) -> None:
+    """Keep CandidateRef + SampleRef + RunIndex unique across the whole run."""
+    episode_documents = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((store.root / "training_episodes").rglob("*.json"))
+    ] + list(final_episodes)
+    by_unit: dict[tuple[str, str], list[int]] = {}
+    for episode in episode_documents:
+        identity = episode["identity"]
+        sample_ref = identity["sample_ref"]
+        key = (identity["candidate_ref"], sample_ref["content_hash"])
+        by_unit.setdefault(key, []).append(identity["run_index"])
+    if any(
+        sorted(indices) != list(range(len(indices)))
+        for indices in by_unit.values()
+    ):
+        raise CliError("invalid RunStore: global evaluation run indices are not contiguous")
+
+
+def _validate_summary(
+    store: RunStore,
+    collection: SampleSetCollection,
+    episodes: list[dict],
+    acceptance: AcceptanceResult,
+    *,
+    cost_observed: bool = True,
+) -> None:
     summary = store.load_json("summary.json")
     entries = [store.load_json(f"epochs/epoch_{epoch:03d}.json")["entry"]
                for epoch in store.epochs()]
@@ -593,7 +612,9 @@ def _validate_summary(store: RunStore, collection: SampleSetCollection,
         "lambda_values": entries[-1]["lambda_values"] if entries else {},
         "total_cost_usd": round(sum(float(entry.get("cost_usd", 0)) for entry in entries), 4),
         "log_chain_valid": True,
-        "evaluation_by_purpose": _evaluation_from_episodes(collection, episodes),
+        "evaluation_by_purpose": _evaluation_from_episodes(
+            collection, episodes, cost_observed=cost_observed,
+        ),
         "objective_ref": acceptance.objective_ref,
         "acceptance_ref": acceptance.content_hash,
         "acceptance_met": acceptance.met,
@@ -812,7 +833,7 @@ def _validate_external_evaluation(
     if len(simulations) != len(episodes):
         raise CliError("invalid RunStore: source results do not match Episode count")
 
-    evaluation = _purpose_metrics(episodes)
+    evaluation = summarize_episodes(episodes)
     if source_projection is not None and evaluation != source_projection.evaluation:
         raise CliError("invalid RunStore: evaluation does not match source projection")
     summary = store.load_json("summary.json")
@@ -868,6 +889,60 @@ def assert_valid_runstore(
         return store
     if run_kind != "training":
         raise CliError(f"invalid RunStore: unsupported run kind: {run_kind}")
+    if run.get("execution_scope") == "adaptation_only":
+        required = (
+            "run.json", "task_samples.json", "sample_sets.json",
+            "capability_inventory.json", "objective.json", "summary.json",
+        )
+        if any(not (path / name).is_file() for name in required):
+            raise CliError("invalid adaptation RunStore: required artifacts missing")
+        if (
+            run.get("lifecycle_state") != "IN_PROGRESS"
+            or run.get("stage") != {"name": "adaptation", "state": "COMPLETE"}
+            or run.get("final_evaluation_state") != "NOT_RUN"
+            or run.get("delivery_state") != "NOT_REQUESTED"
+        ):
+            raise CliError("invalid adaptation RunStore: lifecycle state mismatch")
+        forbidden = ("acceptance.json", "delivery_decision.json", "evidence_package")
+        if any((path / name).exists() for name in forbidden):
+            raise CliError("invalid adaptation RunStore: final-delivery artifacts are forbidden")
+        store = RunStore(path)
+        runtime_provenance = run.get("runtime_provenance")
+        runtime_ref = run.get("runtime_ref")
+        if (
+            not isinstance(runtime_provenance, dict)
+            or not isinstance(runtime_ref, str)
+            or canonical_hash(runtime_provenance) != runtime_ref
+        ):
+            raise CliError("invalid adaptation RunStore: runtime provenance mismatch")
+        _validate_material_lineage(store)
+        _validate_capability_inventory(store)
+        _validate_sample_sets(store)
+        if not store.verify_hash_chain():
+            raise CliError("invalid adaptation RunStore: hash chain verification failed")
+        if not store.solution_versions():
+            raise CliError("invalid adaptation RunStore: candidate snapshot missing")
+        candidates = _validate_training_candidates(store)
+        _validate_training_evidence(store, set(candidates), runtime_ref)
+        summary = store.load_json("summary.json")
+        epochs = store.epochs()
+        if not epochs:
+            raise CliError("invalid adaptation RunStore: epoch evidence missing")
+        last_entry = store.load_json(f"epochs/epoch_{epochs[-1]:03d}.json")["entry"]
+        total_cost = round(sum(
+            float(store.load_json(f"epochs/epoch_{epoch:03d}.json")["entry"].get("cost_usd", 0))
+            for epoch in epochs
+        ), 4)
+        if (
+            summary.get("epochs_run") != len(epochs)
+            or summary.get("final_pass_rate") != last_entry.get("pass_rate")
+            or summary.get("total_cost_usd") != total_cost
+            or summary.get("log_chain_valid") is not True
+            or summary.get("evaluation_by_purpose") is not None
+            or summary.get("delivery_approved") is not False
+        ):
+            raise CliError("invalid adaptation RunStore: summary mismatch")
+        return store
     required = (
         "run.json", "task_samples.json", "sample_sets.json",
         "capability_inventory.json", "objective.json", "acceptance.json",
@@ -894,17 +969,31 @@ def assert_valid_runstore(
     candidates = _validate_training_candidates(store)
     _validate_training_evidence(store, set(candidates), runtime_ref)
     episodes = _validate_episodes(store, runtime_ref=runtime_ref)
-    evaluation_by_purpose = _evaluation_from_episodes(collection, episodes)
+    _validate_global_evaluation_indices(store, episodes)
+    cost_observed = runtime_provenance.get("cost_accounting") != "unavailable"
+    evaluation_by_purpose = _evaluation_from_episodes(
+        collection, episodes, cost_observed=cost_observed,
+    )
     _, acceptance = _validate_objective_acceptance(store, evaluation_by_purpose)
-    _validate_summary(store, collection, episodes, acceptance)
+    _validate_summary(
+        store,
+        collection,
+        episodes,
+        acceptance,
+        cost_observed=cost_observed,
+    )
     _validate_evidence_manifest(store)
     verify_delivery_decision(store)
     return store
 
 
 def _validate(args: argparse.Namespace) -> int:
-    assert_valid_runstore(args.run_dir)
-    print("RunStore valid")
+    store = assert_valid_runstore(args.run_dir)
+    run = store.load_json("run.json")
+    if run.get("execution_scope") == "adaptation_only":
+        print("Adaptation RunStore valid (overall lifecycle IN_PROGRESS)")
+    else:
+        print("RunStore valid")
     return 0
 
 

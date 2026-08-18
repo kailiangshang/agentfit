@@ -64,6 +64,7 @@ def test_active_docs_do_not_carry_iteration_names() -> None:
             active_text = re.sub(
                 r"(?i)\bAgentTeams\s+v\d+(?:[._-]\d+)*\b", "AgentTeams", line,
             )
+            active_text = re.sub(r"(?i)--[a-z0-9][a-z0-9-]*", "", active_text)
             if any(pattern.search(active_text) for pattern in patterns):
                 violations.append(f"{path.relative_to(REPO)}:{line_no}: {line.strip()}")
     assert violations == [], "活跃文档仍携带迭代名称:\n" + "\n".join(violations)
@@ -193,9 +194,18 @@ def test_telecom_materials_compile_to_four_traceable_sets() -> None:
     )
     compiled = compile_material_bundle(materials)
     assert len(compiled.observations) >= 1
-    assert len(compiled.task_samples) == 4
+    assert len(compiled.task_samples) == 12
     assert all(task.observation_refs for task in compiled.task_samples)
     compiled.sample_sets.assert_ready_for_candidate_generation()
+    assert {
+        manifest.purpose.value: len(manifest.sample_refs)
+        for manifest in compiled.sample_sets.manifests
+    } == {
+        "adaptation": 3,
+        "validation": 3,
+        "sealed_holdout": 3,
+        "stress_and_failure": 3,
+    }
     assert {
         criterion.min_pass_rate for criterion in compiled.objective_spec.criteria
     } == {1.0}

@@ -18,28 +18,30 @@
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
 | RunStore、报告、Dashboard、方案包、证据包 | 已实现四集合验收与 G3 状态一致呈现 | `src/agentfit/store/`、`src/agentfit/log/`、`src/agentfit/dashboard/`、`src/agentfit/delivery/` |
 | 稳定核心 CLI | 已实现四集合评价、Objective 验收、签名 G3 和拒绝导出 | `agentfit train/validate/report/export` |
-| AgentTeams 生成、状态、沙箱执行与结果往返 | 已实现桥接合同和离线测试 | `bridges/agentteams/` |
+| AgentTeams 生成、状态、按运行创建 Worker、Matrix 执行与结果往返 | 已完成 12 样本 adaptation 更新和四集合真实运行；G3 因 stress ERROR 与成本不可观测拒绝 | `bridges/agentteams/`、`docs/agentteams-live-validation.md` |
 | τ²-bench 外部评价转换 | 已实现原始字节、CandidateManifest、逐条外部证据链、TaskSample、Trace、Episode 与原子发布 | `bridges/tau2bench/` |
 
-这张表只代表模块和离线测试存在，不代表真实平台运行、真实业务效果或最终泛化已经完成。
+这张表描述已经存在的模块和已明确列出的运行证据；局部真实联动不代表真实业务效果或最终泛化已经完成。
 
 ## 最高优先级工作
 
-### AgentTeams 真实批次闭环
+### AgentTeams 集合级运行隔离与成本证据
 
 核心已经用 `CandidateManifest` 固定四层候选，用 `runtime_ref` 单独记录 Executor、部署、
 Worker 沙箱和模型 provenance；在线 Executor 与离线 importer 共用
-`agentfit.agentteams-result` 语义。下一步不是再设计一套运行描述对象，而是在真实
-AgentTeams 上完成小批次：
+`agentfit.agentteams-result` 语义。12 个正式 demo 样本已经完成真实 adaptation、Candidate
+更新和四集合运行；下一步由当前 runtime ERROR 证据驱动，不再扩展抽象层：
 
-- 将同一冻结 Candidate 和 TaskSample 批次发送到隔离 Worker；
-- 平台桥接按现场条件把 L1/L2 合同解析为 MCP、原生函数、HTTP、脚本或 Memory 载体；
-- 在线或离线写回标准 Trace/Episode，保留连续 `run_index`；
-- 从 RunStore 重算结果，确认沙箱/协议错误只进入 execution error，不触发四层更新；
-- 每次真实运行使用独立 RunStore，不覆盖 smoke 或历史证据。
+- 为 adaptation、validation、sealed_holdout、stress_and_failure 使用独立 Worker/Matrix 会话，
+  防止长会话上下文污染，同时保持同一 CandidateRef 和全局连续 `run_index`；
+- 从 AgentTeams/LiteLLM 运行证据接入可核验 token/cost，只有 `cost_observed=true` 才评价成本门槛；
+- 让 stress 产生可评价的 PASS/FAIL，而不是缺信封或身份错误；
+- 保留一次格式纠错上限，第二次协议错误仍作为 runtime ERROR；
+- 每次真实运行使用独立 RunStore，不覆盖任何成功或失败证据。
 
-完成定义：至少一个真实批次能从 Candidate/Task 发出，经过 AgentTeams 隔离 Worker，
-再以相同 CandidateRef、SampleRef、run_index 和 runtime_ref 回到 RunStore。
+完成定义：四集合 12 个最终 Episode 没有平台/协议 ERROR，成本可核验，报告能从
+CandidateRef、SampleRef、run_index 和 runtime_ref 回到 Trace；是否通过 Objective 由真实
+结果决定，不以降低阈值收尾。
 
 ### 真实场景的逐批适配
 

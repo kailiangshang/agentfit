@@ -77,9 +77,14 @@ def _training_acceptance_lines(store: RunStore, summary: dict) -> list[str]:
             else "REJECT" if criteria_met.get(purpose) is False
             else "PENDING"
         )
+        cost_text = (
+            f"${metrics.get('cost_usd', 0)}"
+            if metrics.get("cost_observed", True) is True
+            else "不可用"
+        )
         lines.append(
             f"| {purpose} | {rate_text} | {counts} | "
-            f"${metrics.get('cost_usd', 0)} | {metrics.get('risk_events', 0)} | "
+            f"{cost_text} | {metrics.get('risk_events', 0)} | "
             f"{threshold} | {result} |"
         )
     failures = acceptance.get("failures") or summary.get("acceptance_failures") or []
@@ -125,10 +130,17 @@ def generate_report(run_dir: str | Path) -> Path:
             f"{final_pass_rate:.0%}"
             if isinstance(final_pass_rate, (int, float)) else "—"
         )
+        cost_accounting = (run.get("runtime_provenance") or {}).get("cost_accounting")
+        cost_line = (
+            "- 总成本：**不可用**（运行时未提供可核验成本） · "
+            if cost_accounting == "unavailable"
+            else f"- 总成本：${s.get('total_cost_usd', 0)} · "
+        )
+        cost_line += f"哈希链：{'✓ 可验证' if s.get('log_chain_valid') else '✗'}"
         lines += ["## 训练结果", "",
                   f"- 训练批次通过率：**{pass_rate_text}**（方案证据版本 {s.get('final_solution_version')}）",
                   f"- 训练轮数：{s.get('epochs_run')} · 收敛：{'是' if s.get('converged') else '否'}",
-                  f"- 总成本：${s.get('total_cost_usd', 0)} · 哈希链：{'✓ 可验证' if s.get('log_chain_valid') else '✗'}",
+                  cost_line,
                   f"- λ 终值：{s.get('lambda_values')}", ""]
         if final_pass_rate is None:
             lines += ["> 无有效方案评测：执行结果均未进入可归因的 L1–L4 方案评测。", ""]

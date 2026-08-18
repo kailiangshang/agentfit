@@ -1031,6 +1031,7 @@ def test_tau2_external_evaluation_is_valid_but_not_exportable(
         "errors": 0,
         "pass_rate": 0.5,
         "cost_usd": 0.04,
+        "cost_observed": True,
         "risk_events": 0,
     }
     assert main(["export", str(run_dir)]) == 2
@@ -1140,6 +1141,7 @@ def test_tau2_external_evaluation_counts_runtime_errors_separately(tmp_path: Pat
         "errors": 1,
         "pass_rate": 0.0,
         "cost_usd": 0.03,
+        "cost_observed": True,
         "risk_events": 0,
     }
     episode = json.loads(next((run_dir / "episodes").glob("*.json")).read_text(encoding="utf-8"))

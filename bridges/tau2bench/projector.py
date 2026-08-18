@@ -42,7 +42,7 @@ class Tau2Projection:
     tasks: tuple[TaskSample, ...]
     records: tuple[Tau2ProjectedRecord, ...]
     num_trials: int
-    evaluation: dict[str, int | float]
+    evaluation: dict[str, int | float | bool]
 
 
 def _cost(value: Any) -> float:
@@ -202,13 +202,14 @@ def project_results(data: dict[str, Any], candidate_ref: str) -> Tau2Projection:
     failed = sum(record.episode.result == "FAIL" for record in records)
     errors = sum(record.episode.result == "ERROR" for record in records)
     total_cost = sum(record.episode.cost_usd for record in records)
-    evaluation: dict[str, int | float] = {
+    evaluation: dict[str, int | float | bool] = {
         "total": len(records),
         "passed": passed,
         "failed": failed,
         "errors": errors,
         "pass_rate": passed / len(records),
         "cost_usd": round(total_cost, 4),
+        "cost_observed": True,
         "risk_events": sum(record.episode.risk_events for record in records),
     }
     return Tau2Projection(

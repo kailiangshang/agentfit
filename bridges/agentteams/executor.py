@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import math
+import re
 from typing import Any
 
 from agentfit.adapters.protocols import SandboxAdapter, SandboxRequest
@@ -160,6 +161,8 @@ class AgentTeamsSandboxExecutor(ExecutorBase):
         deployment_ref: str,
         sandbox_ref: str,
         model_ref: str = "",
+        binding_mode: str = "platform_resolved",
+        cost_accounting: str = "unavailable",
         timeout_seconds: float = 120.0,
     ) -> None:
         if not deployment_ref or not sandbox_ref:
@@ -168,6 +171,8 @@ class AgentTeamsSandboxExecutor(ExecutorBase):
         self.deployment_ref = deployment_ref
         self.sandbox_ref = sandbox_ref
         self.model_ref = model_ref
+        self.binding_mode = binding_mode
+        self.cost_accounting = cost_accounting
         self.timeout_seconds = timeout_seconds
         self._run_indices: dict[tuple[str, str], int] = {}
 
@@ -178,6 +183,8 @@ class AgentTeamsSandboxExecutor(ExecutorBase):
             "deployment_ref": self.deployment_ref,
             "sandbox_ref": self.sandbox_ref,
             "model_ref": self.model_ref,
+            "binding_mode": self.binding_mode,
+            "cost_accounting": self.cost_accounting,
         }
 
     def _task(self, solution: Solution, sample: TaskSample) -> dict[str, Any]:
@@ -222,8 +229,15 @@ class AgentTeamsSandboxExecutor(ExecutorBase):
             )
         sandbox_cost = _valid_cost(getattr(sandbox_result, "cost_usd", None))
         if getattr(sandbox_result, "status", None) != "ok":
+            reported_error = getattr(sandbox_result, "error", None)
+            error_code = (
+                reported_error
+                if isinstance(reported_error, str)
+                and re.fullmatch(r"agentteams_[a-z0-9_]+", reported_error)
+                else "agentteams_sandbox_error"
+            )
             return _runtime_error(
-                sample, runtime_ref, "agentteams_sandbox_error",
+                sample, runtime_ref, error_code,
                 cost_usd=sandbox_cost,
             )
         payload = getattr(sandbox_result, "output", None)
