@@ -13,6 +13,7 @@ build/
 competition/2026-08-15/submission/_screenshots/
 .venv/
 .zcode/
+.worktrees/
 
 # user upload working copies (regeneratable)
 competition/2026-08-16/sub/
