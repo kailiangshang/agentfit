@@ -36,53 +36,85 @@ def test_agentteams_manifest_is_generated_from_canonical_registry() -> None:
     checked_in = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")
 
     assert checked_in == expected
-    assert [resource["kind"] for resource in expected] == ["Worker", "Worker", "Worker", "Team"]
-    assert [resource["metadata"]["name"] for resource in expected] == [
-        "agentfit-steward", "agentfit-attributor", "agentfit-architect", "agentfit",
-    ]
-    workers = expected[:3]
-    team = expected[3]
+    assert expected["apiVersion"] == "hiclaw.io/v1beta1"
+    assert expected["kind"] == "Team"
+    team = expected
     assert team["metadata"]["name"] == "agentfit"
-    assert team["spec"]["workerMembers"] == [
-        {"name": "agentfit-steward", "role": "team_leader"},
-        {"name": "agentfit-attributor", "role": "worker"},
-        {"name": "agentfit-architect", "role": "worker"},
+    annotations = team["metadata"]["annotations"]
+    assert annotations["agentfit.io/registry-hash"]
+    assert annotations["agentfit.io/source"] == "bridges/agentteams/render_team.py"
+    assert annotations["agentfit.io/model-ref"] == "deepseek/deepseek-chat"
+    assert annotations["agentfit.io/platform-contract"] == "hiclaw-v1.1.2-inline-team"
+    assert "workerMembers" not in team["spec"]
+
+    roles = [team["spec"]["leader"], *team["spec"]["workers"]]
+    assert [role["name"] for role in roles] == [
+        "agentfit-steward", "agentfit-attributor", "agentfit-architect",
     ]
-    assert "leader" not in team["spec"]
-    assert "workers" not in team["spec"]
-    for role in workers:
-        assert role["spec"]["model"] == "deepseek/deepseek-chat"
-        assert role["spec"]["runtime"] == "copaw"
-        assert role["spec"]["state"] == "Running"
-        assert role["spec"]["workerName"] == role["metadata"]["name"]
-        assert role["metadata"]["annotations"]["agentfit.io/registry-hash"]
-        assert "## 步骤" in role["spec"]["soul"]
+    assert all(role["model"] == annotations["agentfit.io/model-ref"] for role in roles)
+    assert "runtime" not in roles[0]
+    for role in roles:
+        assert role["state"] == "Running"
+        assert role["workerName"] == role["name"]
+        assert role["identity"]
+        assert "## 步骤" in role["soul"]
 
 
-def test_agentteams_deployment_artifact_rejects_wrong_resource_contract(tmp_path: Path) -> None:
+def test_agentteams_deployment_artifact_rejects_wrong_resource_contract() -> None:
     bridge = _load(REPO / "bridges" / "agentteams" / "apply_team.py", "agentfit_validate_resources")
-    resources = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")
-    bridge.validate_resources(resources)
+    resource = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")
+    bridge.validate_resources(resource)
 
-    duplicate = json.loads(json.dumps(resources))
-    duplicate[1]["metadata"]["name"] = "agentfit-steward"
-    with pytest.raises(SystemExit, match="duplicate"):
-        bridge.validate_resources(duplicate)
+    wrong_api = json.loads(json.dumps(resource))
+    wrong_api["apiVersion"] = "hiclaw.io/v1"
+    with pytest.raises(SystemExit, match="apiVersion"):
+        bridge.validate_resources(wrong_api)
 
-    dangling = json.loads(json.dumps(resources))
-    dangling[-1]["spec"]["workerMembers"][1]["name"] = "agentfit-missing"
-    with pytest.raises(SystemExit, match="missing Worker"):
-        bridge.validate_resources(dangling)
+    ambiguous_model = json.loads(json.dumps(resource))
+    ambiguous_model["spec"]["workers"][0]["model"] = "deepseek-chat"
+    with pytest.raises(SystemExit, match="model-ref"):
+        bridge.validate_resources(ambiguous_model)
 
-    wrong_order = json.loads(json.dumps(resources))
-    wrong_order[-1], wrong_order[0] = wrong_order[0], wrong_order[-1]
-    with pytest.raises(SystemExit, match="ordered"):
-        bridge.validate_resources(wrong_order)
+    bad_leader_runtime = json.loads(json.dumps(resource))
+    bad_leader_runtime["spec"]["leader"]["runtime"] = "copaw"
+    with pytest.raises(SystemExit, match="runtime"):
+        bridge.validate_resources(bad_leader_runtime)
 
-    inline = json.loads(json.dumps(resources))
-    inline[-1]["spec"]["leader"] = {"name": "agentfit-steward"}
-    with pytest.raises(SystemExit, match="inline"):
-        bridge.validate_resources(inline)
+    bad_worker_name = json.loads(json.dumps(resource))
+    bad_worker_name["spec"]["workers"][1]["name"] = "agentfit-extra"
+    with pytest.raises(SystemExit, match="canonical"):
+        bridge.validate_resources(bad_worker_name)
+
+    legacy = json.loads(json.dumps(resource))
+    legacy["spec"]["workerMembers"] = []
+    with pytest.raises(SystemExit, match="workerMembers"):
+        bridge.validate_resources(legacy)
+
+    bad_contract = json.loads(json.dumps(resource))
+    bad_contract["metadata"]["annotations"]["agentfit.io/platform-contract"] = "hiclaw-v1.2.0"
+    with pytest.raises(SystemExit, match="platform-contract"):
+        bridge.validate_resources(bad_contract)
+
+
+def test_agentteams_dry_run_never_calls_apply(monkeypatch) -> None:
+    bridge = _load(REPO / "bridges" / "agentteams" / "apply_team.py", "agentfit_dry_run")
+    called = False
+
+    def forbid_apply(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("dry-run must not apply")
+
+    monkeypatch.setattr(bridge, "find_controller", lambda: "test-controller")
+    monkeypatch.setattr(bridge, "controller_cli", lambda _controller: "hiclaw")
+    monkeypatch.setattr(bridge, "get_teams", lambda _controller, _cli: [])
+    monkeypatch.setattr(bridge, "apply_manifest", forbid_apply)
+    monkeypatch.setattr(sys, "argv", [
+        "apply_team.py", "--manifest", str(REPO / "bridges" / "agentteams" / "team.yaml"), "--dry-run",
+    ])
+
+    bridge.main()
+    assert called is False
 
 
 def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
@@ -117,11 +149,12 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
     assert report.in_sync is False
     assert "agentfit:spec" in report.changed
 
-    full_expected = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")[-1]
+    full_expected = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")
     partial = {
         "metadata": full_expected["metadata"],
         "spec": {
-            "workerMembers": full_expected["spec"]["workerMembers"],
+            "leader": full_expected["spec"]["leader"],
+            "workers": full_expected["spec"]["workers"],
         },
     }
     report = bridge.reconcile_status(full_expected, [partial])
@@ -130,8 +163,8 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
 
     flattened = {
         "metadata": {"name": "agentfit"},
-        "leaderName": full_expected["spec"]["workerMembers"][0]["name"],
-        "workerNames": [member["name"] for member in full_expected["spec"]["workerMembers"][1:]],
+        "leaderName": full_expected["spec"]["leader"]["name"],
+        "workerNames": [worker["name"] for worker in full_expected["spec"]["workers"]],
     }
     report = bridge.reconcile_status(full_expected, {"teams": [flattened]})
     assert report.changed == ()

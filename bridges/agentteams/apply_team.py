@@ -18,15 +18,13 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 CONTROLLER_CANDIDATES = ("agentteams-controller", "hiclaw-controller")
+API_VERSION = "hiclaw.io/v1beta1"
+TEAM_NAME = "agentfit"
+PLATFORM_CONTRACT = "hiclaw-v1.1.2-inline-team"
+CANONICAL_LEADER = "agentfit-steward"
 CANONICAL_WORKERS = (
-    "agentfit-steward",
     "agentfit-attributor",
     "agentfit-architect",
-)
-CANONICAL_MEMBER_REFS = (
-    ("agentfit-steward", "team_leader"),
-    ("agentfit-attributor", "worker"),
-    ("agentfit-architect", "worker"),
 )
 
 
@@ -60,14 +58,10 @@ def _workers(item: dict) -> tuple[str, ...] | None:
     spec = item.get("spec")
     names = []
     if isinstance(spec, dict):
-        members = spec.get("workerMembers")
-        if isinstance(members, list):
-            names.extend(member["name"] for member in members if isinstance(member, dict) and member.get("name"))
-        else:
-            leader = spec.get("leader") or {}
-            if leader.get("name"):
-                names.append(leader["name"])
-            names.extend(worker["name"] for worker in spec.get("workers", []) if worker.get("name"))
+        leader = spec.get("leader") or {}
+        if leader.get("name"):
+            names.append(leader["name"])
+        names.extend(worker["name"] for worker in spec.get("workers", []) if worker.get("name"))
     elif item.get("leaderName") or isinstance(item.get("workerNames"), list):
         if item.get("leaderName"):
             names.append(item["leaderName"])
@@ -86,7 +80,7 @@ def _owned_spec(item: dict) -> dict | None:
         keys = ("name", "model", "runtime", "state", "identity", "soul")
         return {key: role.get(key) for key in keys if key in role}
 
-    payload = {key: spec[key] for key in ("teamName", "description", "peerMentions", "workerMembers") if key in spec}
+    payload = {key: spec[key] for key in ("teamName", "description", "peerMentions") if key in spec}
     if "leader" in spec:
         payload["leader"] = role_payload(spec.get("leader") or {})
     if "workers" in spec:
@@ -160,85 +154,83 @@ def reconcile_status(expected: dict, actual: Any) -> DriftReport:
     return DriftReport(missing, unexpected, tuple(changed), tuple(unverified))
 
 
-def load_resources(path: Path) -> list[dict]:
-    """Load an ordered multi-document YAML deployment artifact."""
+def load_resources(path: Path) -> dict:
+    """Load the single JSON-compatible YAML Team deployment artifact."""
     text = path.read_text(encoding="utf-8")
+    if "\n---\n" in text:
+        raise SystemExit("deployment artifact must contain exactly one Team document")
     try:
         resource = json.loads(text)
-        resources = [resource]
-    except json.JSONDecodeError:
-        documents = [document.strip() for document in text.split("\n---\n") if document.strip()]
-        try:
-            resources = [json.loads(document) for document in documents]
-        except json.JSONDecodeError:
-            try:
-                import yaml
-            except ImportError as exc:
-                raise SystemExit("deployment artifact is non-JSON YAML; install PyYAML") from exc
-            resources = list(yaml.safe_load_all(text))
-    if not all(isinstance(resource, dict) for resource in resources):
-        raise SystemExit("deployment artifact must contain object resources only")
-    return resources
+    except json.JSONDecodeError as exc:
+        raise SystemExit("deployment artifact must be one JSON-compatible YAML Team document") from exc
+    if not isinstance(resource, dict):
+        raise SystemExit("deployment artifact must contain one object resource")
+    return resource
 
 
-def validate_resources(resources: list[dict]) -> None:
-    """Fail closed before copying an AgentFit deployment into AgentTeams."""
-    if len(resources) != 4:
-        raise SystemExit("deployment artifact must contain exactly three Workers and one Team")
-    kinds = tuple(str(resource.get("kind", "")) for resource in resources)
-    if kinds != ("Worker", "Worker", "Worker", "Team"):
-        raise SystemExit("deployment resources must be ordered Worker, Worker, Worker, Team")
-    names = tuple(_name(resource) for resource in resources)
-    if any(not name for name in names):
-        raise SystemExit("deployment resource is missing metadata.name")
-    if len(set(names)) != len(names):
-        raise SystemExit("deployment artifact contains duplicate resource names")
-    if names[:3] != CANONICAL_WORKERS or names[3] != "agentfit":
-        raise SystemExit("deployment artifact must use the canonical AgentFit resource names")
+def validate_resources(team: dict) -> None:
+    """Fail closed before copying the v1.1.2 inline Team into AgentTeams."""
+    if team.get("apiVersion") != API_VERSION:
+        raise SystemExit(f"Team {TEAM_NAME} must set apiVersion={API_VERSION}")
+    if team.get("kind") != "Team":
+        raise SystemExit("deployment artifact kind must be Team")
+    if _name(team) != TEAM_NAME:
+        raise SystemExit(f"deployment artifact must use canonical Team name {TEAM_NAME}")
 
-    for worker in resources[:3]:
-        spec = worker.get("spec")
-        if not isinstance(spec, dict):
-            raise SystemExit(f"Worker {_name(worker)} is missing spec")
-        if spec.get("workerName") != _name(worker):
-            raise SystemExit(f"Worker {_name(worker)} must use its canonical workerName")
-        for key, expected in (("runtime", "copaw"), ("state", "Running")):
-            if spec.get(key) != expected:
-                raise SystemExit(f"Worker {_name(worker)} must set {key}={expected}")
-        if not isinstance(spec.get("model"), str) or not spec["model"].strip():
-            raise SystemExit(f"Worker {_name(worker)} is missing an explicit model")
-        if not isinstance(spec.get("identity"), str) or not isinstance(spec.get("soul"), str):
-            raise SystemExit(f"Worker {_name(worker)} is missing identity or soul")
+    annotations = (team.get("metadata") or {}).get("annotations")
+    if not isinstance(annotations, dict):
+        raise SystemExit("Team agentfit is missing required annotations")
+    if not isinstance(annotations.get("agentfit.io/registry-hash"), str) or not annotations["agentfit.io/registry-hash"]:
+        raise SystemExit("Team agentfit is missing agentfit.io/registry-hash")
+    if annotations.get("agentfit.io/source") != "bridges/agentteams/render_team.py":
+        raise SystemExit("Team agentfit must use the canonical agentfit.io/source")
+    model_ref = annotations.get("agentfit.io/model-ref")
+    if not isinstance(model_ref, str) or not model_ref or model_ref == "deepseek-chat":
+        raise SystemExit("Team agentfit must use a non-ambiguous agentfit.io/model-ref")
+    if annotations.get("agentfit.io/platform-contract") != PLATFORM_CONTRACT:
+        raise SystemExit(f"Team agentfit must set agentfit.io/platform-contract={PLATFORM_CONTRACT}")
 
-    team = resources[-1]
     spec = team.get("spec")
     if not isinstance(spec, dict):
         raise SystemExit("Team agentfit is missing spec")
-    if "leader" in spec or "workers" in spec:
-        raise SystemExit("Team agentfit must not use inline leader or workers")
-    members = spec.get("workerMembers")
-    if not isinstance(members, list):
-        raise SystemExit("Team agentfit must declare workerMembers")
-    refs = tuple(
-        (str(member.get("name", "")), str(member.get("role", "")))
-        for member in members if isinstance(member, dict)
-    )
-    if refs != CANONICAL_MEMBER_REFS:
-        referenced = {name for name, _ in refs}
-        missing = set(CANONICAL_WORKERS) - referenced
-        if missing:
-            raise SystemExit(f"Team agentfit references missing Worker resources: {', '.join(sorted(missing))}")
-        raise SystemExit("Team agentfit workerMembers must use canonical role ordering")
+    if "workerMembers" in spec:
+        raise SystemExit("Team agentfit must not use v1.2 workerMembers")
+    if spec.get("teamName") != TEAM_NAME or not isinstance(spec.get("description"), str) or not spec["description"]:
+        raise SystemExit("Team agentfit must set canonical teamName and description")
+    if spec.get("peerMentions") is not False:
+        raise SystemExit("Team agentfit must set peerMentions=false")
 
+    leader = spec.get("leader")
+    if not isinstance(leader, dict) or leader.get("name") != CANONICAL_LEADER:
+        raise SystemExit("Team agentfit must use canonical inline leader")
+    if "runtime" in leader:
+        raise SystemExit("Team agentfit leader must not set runtime in v1.1.2")
+    workers = spec.get("workers")
+    if not isinstance(workers, list) or tuple(worker.get("name") for worker in workers if isinstance(worker, dict)) != CANONICAL_WORKERS:
+        raise SystemExit("Team agentfit must use canonical inline worker roles")
 
-def team_resource(resources: list[dict]) -> dict:
-    validate_resources(resources)
-    return resources[-1]
+    for role in (leader, *workers):
+        if not isinstance(role, dict):
+            raise SystemExit("Team agentfit inline roles must be objects")
+        name = role.get("name")
+        if role.get("workerName") != name or role.get("model") != model_ref:
+            raise SystemExit("Team agentfit role model must bind to agentfit.io/model-ref")
+        if role.get("state") != "Running":
+            raise SystemExit("Team agentfit roles must set state=Running")
+        if not isinstance(role.get("identity"), str) or not role["identity"]:
+            raise SystemExit("Team agentfit roles must include identity")
+        if not isinstance(role.get("soul"), str) or "## 步骤" not in role["soul"]:
+            raise SystemExit("Team agentfit roles must include canonical Soul/Skill content")
+    for worker in workers:
+        if worker.get("runtime") != "copaw":
+            raise SystemExit("Team agentfit inline workers must set runtime=copaw")
 
 
 def load_manifest(path: Path) -> dict:
-    """Compatibility helper returning the Team document from the deployment artifact."""
-    return team_resource(load_resources(path))
+    """Compatibility helper returning the validated Team document."""
+    team = load_resources(path)
+    validate_resources(team)
+    return team
 
 
 def find_controller() -> str:
@@ -292,8 +284,8 @@ def main() -> None:
     if args.status_only and args.dry_run:
         parser.error("--status-only and --dry-run cannot be used together")
     expected_path = Path(args.manifest) if args.manifest else Path(__file__).with_name("team.yaml")
-    resources = load_resources(expected_path)
-    expected = team_resource(resources)
+    expected = load_resources(expected_path)
+    validate_resources(expected)
     controller = find_controller()
     cli = controller_cli(controller)
     applied = None
@@ -304,9 +296,8 @@ def main() -> None:
     drift = reconcile_status(expected, teams)
     payload = {
         "controller": controller, "cli": cli, "applied": applied,
-        "dry_run": args.dry_run, "plan": [
-            {"kind": resource["kind"], "name": _name(resource)} for resource in resources
-        ],
+        "dry_run": args.dry_run,
+        "plan": [{"kind": expected["kind"], "name": _name(expected)}],
         "teams": teams,
         "drift": {**drift._asdict(), "in_sync": drift.in_sync},
     }

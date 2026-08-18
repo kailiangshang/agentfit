@@ -32,9 +32,10 @@ ROLE_SPECS = {
         "skills": ("bootstrap", "aggregation", "proposal", "cascade"),
     },
 }
+PLATFORM_CONTRACT = "hiclaw-v1.1.2-inline-team"
 
 
-def _role_payload(role: str, model: str, registry: dict) -> dict:
+def _role_payload(role: str, model: str, registry: dict, *, runtime: bool) -> dict:
     spec = ROLE_SPECS[role]
     sections = [
         f"# AgentFit {role.title()}",
@@ -53,35 +54,31 @@ def _role_payload(role: str, model: str, registry: dict) -> dict:
     ]
     for skill_name in spec["skills"]:
         sections.extend(("", registry[skill_name].content))
-    return {
+    payload = {
         "name": spec["name"],
         "model": model,
-        "runtime": "copaw",
         "state": "Running",
+        "workerName": spec["name"],
         "identity": spec["identity"],
         "soul": "\n".join(sections),
     }
+    if runtime:
+        payload["runtime"] = "copaw"
+    return payload
 
 
-def render_resources(model: str = "deepseek/deepseek-chat") -> list[dict]:
-    """Render the ordered Worker-first resource set accepted by AgentTeams."""
+def render_resources(model: str = "deepseek/deepseek-chat") -> dict:
+    """Render the single inline Team resource accepted by HiClaw v1.1.2."""
     registry = SkillRegistry().load()
     used = sorted({name for spec in ROLE_SPECS.values() for name in spec["skills"]})
     registry_hash = canonical_hash([(name, registry[name].content_hash) for name in used])
     annotations = {
         "agentfit.io/registry-hash": registry_hash,
         "agentfit.io/source": "bridges/agentteams/render_team.py",
+        "agentfit.io/model-ref": model,
+        "agentfit.io/platform-contract": PLATFORM_CONTRACT,
     }
-    workers = []
-    for role in ("steward", "attributor", "architect"):
-        payload = _role_payload(role, model, registry)
-        workers.append({
-            "apiVersion": "hiclaw.io/v1beta1",
-            "kind": "Worker",
-            "metadata": {"name": payload.pop("name"), "annotations": annotations},
-            "spec": {"workerName": ROLE_SPECS[role]["name"], **payload},
-        })
-    team = {
+    return {
         "apiVersion": "hiclaw.io/v1beta1",
         "kind": "Team",
         "metadata": {
@@ -95,27 +92,23 @@ def render_resources(model: str = "deepseek/deepseek-chat") -> list[dict]:
                 "AgentTeams; Orchestrator, Validator and Auditor remain deterministic core code."
             ),
             "peerMentions": False,
-            "workerMembers": [
-                {"name": "agentfit-steward", "role": "team_leader"},
-                {"name": "agentfit-attributor", "role": "worker"},
-                {"name": "agentfit-architect", "role": "worker"},
+            "leader": _role_payload("steward", model, registry, runtime=False),
+            "workers": [
+                _role_payload(role, model, registry, runtime=True)
+                for role in ("attributor", "architect")
             ],
         },
     }
-    return [*workers, team]
 
 
 def render_manifest(model: str = "deepseek/deepseek-chat") -> dict:
-    """Return the Team resource for callers using the earlier helper API."""
-    return render_resources(model)[-1]
+    """Compatibility alias for the canonical single Team resource."""
+    return render_resources(model)
 
 
 def render_text(model: str = "deepseek/deepseek-chat") -> str:
-    """Emit ordered JSON documents; JSON is valid YAML for ``hiclaw apply -f``."""
-    return "\n---\n".join(
-        json.dumps(resource, ensure_ascii=False, indent=2)
-        for resource in render_resources(model)
-    ) + "\n"
+    """Emit JSON, which is valid YAML for ``hiclaw apply -f``."""
+    return json.dumps(render_resources(model), ensure_ascii=False, indent=2) + "\n"
 
 
 def main() -> int:
