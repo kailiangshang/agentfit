@@ -73,7 +73,11 @@ output/telecom-demo/
 
 ## AgentTeams 桥接
 
-AgentTeams 是外部运行底座，核心库不导入其 SDK。`team.yaml` 是由 Skill Registry 生成的部署正本，不手工维护 Skill 副本。
+AgentTeams 是外部运行底座，核心库不导入其 SDK。`team.yaml` 是由 Skill Registry
+生成的部署正本，不手工维护 Skill 副本。该文件按 AgentTeams v1.1.2 的声明式接口顺序
+包含三个 `Worker`（Steward、Attributor、Architect）和一个引用它们的 `Team`；Team 不内联
+leader 或 worker 内容。默认模型是当前 LiteLLM 清单的精确 ID `deepseek/deepseek-chat`，部署
+到其他环境时可通过渲染器的 `--model` 显式替换。
 
 ```bash
 # 检查生成物是否与 Registry 一致
@@ -82,12 +86,22 @@ python bridges/agentteams/render_team.py --check
 # 只读回读运行态并输出精确 drift
 python bridges/agentteams/apply_team.py --status-only
 
+# 本地预检：验证四个声明式资源，回读当前 drift；不复制、不 apply
+python bridges/agentteams/apply_team.py \
+  --manifest bridges/agentteams/team.yaml \
+  --dry-run
+
 # 维护者审核 drift 后再显式 apply
 python bridges/agentteams/apply_team.py \
   --manifest bridges/agentteams/team.yaml
 ```
 
-状态回读只把 `agentfit` 前缀的其他 Team 识别为本项目遗留对象，不触碰无关 Team。AgentTeams v1.1.2 的扁平列表结果只能核对 Team/Worker 成员；拿不到 model、runtime、soul 和 Registry 注解时，对应项明确标记为 `unverified`，不会误报 `in_sync` 或伪称完整规格一致。完整 drift 需要平台返回原始 Team/Worker 规格。
+状态回读只把 `agentfit` 前缀的其他 Team 识别为本项目遗留对象，不触碰无关 Team。预检
+会先验证资源顺序、唯一性、Worker 引用和角色，再输出将要按顺序提交的资源计划及当前
+drift。AgentTeams v1.1.2 的扁平列表结果只能核对 Team/Worker 成员；它通常不会回传
+metadata annotations，因此拿不到 model、runtime、soul 或 Registry 注解时，对应项明确标记为
+`unverified`，不会误报 `in_sync` 或伪称完整规格一致。完整 drift 需要平台返回原始
+Team/Worker 规格。
 
 AgentTeams 的 Team Active 只证明部署对象存在；只有 Matrix 消息、模型清单、工具 Trace、成本和导出哈希齐全时，才能证明一次真实运行完成。
 

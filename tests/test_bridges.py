@@ -31,18 +31,58 @@ def test_agentteams_manifest_is_generated_from_canonical_registry() -> None:
     script = REPO / "bridges" / "agentteams" / "render_team.py"
     assert script.is_file(), "AgentTeams render bridge is missing"
     renderer = _load(script, "agentfit_render_team")
-    expected = renderer.render_manifest()
-    checked_in = json.loads((REPO / "bridges" / "agentteams" / "team.yaml").read_text(encoding="utf-8"))
+    expected = renderer.render_resources()
+    bridge = _load(REPO / "bridges" / "agentteams" / "apply_team.py", "agentfit_apply_resources")
+    checked_in = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")
 
     assert checked_in == expected
-    assert expected["metadata"]["name"] == "agentfit"
-    assert expected["spec"]["leader"]["name"] == "agentfit-steward"
-    assert {worker["name"] for worker in expected["spec"]["workers"]} == {
-        "agentfit-attributor", "agentfit-architect",
-    }
-    for role in (expected["spec"]["leader"], *expected["spec"]["workers"]):
-        assert "## 步骤" in role["soul"]
-    assert expected["metadata"]["annotations"]["agentfit.io/registry-hash"]
+    assert [resource["kind"] for resource in expected] == ["Worker", "Worker", "Worker", "Team"]
+    assert [resource["metadata"]["name"] for resource in expected] == [
+        "agentfit-steward", "agentfit-attributor", "agentfit-architect", "agentfit",
+    ]
+    workers = expected[:3]
+    team = expected[3]
+    assert team["metadata"]["name"] == "agentfit"
+    assert team["spec"]["workerMembers"] == [
+        {"name": "agentfit-steward", "role": "team_leader"},
+        {"name": "agentfit-attributor", "role": "worker"},
+        {"name": "agentfit-architect", "role": "worker"},
+    ]
+    assert "leader" not in team["spec"]
+    assert "workers" not in team["spec"]
+    for role in workers:
+        assert role["spec"]["model"] == "deepseek/deepseek-chat"
+        assert role["spec"]["runtime"] == "copaw"
+        assert role["spec"]["state"] == "Running"
+        assert role["spec"]["workerName"] == role["metadata"]["name"]
+        assert role["metadata"]["annotations"]["agentfit.io/registry-hash"]
+        assert "## 步骤" in role["spec"]["soul"]
+
+
+def test_agentteams_deployment_artifact_rejects_wrong_resource_contract(tmp_path: Path) -> None:
+    bridge = _load(REPO / "bridges" / "agentteams" / "apply_team.py", "agentfit_validate_resources")
+    resources = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")
+    bridge.validate_resources(resources)
+
+    duplicate = json.loads(json.dumps(resources))
+    duplicate[1]["metadata"]["name"] = "agentfit-steward"
+    with pytest.raises(SystemExit, match="duplicate"):
+        bridge.validate_resources(duplicate)
+
+    dangling = json.loads(json.dumps(resources))
+    dangling[-1]["spec"]["workerMembers"][1]["name"] = "agentfit-missing"
+    with pytest.raises(SystemExit, match="missing Worker"):
+        bridge.validate_resources(dangling)
+
+    wrong_order = json.loads(json.dumps(resources))
+    wrong_order[-1], wrong_order[0] = wrong_order[0], wrong_order[-1]
+    with pytest.raises(SystemExit, match="ordered"):
+        bridge.validate_resources(wrong_order)
+
+    inline = json.loads(json.dumps(resources))
+    inline[-1]["spec"]["leader"] = {"name": "agentfit-steward"}
+    with pytest.raises(SystemExit, match="inline"):
+        bridge.validate_resources(inline)
 
 
 def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
@@ -77,16 +117,11 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
     assert report.in_sync is False
     assert "agentfit:spec" in report.changed
 
-    full_expected = json.loads(
-        (REPO / "bridges" / "agentteams" / "team.yaml").read_text(encoding="utf-8")
-    )
+    full_expected = bridge.load_resources(REPO / "bridges" / "agentteams" / "team.yaml")[-1]
     partial = {
         "metadata": full_expected["metadata"],
         "spec": {
-            "leader": {"name": full_expected["spec"]["leader"]["name"]},
-            "workers": [
-                {"name": worker["name"]} for worker in full_expected["spec"]["workers"]
-            ],
+            "workerMembers": full_expected["spec"]["workerMembers"],
         },
     }
     report = bridge.reconcile_status(full_expected, [partial])
@@ -95,8 +130,8 @@ def test_agentteams_drift_is_precise_and_ignores_unrelated_teams() -> None:
 
     flattened = {
         "metadata": {"name": "agentfit"},
-        "leaderName": full_expected["spec"]["leader"]["name"],
-        "workerNames": [worker["name"] for worker in full_expected["spec"]["workers"]],
+        "leaderName": full_expected["spec"]["workerMembers"][0]["name"],
+        "workerNames": [member["name"] for member in full_expected["spec"]["workerMembers"][1:]],
     }
     report = bridge.reconcile_status(full_expected, {"teams": [flattened]})
     assert report.changed == ()

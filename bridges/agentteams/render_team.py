@@ -56,31 +56,37 @@ def _role_payload(role: str, model: str, registry: dict) -> dict:
     return {
         "name": spec["name"],
         "model": model,
+        "runtime": "copaw",
         "state": "Running",
         "identity": spec["identity"],
         "soul": "\n".join(sections),
     }
 
 
-def render_manifest(model: str = "deepseek-chat") -> dict:
+def render_resources(model: str = "deepseek/deepseek-chat") -> list[dict]:
+    """Render the ordered Worker-first resource set accepted by AgentTeams."""
     registry = SkillRegistry().load()
     used = sorted({name for spec in ROLE_SPECS.values() for name in spec["skills"]})
     registry_hash = canonical_hash([(name, registry[name].content_hash) for name in used])
-    leader = _role_payload("steward", model, registry)
+    annotations = {
+        "agentfit.io/registry-hash": registry_hash,
+        "agentfit.io/source": "bridges/agentteams/render_team.py",
+    }
     workers = []
-    for role in ("attributor", "architect"):
+    for role in ("steward", "attributor", "architect"):
         payload = _role_payload(role, model, registry)
-        payload["runtime"] = "copaw"
-        workers.append(payload)
-    return {
+        workers.append({
+            "apiVersion": "hiclaw.io/v1beta1",
+            "kind": "Worker",
+            "metadata": {"name": payload.pop("name"), "annotations": annotations},
+            "spec": {"workerName": ROLE_SPECS[role]["name"], **payload},
+        })
+    team = {
         "apiVersion": "hiclaw.io/v1beta1",
         "kind": "Team",
         "metadata": {
             "name": "agentfit",
-            "annotations": {
-                "agentfit.io/registry-hash": registry_hash,
-                "agentfit.io/source": "bridges/agentteams/render_team.py",
-            },
+            "annotations": annotations,
         },
         "spec": {
             "teamName": "agentfit",
@@ -89,20 +95,32 @@ def render_manifest(model: str = "deepseek-chat") -> dict:
                 "AgentTeams; Orchestrator, Validator and Auditor remain deterministic core code."
             ),
             "peerMentions": False,
-            "leader": leader,
-            "workers": workers,
+            "workerMembers": [
+                {"name": "agentfit-steward", "role": "team_leader"},
+                {"name": "agentfit-attributor", "role": "worker"},
+                {"name": "agentfit-architect", "role": "worker"},
+            ],
         },
     }
+    return [*workers, team]
 
 
-def render_text(model: str = "deepseek-chat") -> str:
-    """JSON is valid YAML and keeps the generated artifact deterministic."""
-    return json.dumps(render_manifest(model), ensure_ascii=False, indent=2) + "\n"
+def render_manifest(model: str = "deepseek/deepseek-chat") -> dict:
+    """Return the Team resource for callers using the earlier helper API."""
+    return render_resources(model)[-1]
+
+
+def render_text(model: str = "deepseek/deepseek-chat") -> str:
+    """Emit ordered JSON documents; JSON is valid YAML for ``hiclaw apply -f``."""
+    return "\n---\n".join(
+        json.dumps(resource, ensure_ascii=False, indent=2)
+        for resource in render_resources(model)
+    ) + "\n"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="deepseek-chat")
+    parser.add_argument("--model", default="deepseek/deepseek-chat")
     parser.add_argument("--output", type=Path, default=Path(__file__).with_name("team.yaml"))
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
