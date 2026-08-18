@@ -53,6 +53,76 @@ def test_dashboard_generates_and_renders(tmp_path):
     assert payload["summary"]["final_pass_rate"] >= 0.9
 
 
+def test_dashboard_surfaces_learning_loop_and_per_sample_evidence(tmp_path):
+    run_dir = _train_with_store(tmp_path)
+    candidate_ref = "a" * 64
+    sample_hash = "b" * 64
+    trace_rel = "traces/final-error.json"
+    (run_dir / "traces").mkdir(exist_ok=True)
+    (run_dir / trace_rel).write_text(json.dumps({
+        "sample_id": "stress-sample",
+        "result": "ERROR",
+        "steps": [],
+        "risk_events": [],
+        "cost_usd": 0.0,
+        "error_scope": "runtime",
+        "error_code": "agentteams_result_envelope_error",
+    }), encoding="utf-8")
+    (run_dir / "episodes").mkdir(exist_ok=True)
+    (run_dir / "episodes" / "final-error.json").write_text(json.dumps({
+        "identity": {
+            "candidate_ref": candidate_ref,
+            "sample_ref": {
+                "sample_id": "stress-sample",
+                "content_hash": sample_hash,
+            },
+            "run_index": 0,
+        },
+        "trace_ref": trace_rel,
+        "result": "ERROR",
+        "cost_usd": 0.0,
+        "evidence_hash": "c" * 64,
+        "status": "completed",
+        "risk_events": 0,
+        "runtime_ref": "d" * 64,
+    }), encoding="utf-8")
+    (run_dir / "sample_sets.json").write_text(json.dumps({
+        "manifests": [{
+            "purpose": "stress_and_failure",
+            "sample_refs": [{
+                "sample_id": "stress-sample",
+                "content_hash": sample_hash,
+            }],
+        }],
+    }), encoding="utf-8")
+
+    html = generate_dashboard(run_dir).read_text(encoding="utf-8")
+    payload = json.loads(html.split("const DATA = ")[1].split(";\n")[0])
+
+    assert "真实联动效果" in html
+    assert "逐样本最终证据" in html
+    assert payload["training_evidence"]
+    assert payload["evaluation_evidence"] == [{
+        "purpose": "stress_and_failure",
+        "sample_id": "stress-sample",
+        "candidate_ref": candidate_ref,
+        "run_index": 0,
+        "result": "ERROR",
+        "error_code": "agentteams_result_envelope_error",
+        "route": [],
+    }]
+
+
+def test_dashboard_contains_long_runtime_evidence_on_mobile(tmp_path):
+    run_dir = _train_with_store(tmp_path)
+
+    html = generate_dashboard(run_dir).read_text(encoding="utf-8")
+
+    assert "section{min-width:0;overflow-x:auto" in html
+    assert ".flow-step{min-width:0;" in html
+    assert ".flow-step span{overflow-wrap:anywhere;" in html
+
+
 def test_dashboard_treats_runstore_values_as_text_not_html(tmp_path):
     run_dir = _train_with_store(tmp_path)
     attack = "</script><img src=x onerror=alert(1)>"

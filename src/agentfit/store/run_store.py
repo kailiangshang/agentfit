@@ -198,6 +198,7 @@ class RunStore:
                                    "capability_inventory": None,
                                    "objective": None, "acceptance": None,
                                    "candidate_manifest": None, "external_evidence": [],
+                                   "training_evidence": [], "evaluation_evidence": [],
                                    "epochs": [],
                                    "loss_traces": {}, "solutions": {}, "messages": {}, "summary": None}
         if (self.root / "run.json").exists():
@@ -231,6 +232,50 @@ class RunStore:
                 payload["messages"][e] = self.load_json(f"messages/epoch_{e:03d}.json")
         for v in self.solution_versions():
             payload["solutions"][v] = self.load_json(f"solution_versions/v{v:03d}.json")
+        purpose_by_sample_ref = {
+            (ref.get("sample_id"), ref.get("content_hash")): manifest.get("purpose", "")
+            for manifest in (payload.get("sample_sets") or {}).get("manifests", [])
+            for ref in manifest.get("sample_refs", [])
+        }
+        training_root = self.root / "training_episodes"
+        if training_root.is_dir():
+            for episode_path in sorted(training_root.rglob("*.json")):
+                episode = json.loads(episode_path.read_text(encoding="utf-8"))
+                trace = self.load_json(episode["trace_ref"])
+                relative = episode_path.relative_to(training_root)
+                payload["training_evidence"].append({
+                    "phase": relative.parts[0],
+                    "epoch": int(relative.parts[1].split("_")[1]),
+                    **_dashboard_episode_record(episode, trace),
+                })
+        evaluation_root = self.root / "episodes"
+        if evaluation_root.is_dir():
+            for episode_path in sorted(evaluation_root.glob("*.json")):
+                episode = json.loads(episode_path.read_text(encoding="utf-8"))
+                trace = self.load_json(episode["trace_ref"])
+                sample_ref = episode["identity"]["sample_ref"]
+                payload["evaluation_evidence"].append({
+                    "purpose": purpose_by_sample_ref.get(
+                        (sample_ref.get("sample_id"), sample_ref.get("content_hash")), "",
+                    ),
+                    **_dashboard_episode_record(episode, trace),
+                })
         if (self.root / "summary.json").exists():
             payload["summary"] = self.load_json("summary.json")
         return payload
+
+
+def _dashboard_episode_record(episode: dict[str, Any], trace: dict[str, Any]) -> dict[str, Any]:
+    identity = episode["identity"]
+    return {
+        "sample_id": identity["sample_ref"]["sample_id"],
+        "candidate_ref": identity["candidate_ref"],
+        "run_index": identity["run_index"],
+        "result": episode["result"],
+        "error_code": trace.get("error_code"),
+        "route": [
+            step["element_id"]
+            for step in trace.get("steps", [])
+            if step.get("layer") == "L2" and step.get("ok") is True
+        ],
+    }
