@@ -18,17 +18,6 @@ class Expected:
 
 
 @dataclass
-class Sample:
-    """训练样本：特征 + 期望动作 + 元信息。"""
-    id: str
-    features: dict[str, Any] = field(default_factory=dict)   # {"abroad": True, "roaming_off": True}
-    expected: Expected = field(default_factory=Expected)
-    requires_human: bool = False
-    complexity: str = "simple"     # "simple" | "compound"
-    group: str = "train"           # train | regression | control | stress
-
-
-@dataclass
 class TraceStep:
     """执行轨迹中的一步。downstream 记录消费本步输出的后续步骤索引（关键路径判定用）。"""
     layer: str                     # "L1" | "L2" | "L3" | "L4"
@@ -45,10 +34,14 @@ class TraceStep:
 class Trace:
     """一次样本执行的完整轨迹。"""
     sample_id: str
-    result: str = "PASS"           # "PASS" | "FAIL"
+    result: str = "PASS"           # "PASS" | "FAIL" | "ERROR"
     steps: list[TraceStep] = field(default_factory=list)
     routed_knowledge_id: str | None = None    # L3 命中的路由规则
     cost_usd: float = 0.0
+    risk_events: list[str] = field(default_factory=list)
+    error_scope: str | None = None  # "runtime" | "evaluation"；不属于 L1-L4
+    error_code: str | None = None
+    runtime_ref: str = ""           # 本次解析后的运行环境/沙箱证据引用
 
 
 @dataclass

@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
 from agentfit.core.regularization import LambdaController, RegReport
@@ -14,10 +16,22 @@ from agentfit.data.sample_pool import SamplePool
 from agentfit.delivery.package import analyze_boundary, export_package
 from agentfit.executors.simulator import SimulatorExecutor
 from agentfit.models.config import AutoApprove, TrainingConfig
-from agentfit.models.loss import Expected, Sample
+from agentfit.models.loss import Expected
+from agentfit.models.sample import TaskSample, canonical_hash
 from agentfit.store.run_store import RunStore
 
 from telecom_world import make_initial_solution, make_samples
+
+
+def _tau2_candidate_declaration() -> dict:
+    return {
+        "candidate_id": "fixture-system",
+        "kind": "external_system",
+        "specification": {
+            "system_ref": canonical_hash({"external_system": "fixture-system"}),
+        },
+        "provenance_complete": False,
+    }
 
 
 REPO = Path(__file__).resolve().parents[1]
@@ -39,10 +53,11 @@ def test_lambda_ignores_layers_without_violations() -> None:
 def _proposal_id_from_fresh_process() -> str:
     code = """
 from agentfit.core.proposals import _rule_from_evidence
-from agentfit.models.loss import Expected, ExpectedAction, Sample
+from agentfit.models.loss import Expected, ExpectedAction
+from agentfit.models.sample import TaskSample
 from agentfit.models.solution import CapabilityTool, SolidAtom, Solution
-sample = Sample('sample', {'second': False, 'first': True}, Expected([ExpectedAction('safe_fix')]))
-solution = Solution(L1_atoms=[SolidAtom('fix', 'write', 'api')], L2_tools=[CapabilityTool('safe_fix', ['fix'])])
+sample = TaskSample('sample', (), {'second': False, 'first': True}, Expected([ExpectedAction('safe_fix')]))
+solution = Solution(L1_atoms=[SolidAtom('fix', 'write')], L2_tools=[CapabilityTool('safe_fix', ['fix'])])
 print(_rule_from_evidence([sample], solution).id)
 """
     env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
@@ -59,9 +74,9 @@ def test_proposal_ids_are_stable_across_processes() -> None:
 
 def test_boundary_counts_successful_human_episode_as_human_required(tmp_path: Path) -> None:
     store = RunStore(tmp_path)
-    store.save_samples([
-        Sample("automatic", {}, Expected()),
-        Sample("human", {}, Expected(), requires_human=True),
+    store.save_task_samples([
+        TaskSample("automatic", (), {}, Expected()),
+        TaskSample("human", (), {}, Expected(), requires_human=True),
     ])
     boundary = analyze_boundary(tmp_path)
     assert boundary["human_required"] == ["human"]
@@ -88,7 +103,7 @@ def test_solution_package_contains_structured_topology(tmp_path: Path) -> None:
     assert package["delivery_conditions"] == ["human confirmation before write"]
 
 
-def test_tau2_ingestion_writes_a_real_valid_hash_chain(tmp_path: Path) -> None:
+def test_tau2_ingestion_writes_a_real_external_evidence_chain(tmp_path: Path) -> None:
     from bridges.tau2bench.results_to_runstore import convert
 
     source = tmp_path / "results.json"
@@ -99,13 +114,92 @@ def test_tau2_ingestion_writes_a_real_valid_hash_chain(tmp_path: Path) -> None:
         "user_cost": 0.002,
     }]}), encoding="utf-8")
     run_dir = tmp_path / "run"
-    convert(source, str(run_dir), "fixture")
+    convert(source, str(run_dir), _tau2_candidate_declaration())
 
-    epoch = json.loads((run_dir / "epochs" / "epoch_001.json").read_text(encoding="utf-8"))
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
-    assert len(epoch["hash"]) == 64
-    assert epoch["previous_hash"] == "GENESIS"
-    assert summary["log_chain_valid"] is True
+    record = json.loads(
+        (run_dir / "external_evidence" / "record_000000.json").read_text(encoding="utf-8")
+    )
+    assert record["previous_hash"] == "GENESIS"
+    assert len(record["content_hash"]) == 64
+    assert summary["evidence_chain_root"] == record["content_hash"]
+    assert summary["evidence_chain_valid"] is True
+    assert not (run_dir / "epochs").exists()
+    assert not (run_dir / "messages").exists()
+
+
+def test_tau2_validation_rejects_tampered_source_results(tmp_path: Path) -> None:
+    from agentfit.cli import CliError, assert_valid_runstore
+    from bridges.tau2bench.results_to_runstore import convert
+
+    source = tmp_path / "results.json"
+    source.write_text(json.dumps({"simulations": [{
+        "task_id": "[TASK]airplane_mode_on[PERSONA]traveler",
+        "reward_info": {"reward": 1},
+        "agent_cost": 0.001,
+        "user_cost": 0.002,
+    }]}), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    convert(source, str(run_dir), _tau2_candidate_declaration())
+    results_path = run_dir / "source_results.json"
+    document = json.loads(results_path.read_text(encoding="utf-8"))
+    document["simulations"][0]["reward_info"]["reward"] = 0
+    tampered_bytes = json.dumps(document).encode("utf-8")
+    results_path.write_bytes(tampered_bytes)
+    run_path = run_dir / "run.json"
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    run["source_results_sha256"] = __import__("hashlib").sha256(tampered_bytes).hexdigest()
+    run["source_results_content_hash"] = canonical_hash(document)
+    run_path.write_text(json.dumps(run), encoding="utf-8")
+
+    with pytest.raises(CliError, match="source record hash"):
+        assert_valid_runstore(run_dir)
+
+
+def test_tau2_validation_rejects_non_contiguous_run_indices(tmp_path: Path) -> None:
+    from agentfit.cli import CliError, assert_valid_runstore
+    from bridges.tau2bench.results_to_runstore import convert
+
+    simulation = {
+        "task_id": "[TASK]airplane_mode_on[PERSONA]traveler",
+        "reward_info": {"reward": 1},
+        "agent_cost": 0.001,
+        "user_cost": 0.002,
+    }
+    source = tmp_path / "results.json"
+    source.write_text(json.dumps({"simulations": [simulation, simulation]}), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    convert(source, str(run_dir), _tau2_candidate_declaration())
+    episode_zero = next(
+        path for path in (run_dir / "episodes").glob("*.json")
+        if json.loads(path.read_text(encoding="utf-8"))["identity"]["run_index"] == 0
+    )
+    episode_zero.unlink()
+
+    with pytest.raises(CliError, match="run indices"):
+        assert_valid_runstore(run_dir)
+
+
+def test_tau2_validation_recomputes_external_summary(tmp_path: Path) -> None:
+    from agentfit.cli import CliError, assert_valid_runstore
+    from bridges.tau2bench.results_to_runstore import convert
+
+    source = tmp_path / "results.json"
+    source.write_text(json.dumps({"simulations": [{
+        "task_id": "[TASK]airplane_mode_on[PERSONA]traveler",
+        "reward_info": {"reward": 1},
+        "agent_cost": 0.001,
+        "user_cost": 0.002,
+    }]}), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    convert(source, str(run_dir), _tau2_candidate_declaration())
+    summary_path = run_dir / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["evaluation"]["pass_rate"] = 0.0
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    with pytest.raises(CliError, match="summary mismatch: evaluation"):
+        assert_valid_runstore(run_dir)
 
 
 def test_orchestrator_keeps_distinct_previous_solution_snapshot() -> None:

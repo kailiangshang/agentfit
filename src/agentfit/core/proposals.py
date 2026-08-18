@@ -15,7 +15,7 @@ import json
 
 from ..core.aggregation import AggregatedLoss
 from ..core.transaction import UpdateProposal
-from ..models.loss import Sample
+from ..models.sample import TaskSample
 from ..models.solution import Agent, Knowledge, Solution, Topology
 
 
@@ -27,7 +27,7 @@ def stable_element_id(prefix: str, payload: object) -> str:
     return f"{prefix}_{digest}"
 
 
-def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, Sample],
+def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, TaskSample],
                     solution: Solution) -> tuple[list[UpdateProposal], list[str]]:
     """返回 (建议列表, 边界备注列表)。"""
     proposals: list[UpdateProposal] = []
@@ -66,17 +66,19 @@ def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, Sample],
     return proposals, notes
 
 
-def _rule_from_evidence(evidence: list[Sample], solution: Solution, replace_id: str | None = None) -> Knowledge | None:
+def _rule_from_evidence(evidence: list[TaskSample], solution: Solution, replace_id: str | None = None) -> Knowledge | None:
     """从失败样本归纳新知识：条件 = 样本布尔特征的合取（出现率 100% 的键）。
 
     单动作证据 → routing_rule（调度一个 L2 工具）；
     多动作证据 → chain 排查链（任务拆解为有序步骤，骨架 L3 知识类型）。
     """
+    if any(not isinstance(item, TaskSample) for item in evidence):
+        raise TypeError("proposal evidence accepts canonical TaskSample objects only")
     if not evidence:
         return None
     bool_keys: list[str] = []
-    for key, val in evidence[0].features.items():
-        if isinstance(val, bool) and all(s.features.get(key) is val for s in evidence):
+    for key, val in evidence[0].input_data.items():
+        if isinstance(val, bool) and all(s.input_data.get(key) is val for s in evidence):
             bool_keys.append(key if val else f"NOT {key}")
     bool_keys.sort()
     actions = list(evidence[0].expected.actions)

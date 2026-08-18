@@ -19,6 +19,7 @@ class EpochEntry:
     regression: dict[str, int] = field(default_factory=dict)
     lambda_values: dict[str, float] = field(default_factory=dict)
     cost_usd: float = 0.0
+    execution_errors: int = 0
     rolled_back: bool = False
     note: str = ""
 

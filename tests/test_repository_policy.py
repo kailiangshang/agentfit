@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -115,16 +116,92 @@ def test_active_sources_only_reference_canonical_architecture() -> None:
 def test_documented_cli_and_example_are_executable_contracts() -> None:
     scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
     assert "python -m agentfit.train" not in scenario
-    for command in ("agentfit train", "agentfit validate", "agentfit report", "agentfit export"):
+    for command in (
+        "agentfit compile", "agentfit train", "agentfit validate",
+        "agentfit report", "agentfit export",
+    ):
         assert command in scenario
     assert "AGENTFIT_G3_SIGNING_KEY" in scenario
-    assert (REPO / "examples" / "telecom-case.json").is_file()
+    assert (REPO / "examples" / "telecom-materials.json").is_file()
+    assert not (REPO / "examples" / "telecom-case.json").exists(), (
+        "compiled cases are generated output, not a second tracked source"
+    )
+    assert "├── samples.json" not in scenario
+    assert "external_evaluation" in scenario
+    assert "不得执行 `agentfit export`" in scenario
     for artifact in ("sample_sets.json", "summary.json", "boundary.json",
                      "delivery_decision.json",
                      "solution_package/package.json", "evidence_package/manifest.json"):
         assert artifact in scenario
 
 
+def test_external_evaluation_docs_match_the_separate_evidence_contract() -> None:
+    architecture = (REPO / "docs" / "architecture.md").read_text(encoding="utf-8")
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+    plan = (REPO / "docs" / "development-plan.md").read_text(encoding="utf-8")
+
+    for term in ("CandidateManifest", "ExternalEvidenceRecord"):
+        assert term in architecture
+    for artifact in (
+        "candidate_manifest.json", "external_evidence/", "evaluation_report.md",
+    ):
+        assert artifact in scenario
+    assert "外部评价不生成训练 Epoch" in scenario
+    assert "epoch 哈希链；它不要求伪造" not in scenario
+    assert "逐条外部证据链" in plan
+
+
+def test_active_docs_match_the_current_acceptance_and_ci_state() -> None:
+    architecture = (REPO / "docs" / "architecture.md").read_text(encoding="utf-8")
+    plan = (REPO / "docs" / "development-plan.md").read_text(encoding="utf-8")
+    readme = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+
+    assert "还没有 `ObjectiveSpec`" not in plan
+    assert "ObjectiveSpec 与 AcceptanceResult" in plan
+    assert "CI 工作流尚未接入" in architecture
+    assert "CI 扫描活构件" not in architecture
+    for artifact in ("objective.json", "acceptance.json"):
+        assert artifact in scenario
+    for document in (readme, scenario):
+        assert "当前严格示例会被 G3 拒绝导出" in document
+
+
+def test_active_docs_keep_four_layer_semantics_separate_from_runtime_bindings() -> None:
+    architecture = (REPO / "docs" / "architecture.md").read_text(encoding="utf-8")
+    plan = (REPO / "docs" / "development-plan.md").read_text(encoding="utf-8")
+    readme = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+
+    for document in (architecture, plan, readme, scenario):
+        assert "RuntimeManifest" not in document
+    assert "MCP、Memory 与对象层自动部署" not in architecture
+    assert "横向同层禁止互调" not in readme
+    assert "L4 只允许通过显式 TopologyEdge 通信" in architecture
+    assert "MCP、原生函数、HTTP 或脚本" in architecture
+    assert "运行环境错误不得归因到 L1–L4" in architecture
+    assert "AgentTeamsSandboxExecutor" in scenario
+    assert "import_results_to_runstore" in scenario
+    assert "capability_contracts" in architecture
+
+
+def test_telecom_materials_compile_to_four_traceable_sets() -> None:
+    from agentfit.materials.compiler import compile_material_bundle
+
+    materials = json.loads(
+        (REPO / "examples" / "telecom-materials.json").read_text(encoding="utf-8")
+    )
+    compiled = compile_material_bundle(materials)
+    assert len(compiled.observations) >= 1
+    assert len(compiled.task_samples) == 4
+    assert all(task.observation_refs for task in compiled.task_samples)
+    compiled.sample_sets.assert_ready_for_candidate_generation()
+    assert {
+        criterion.min_pass_rate for criterion in compiled.objective_spec.criteria
+    } == {1.0}
+
+
 def test_open_source_maintenance_contracts_exist() -> None:
     assert (REPO / "CONTRIBUTING.md").is_file()
     assert (REPO / "SECURITY.md").is_file()
+    assert "Changes to TaskSample" in (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")

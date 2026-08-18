@@ -17,6 +17,8 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 - 实验快照使用不可变 `run_id`、内容哈希和快照引用；它们是证据身份，不是并行活构件。
 - `competition/2026-08-16/submission/` 是已提交的冻结档案，不参与后续改写。
 
+当前材料合同不接受 `backend`、MCP、函数或 Memory 等运行绑定字段；这类字段必须由 bridge 解析。历史 RunStore 是不可变证据，不做原地迁移；需要复验历史证据时使用生成它的 Git 提交，当前 CLI 只验证当前正本合同。
+
 ## 双层架构
 
 ### 元层：训练者
@@ -39,19 +41,23 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 
 | 层 | 内容 | 约束 |
 |---|---|---|
-| L1 Solid | API、数据库、知识库、文件系统、人工审核等真实原子能力 | 必须对应已确认基础设施 |
-| L2 Capability | 对 L1 的安全包装、组合、统一口径和送审路由 | 只能引用 L1，不同 L2 不互调 |
-| L3 Knowledge | Skill、路由规则、排查链、阈值和经验 | 只能使用 L2，执行时不互调 |
-| L4 Topology | Agent 数量、角色、通信边、行为序列和人工位置 | 只能使用 L3，复杂化必须有样本证据 |
+| L1 Solid | 最小原子能力合同：标识、读写类型、输入输出与作用语义 | 不声明 API、MCP、函数或供应商后端 |
+| L2 Capability | 可复用能力合同：组合哪些 L1、前后置条件、聚合和 Human Gate | 只能引用 L1，不同 L2 不形成隐藏调用链 |
+| L3 Knowledge | Skill、路由规则、排查链、阈值和经验 | 只能使用 L2，不形成隐藏的同层执行依赖 |
+| L4 Topology | Agent、角色、显式通信边、触发方式和人工位置 | 只能使用 L3；同层协作必须是可审计的显式边 |
 
-纵向执行必须遵守 `L4 → L3 → L2 → L1`；每个声明都必须能追溯到下层真实支撑。多层变更由 `ChangeTransaction` 自底向上原子应用，验证或回归失败则整体回滚。
+纵向存在依赖遵守 `L4 → L3 → L2 → L1`。L1–L3 禁止隐藏的同层执行依赖，L4 只允许通过显式 TopologyEdge 通信。多层变更由 `ChangeTransaction` 自底向上原子应用，验证或回归失败则整体回滚。
+
+四层回答的是“方案里有什么、各自负责什么、如何连接”，不回答“目标平台具体如何实现”。例如 L2 能力可以由 MCP、原生函数、HTTP 或脚本实现；Memory 可以由上下文、文件、数据库或平台对象承载。`src/agentfit/` 不选择这些实现，Executor 或 `bridges/` 在运行时解析，并把平台、部署、沙箱和模型引用写入 `runtime_ref` 证据。当前 Python 类型名 `CapabilityTool` 表达的是 L2 能力合同，不是已绑定的运行时 Tool。
+
+候选方案错误与运行环境错误必须分开。只有完成的 Trace 才能进入 L1–L4 归因与方案更新；沙箱不可用、协议错误、超时或平台故障写成 `result=ERROR`、`error_scope=runtime`。运行环境错误不得归因到 L1–L4，也不得据此增加 Tool、Skill、Memory 或 Agent。
 
 ## 样本与证据合同
 
 三个概念必须分开：
 
 - `SourceObservation`：业务材料中的原始事实、日志、流程片段或人工描述。
-- `TaskSample`：从一个或多个 Observation 编译出的可执行任务，包含输入、期望、约束与评价方式。
+- `TaskSample`：从一个或多个 Observation 编译出的可执行任务，包含输入、期望、约束与评价方式；每个 ObservationRef 同时绑定稳定 ID 和内容哈希。
 - `Episode`：某个候选方案在某个冻结样本上的一次实际运行，包含 `run_index`、Trace、结果、成本与证据引用。
 
 训练开始前必须冻结四个互不混用的样本集合：
@@ -65,6 +71,8 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 
 每个集合由一个不可变 `SampleSetManifest` 描述，至少包含稳定集合名、内容哈希、成员引用、访问策略和 Human Freeze 记录。一次评价单元由 `candidate_ref + sample_ref + run_index` 唯一确定；引用使用内容哈希或不可变运行引用，不把迭代号写进活构件名称。
 
+训练和外部评价都用持久化 `CandidateManifest` 的规范内容哈希确定候选身份，而不是用显示名称或调用方传入的裸哈希。运行绑定不进入四层 Candidate；每个 Trace/Episode 另以 `runtime_ref` 绑定本次 Executor、平台部署和沙箱 provenance。评价身份始终是 `candidate_ref + sample_ref + run_index`。外部 bench 的每条原始记录还必须生成平台无关的 `ExternalEvidenceRecord`，逐条绑定来源记录、CandidateRef、TaskSampleRef、Trace、结果和成本，并形成独立内容哈希链。内部一致性哈希用于发现证据不一致，来源真实性仍需外部签名或可信存储锚点。
+
 ## 训练闭环
 
 1. Steward 将材料编译为 Observation、TaskSample 和评价合同。
@@ -76,6 +84,8 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 7. Auditor 保存消息、Trace、事务、成本、哈希链和拒绝理由。
 8. 达到目标后冻结候选，再运行 sealed holdout 和 stress_and_failure。
 9. Human 确认交付边界，导出方案包、证据包和桥接部署包。
+
+结构化 Material Bundle 由平台无关的 `src/agentfit/materials/compiler.py` 确定性编译。非结构化文件解析或 LLM 抽取属于桥接适配，不得改变上述输出合同。仓库只跟踪材料源；编译生成的 case 是可再生输出，不作为第二个活构件正本。
 
 ## Human Gate
 
@@ -101,8 +111,9 @@ LLM、检索、沙箱和 Human Review 均通过通用 Protocol 注入。核心�
 
 - 从核心角色和 Skill 正本生成稳定名称的 Team 清单；
 - apply/reconcile/status 回读；
-- 把 Team 消息转换为核心 TaskMsg；
-- 把核心 ResultMsg、方案包和证据引用转换为 AgentTeams 可消费对象；
+- 通过 `AgentTeamsSandboxExecutor` 把四层 Candidate 和 TaskSample 发到隔离 Worker；
+- 将在线或离线 `agentfit.agentteams-result` 标准化为 Trace/Episode 并写回 RunStore；
+- 在平台侧把 L1/L2 合同解析为实际 MCP、原生函数、HTTP、脚本或 Memory 载体；
 - 检测部署态是否与 Git 正本一致。
 
 AgentTeams Team 的稳定名称为 `agentfit`。部署修订信息只写入 provenance，不进入 Team、Worker 或项目名称。
@@ -111,10 +122,14 @@ AgentTeams Team 的稳定名称为 `agentfit`。部署修订信息只写入 prov
 
 `bridges/tau2bench/` 负责：
 
+- 读取调用方显式提供的候选语义声明，禁止用展示 label 代替 CandidateManifest；
+- 在 bridge 内维护 τ² 原始记录的唯一规范投影，并把该投影作为平台无关回调交给
+  RunStore 校验器；
 - 把 τ² 任务转换为 TaskSample；
 - 以核心 Executor 接口运行候选；
 - 把真实 simulation、reward、tool call、成本和错误转换为 Episode/Trace；
-- 写入 RunStore 后重新计算哈希链，不伪造“已验证”状态。
+- 保存原始上传字节、持久化 CandidateManifest，并生成逐条 ExternalEvidenceRecord；
+- 在临时兄弟目录完成验证后原子发布 RunStore，不伪造训练 Epoch 或“已验证”状态。
 
 ## RunStore 与交付物
 
@@ -128,9 +143,24 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 - 真实成本、正则、边界和收敛结果；
 - 可重算的哈希链与验证结果。
 
+`run_kind=training` 与 `run_kind=external_evaluation` 使用不同产物合同。训练运行拥有四集合、Solution 快照、Epoch、事务和 G3；外部评价只拥有原始结果、CandidateManifest、TaskSample、ExternalEvidenceRecord、Trace、Episode 和评价汇总，不得混入训练或交付产物。
+
+## 当前实现边界
+
+| 架构关注点 | 当前状态 | 稳定边界或缺口 |
+|---|---|---|
+| 材料、样本、四集合、能力清单和 Objective | 已实现平台无关合同 | `materials/`、`models/project.py`、`models/objective.py` |
+| 训练、归因、事务、回归和四集合验收 | 已实现确定性闭环 | 多次真实独立运行和统计比较尚未完成 |
+| 认知、检索和沙箱 | 仅有 Protocol | `adapters/protocols.py`，尚未注入认知角色和状态机 |
+| 候选与运行身份 | 已实现分离证据 | CandidateManifest 绑定四层语义；`runtime_ref` 绑定 Executor/平台/沙箱 |
+| AgentTeams | 生成、状态、导出、沙箱 Executor 和结果往返合同已实现 | 尚需真实平台批次运行证据 |
+| 运行绑定 | 核心保持实现无关 | 每个 bridge 按目标平台解析能力和 Memory；不要求核心自动部署某种技术 |
+| RunStore 可信存储 | 内容哈希、验证、训练证据和外部评价原子发布已实现 | 继续按真实运行暴露的问题做完整性加固 |
+| 正则 | 已接入结构、行为、成本和回归约束 | 新指标只在目标函数或真实失败证据需要时增加，不追求固定数量 |
+
 最终交付包含三个独立但可追溯的部分：
 
-1. 核心 `solution_package`：结构化 L1-L4 方案、Human Gate 和监控策略。
+1. 核心 `solution_package`：结构化 L1-L4 方案、`capability_contracts`、Human Gate 和监控策略。
 2. `evidence_package`：样本引用、Episode、指标、事务、边界与哈希证明。
 3. 平台桥接包：由目标平台桥接器生成，保持稳定部署名称。
 
@@ -142,5 +172,6 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 - 合同测试覆盖四类 Manifest、Human Freeze、访问隔离和评价身份。
 - 桥接测试覆盖双向转换、稳定名称和部署漂移检测。
 - 全链测试覆盖 `材料 → 样本 → 冻结 → 候选 → Episode → 归因 → 更新 → 回归 → 交付`。
-- CI 扫描活构件中的版本化名称，并保护冻结提交目录。
+- 仓库级测试扫描活构件中的版本化名称，并用摘要保护冻结提交目录。
+- CI 工作流尚未接入；接入后只调用同一组仓库门禁，不维护第二套规则。
 - 模拟器通过只证明核心闭环；真实平台和真实 bench 必须分别提供运行证据。

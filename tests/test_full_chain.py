@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import json
-import copy
 
 from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
@@ -16,17 +15,20 @@ from agentfit.delivery.boundary import write_boundary
 from agentfit.delivery.package import export_evidence_package
 from agentfit.executors.simulator import SimulatorExecutor
 from agentfit.log.report import generate_report
+from agentfit.models.evidence import CandidateManifest
 from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.models.manifest import (FreezeDecision, SampleSetCollection,
                                       SampleSetManifest, SampleSetPurpose,
                                       default_access_policy)
-from agentfit.models.sample import Episode, EvaluationIdentity, canonical_hash, task_sample_from_legacy
+from agentfit.models.objective import (ObjectiveSpec, PurposeAcceptance,
+                                       evaluate_acceptance)
+from agentfit.models.sample import Episode, EvaluationIdentity, canonical_hash
 from agentfit.monitoring.monitor import check_training_health, detect_drift
 from agentfit.solution.builder import build_candidate
 from agentfit.solution.validator import validate_existence_dependencies
 from agentfit.store.run_store import RunStore
 
-from telecom_world import make_samples
+from telecom_world import make_capability_inventory, make_samples
 
 
 def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
@@ -39,7 +41,7 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
         reviewer="human-owner", approved=True,
         decided_at="2026-08-17T15:00:00+08:00", reason="full-chain fixture",
     )
-    refs = [task_sample_from_legacy(sample).ref for sample in samples]
+    refs = [sample.ref for sample in samples]
     refs_by_purpose = {
         SampleSetPurpose.ADAPTATION: tuple(refs[:18]),
         SampleSetPurpose.VALIDATION: (refs[18],),
@@ -51,19 +53,24 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
             purpose, refs_by_purpose[purpose], default_access_policy(purpose), freeze,
         ) for purpose in SampleSetPurpose
     ))
+    objective = ObjectiveSpec.create(
+        criteria=tuple(
+            PurposeAcceptance(purpose, 0.9, 0, 1.0, 0)
+            for purpose in SampleSetPurpose
+        ),
+        max_total_evaluation_cost_usd=3.0,
+    )
 
     # Human Freeze → Simple First candidate，且只从 adaptation 构建。
-    initial = build_candidate(samples, collection, coverage=0.5)
+    capability_inventory = make_capability_inventory()
+    initial = build_candidate(
+        samples, collection, capability_inventory, coverage=0.5,
+    )
     assert validate_existence_dependencies(initial) == [], "builder 产物必须过存在依赖验证"
     assert len(initial.L4_topology.agents) == 1, "Simple First：初始单 Agent"
 
     adaptation_ids = {ref.sample_id for ref in refs_by_purpose[SampleSetPurpose.ADAPTATION]}
-    adaptation = []
-    for sample in samples:
-        if sample.id in adaptation_ids:
-            clone = copy.deepcopy(sample)
-            clone.group = "train"
-            adaptation.append(clone)
+    adaptation = [sample for sample in samples if sample.id in adaptation_ids]
 
     # 训练（含 RunStore 落盘、归因、更新和回归）。
     executor = SimulatorExecutor()
@@ -86,9 +93,13 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
 
     # Candidate Freeze 后按各集合访问规则生成可追溯 Episode。
     store = RunStore(run_dir)
-    store.save_samples(samples)
+    store.save_task_samples(samples)
+    store.save_capability_inventory(capability_inventory)
     store.save_sample_manifests(collection)
-    candidate_ref = canonical_hash(orch.solution)
+    store.save_objective(objective)
+    candidate = CandidateManifest.for_solution(orch.solution)
+    store.save_training_candidate_manifest(candidate)
+    candidate_ref = candidate.candidate_ref
     by_id = {sample.id: sample for sample in samples}
     actors = {
         SampleSetPurpose.ADAPTATION: "architect",
@@ -108,6 +119,7 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
             store.save_episode(Episode(
                 identity, trace_path.relative_to(store.root).as_posix(), trace.result,
                 trace.cost_usd, canonical_hash(trace),
+                risk_events=len(trace.risk_events),
             ))
             results.append(trace)
         passed = sum(trace.result == "PASS" for trace in results)
@@ -118,12 +130,20 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
             "errors": sum(trace.result == "ERROR" for trace in results),
             "pass_rate": passed / len(results),
             "cost_usd": round(sum(trace.cost_usd for trace in results), 4),
+            "risk_events": sum(len(trace.risk_events) for trace in results),
         }
     assert len(list((run_dir / "episodes").glob("*.json"))) == len(samples)
+    acceptance = evaluate_acceptance(objective, evaluation_by_purpose)
+    store.save_acceptance(acceptance)
+    assert acceptance.met is True
     decision = orch.finalize_delivery({
         "candidate_ref": candidate_ref,
         "candidate_frozen": True,
         "evaluation_by_purpose": evaluation_by_purpose,
+        "objective_ref": objective.content_hash,
+        "acceptance_ref": acceptance.content_hash,
+        "acceptance_met": acceptance.met,
+        "acceptance_failures": list(acceptance.failures),
     })
     assert decision.approved is True
     assert decision.conditions == ("human confirmation before write",)
@@ -138,6 +158,9 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
     boundary = analyze_boundary(run_dir)
     package = json.loads(pkg.read_text())
     assert pkg.exists() and evidence.exists() and "routing_rules" in package
+    assert "capability_contracts" in package
+    assert "tool_bindings" not in package
+    assert all("backend" not in atom for atom in package["solid_atoms"])
     assert package["delivery_conditions"] == ["human confirmation before write"]
     assert boundary["coverage"] >= 0.9
     assert boundary["recommended_delivery"] in ("全自动", "部分自动")

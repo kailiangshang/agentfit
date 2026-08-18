@@ -23,6 +23,8 @@ from ..gates.human import GateType, ReviewDecision, ReviewRequest
 from ..log.training_log import EpochEntry, TrainingLog
 from ..models.config import TrainingConfig
 from ..models.manifest import SampleSetPurpose
+from ..models.evidence import CandidateManifest
+from ..models.sample import Episode, EvaluationIdentity, TaskSample, canonical_hash
 from ..models.solution import Solution
 
 
@@ -35,6 +37,7 @@ class EpochOutcome:
     proposals_count: int = 0
     notes: list[str] = field(default_factory=list)
     converged: bool = False
+    execution_errors: int = 0
 
 
 class Orchestrator:
@@ -52,15 +55,21 @@ class Orchestrator:
         self.outcomes: list[EpochOutcome] = []
         self.delivery_decision: ReviewDecision | None = None
         self._prev_solution = copy.deepcopy(solution)
+        self.runtime_provenance = executor.runtime_provenance()
+        self.runtime_ref = canonical_hash(self.runtime_provenance)
+        self._run_indices: dict[tuple[str, str], int] = {}
         self.auditor = None
         if run_dir:
             from ..agents.auditor import Auditor
             from ..store.run_store import RunStore
             store = RunStore(run_dir)
-            store.init_run({"scenario": scenario, "executor": type(executor).__name__,
+            store.init_run({"run_kind": "training", "scenario": scenario,
+                            "executor": type(executor).__name__,
+                            "runtime_provenance": self.runtime_provenance,
+                            "runtime_ref": self.runtime_ref,
                             "config": {"batch_size": config.batch_size, "max_epochs": config.max_epochs},
                             "solution_version_start": solution.version})
-            store.save_samples(pool.all_samples)
+            store.save_task_samples(pool.all_tasks)
             store.save_solution_version(solution, note="初始最简方案（Simple First）")
             self.auditor = Auditor(store)
 
@@ -71,12 +80,25 @@ class Orchestrator:
 
         # ① 前向执行
         batch = self.pool.next_batch(self.config.batch_size)
-        traces = [self._send(MsgType.EXECUTE_BATCH, ctx, {"batch": batch}, lambda _: self.executor.execute(self.solution, s)) for s in batch]
+        traces = [
+            self._send(
+                MsgType.EXECUTE_BATCH,
+                ctx,
+                {"batch": batch},
+                lambda _, s=s: self._execute_recorded(self.solution, s, epoch, "forward"),
+            )
+            for s in batch
+        ]
+        outcome.execution_errors = sum(trace.result == "ERROR" for trace in traces)
+        if outcome.execution_errors:
+            outcome.notes.append(
+                f"{outcome.execution_errors} execution error(s) excluded from L1-L4 attribution"
+            )
 
         # ② 损失归因（Attributor 扇出）
         loss_traces = []
         for s, t in zip(batch, traces):
-            if not self.executor.evaluate(t, s.expected):
+            if t.result != "ERROR" and not self.executor.evaluate(t, s.expected):
                 loss_traces.append(self._send(MsgType.ATTRIBUTE, ctx, {"sample": s, "trace": t},
                                               lambda _, s=s, t=t: attribute_loss(s, t, self.solution)))
 
@@ -155,10 +177,36 @@ class Orchestrator:
                     self.auditor.record_transaction(tx, rolled_back=True, reason="依赖验证失败")
                 candidate = None
             if candidate is not None:
-                reg_results = {s.id: self.executor.evaluate(self.executor.execute(candidate, s), s.expected)
-                               for s in self.regression_pool.samples}
+                regression_traces = {
+                    s.id: self._execute_recorded(candidate, s, epoch, "regression")
+                    for s in self.regression_pool.samples
+                }
+                regression_errors = sorted(
+                    sample_id
+                    for sample_id, trace in regression_traces.items()
+                    if trace.result == "ERROR"
+                )
+                reg_results = {
+                    s.id: self.executor.evaluate(regression_traces[s.id], s.expected)
+                    for s in self.regression_pool.samples
+                    if s.id not in regression_errors
+                }
                 forgot = self.regression_pool.forget_check(reg_results)
-                if forgot:
+                if regression_errors:
+                    tx.rollback()
+                    outcome.rolled_back = True
+                    outcome.execution_errors += len(regression_errors)
+                    outcome.notes.append(
+                        "regression blocked by execution error: "
+                        + ", ".join(regression_errors)
+                    )
+                    if self.auditor:
+                        self.auditor.record_transaction(
+                            tx,
+                            rolled_back=True,
+                            reason=f"regression execution error: {regression_errors}",
+                        )
+                elif forgot:
                     tx.rollback()
                     outcome.rolled_back = True
                     outcome.notes.append(f"回归遗忘 {len(forgot)} 个样本：回滚")
@@ -170,8 +218,16 @@ class Orchestrator:
                     if self.auditor:
                         self.auditor.record_transaction(tx, rolled_back=False)
                         self.auditor.store.save_solution_version(candidate, note=f"epoch {epoch} 更新")
-                    passed_c = sum(1 for s in self.pool.group("train")
-                                   if self.executor.evaluate(self.executor.execute(candidate, s), s.expected))
+                    passed_c = sum(
+                        1
+                        for s in self.pool.group("train")
+                        if self.executor.evaluate(
+                            self._execute_recorded(
+                                candidate, s, epoch, "candidate_evaluation",
+                            ),
+                            s.expected,
+                        )
+                    )
                     outcome.pass_rate = passed_c / max(1, len(self.pool.group("train")))
 
         # ⑨ 日志（Auditor 哈希链）
@@ -185,9 +241,15 @@ class Orchestrator:
             behavioral={k: round(v, 4) for k, v in reg.values.items() if k in ("chain_coverage", "human_intervention", "communication_overhead", "atom_growth")},
             regression={"tested": len(self.regression_pool.samples),
                         "passed": sum(1 for s in self.regression_pool.samples
-                                      if self.executor.evaluate(self.executor.execute(self.solution, s), s.expected))},
+                                      if self.executor.evaluate(
+                                          self._execute_recorded(
+                                              self.solution, s, epoch, "regression",
+                                          ),
+                                          s.expected,
+                                      ))},
             lambda_values=dict(self.solution.lambda_values),
             cost_usd=sum(t.cost_usd for t in traces),
+            execution_errors=outcome.execution_errors,
             rolled_back=outcome.rolled_back,
             note="; ".join(outcome.notes),
         ))
@@ -221,6 +283,34 @@ class Orchestrator:
         return self.total_cost() > self.config.budget_usd
 
     # ---------- 总线 ----------
+    def _execute_recorded(
+        self, solution: Solution, sample: TaskSample, epoch: int, phase: str,
+    ):
+        trace = self.executor.execute(solution, sample)
+        if not trace.runtime_ref:
+            trace.runtime_ref = self.runtime_ref
+        if not self.auditor:
+            return trace
+
+        manifest = CandidateManifest.for_solution(solution)
+        self.auditor.store.save_training_candidate_manifest(manifest)
+        counter_key = (manifest.candidate_ref, sample.content_hash)
+        run_index = self._run_indices.get(counter_key, 0)
+        self._run_indices[counter_key] = run_index + 1
+        identity = EvaluationIdentity(manifest.candidate_ref, sample.ref, run_index)
+        trace_path = self.auditor.store.save_training_trace(epoch, phase, identity, trace)
+        episode = Episode(
+            identity=identity,
+            trace_ref=trace_path.relative_to(self.auditor.store.root).as_posix(),
+            result=trace.result,
+            cost_usd=trace.cost_usd,
+            evidence_hash=canonical_hash(trace),
+            risk_events=len(trace.risk_events),
+            runtime_ref=trace.runtime_ref,
+        )
+        self.auditor.store.save_training_episode(epoch, phase, episode)
+        return trace
+
     def _send(self, msg_type: MsgType, ctx: str, payload: dict, fn) -> object:
         """发消息经总线（角色处理 + Auditor 留痕）；无注册角色时回退本地确定性内核。"""
         msg = TaskMsg(to="*", type=msg_type, payload=payload, context_ref=ctx)
@@ -234,6 +324,9 @@ class Orchestrator:
         purposes = {purpose.value for purpose in SampleSetPurpose}
         evaluations = evidence.get("evaluation_by_purpose") if isinstance(evidence, dict) else None
         candidate_ref = evidence.get("candidate_ref") if isinstance(evidence, dict) else None
+        objective_ref = evidence.get("objective_ref") if isinstance(evidence, dict) else None
+        acceptance_ref = evidence.get("acceptance_ref") if isinstance(evidence, dict) else None
+        acceptance_met = evidence.get("acceptance_met") if isinstance(evidence, dict) else None
         complete = (
             evidence is not None
             and evidence.get("candidate_frozen") is True
@@ -241,6 +334,12 @@ class Orchestrator:
             and re.fullmatch(r"[0-9a-f]{64}", candidate_ref) is not None
             and isinstance(evaluations, dict)
             and set(evaluations) == purposes
+            and isinstance(objective_ref, str)
+            and re.fullmatch(r"[0-9a-f]{64}", objective_ref) is not None
+            and isinstance(acceptance_ref, str)
+            and re.fullmatch(r"[0-9a-f]{64}", acceptance_ref) is not None
+            and isinstance(acceptance_met, bool)
+            and isinstance(evidence.get("acceptance_failures"), list)
         )
         if complete:
             for metrics in evaluations.values():
@@ -256,9 +355,17 @@ class Orchestrator:
             raise ValueError("complete final evaluation evidence is required before G3")
         summary = dict(getattr(self, "_last_summary", {}))
         summary.update(evidence or {})
-        self.delivery_decision = self.config.review_policy.review(
-            ReviewRequest(GateType.G3, "delivery boundary", summary)
-        )
+        if not acceptance_met:
+            failures = summary.get("acceptance_failures") or ["objective not met"]
+            self.delivery_decision = ReviewDecision(
+                False,
+                "objective acceptance failed: " + "; ".join(failures),
+                "objective-gate",
+            )
+        else:
+            self.delivery_decision = self.config.review_policy.review(
+                ReviewRequest(GateType.G3, "delivery boundary", summary)
+            )
         summary["delivery_approved"] = self.delivery_decision.approved
         summary["delivery_review_reason"] = self.delivery_decision.reason
         summary["delivery_reviewer"] = self.delivery_decision.reviewer

@@ -9,39 +9,59 @@
 """
 from __future__ import annotations
 
-from agentfit.models.loss import Expected, ExpectedAction, Sample
+from agentfit.models.loss import Expected, ExpectedAction
+from agentfit.models.project import CapabilityInventory
+from agentfit.models.sample import SourceObservation, TaskSample
 from agentfit.models.solution import (Agent, CapabilityTool, HumanGate, Knowledge,
                                       Solution, SolidAtom, Topology)
 
 N_PER_TYPE = 5   # 每类 5 个 → 20 个训练样本 + 少量回归/人工样本
+TELECOM_OBSERVATION = SourceObservation.create(
+    "telecom-fixture-procedure",
+    "procedure",
+    "Diagnose telecom state and apply only the matching approved safe action.",
+    {"source": "test-fixture"},
+)
 
 
-def make_samples() -> list[Sample]:
-    samples: list[Sample] = []
+def _task(task_id: str, input_data: dict, expected: Expected, *,
+          requires_human: bool = False, complexity: str = "simple") -> TaskSample:
+    return TaskSample(
+        id=task_id,
+        observation_refs=(TELECOM_OBSERVATION.ref,),
+        input_data=input_data,
+        expected=expected,
+        requires_human=requires_human,
+        complexity=complexity,
+    )
+
+
+def make_samples() -> list[TaskSample]:
+    samples: list[TaskSample] = []
     for i in range(N_PER_TYPE):
-        samples.append(Sample(f"F1-{i}", {"abroad": True, "roaming_off": True, "airplane": False, "sim_ok": True},
-                              Expected([ExpectedAction("safe_toggle_roaming")])))
-        samples.append(Sample(f"F2-{i}", {"abroad": False, "roaming_off": False, "airplane": True, "sim_ok": True},
-                              Expected([ExpectedAction("safe_reset_airplane_mode")])))
-        samples.append(Sample(f"F3-{i}", {"abroad": False, "roaming_off": False, "airplane": False, "sim_ok": False},
-                              Expected([ExpectedAction("safe_run_sim_diagnostics")])))
-        samples.append(Sample(f"F4-{i}", {"abroad": True, "roaming_off": True, "airplane": True, "sim_ok": True},
-                              Expected([ExpectedAction("safe_reset_airplane_mode"),
-                                        ExpectedAction("safe_toggle_roaming")]),
-                              complexity="compound"))
+        samples.append(_task(f"F1-{i}", {"abroad": True, "roaming_off": True, "airplane": False, "sim_ok": True},
+                             Expected([ExpectedAction("safe_toggle_roaming")])))
+        samples.append(_task(f"F2-{i}", {"abroad": False, "roaming_off": False, "airplane": True, "sim_ok": True},
+                             Expected([ExpectedAction("safe_reset_airplane_mode")])))
+        samples.append(_task(f"F3-{i}", {"abroad": False, "roaming_off": False, "airplane": False, "sim_ok": False},
+                             Expected([ExpectedAction("safe_run_sim_diagnostics")])))
+        samples.append(_task(f"F4-{i}", {"abroad": True, "roaming_off": True, "airplane": True, "sim_ok": True},
+                             Expected([ExpectedAction("safe_reset_airplane_mode"),
+                                       ExpectedAction("safe_toggle_roaming")]),
+                             complexity="compound"))
     # 边界样本：需人工（不该被训练成自动化）
-    samples.append(Sample("H-1", {"vip": True, "contract_dispute": True},
-                          Expected([ExpectedAction("safe_escalate_human")]), requires_human=True))
+    samples.append(_task("H-1", {"vip": True, "contract_dispute": True},
+                         Expected([ExpectedAction("safe_escalate_human")]), requires_human=True))
     return samples
 
 
 def make_initial_solution() -> Solution:
     """Simple First：原子齐备、工具齐备，但 L3 只归纳出 F1/F2 两条规则，L4 单 Agent。"""
     atoms = [
-        SolidAtom("toggle_roaming", "write", "telecom_api", "开关漫游"),
-        SolidAtom("reset_airplane_mode", "write", "telecom_api", "重置飞行模式"),
-        SolidAtom("run_sim_diagnostics", "read", "telecom_api", "SIM 诊断"),
-        SolidAtom("escalate_human", "human", "human_cs_team", "升级人工"),
+        SolidAtom("toggle_roaming", "write", "开关漫游"),
+        SolidAtom("reset_airplane_mode", "write", "重置飞行模式"),
+        SolidAtom("run_sim_diagnostics", "read", "SIM 诊断"),
+        SolidAtom("escalate_human", "human", "升级人工"),
     ]
     tools = [
         CapabilityTool("safe_toggle_roaming", ["toggle_roaming"], "安全开关漫游"),
@@ -58,3 +78,12 @@ def make_initial_solution() -> Solution:
     ]
     topology = Topology(agents=[Agent("solo", "single", uses=["rule_roaming", "rule_airplane"])])
     return Solution(version=0, L1_atoms=atoms, L2_tools=tools, L3_knowledge=rules, L4_topology=topology)
+
+
+def make_capability_inventory() -> CapabilityInventory:
+    """Approved L1/L2 boundary shared by candidate-building tests."""
+    solution = make_initial_solution()
+    return CapabilityInventory.create(
+        atoms=solution.L1_atoms,
+        tools=solution.L2_tools,
+    )

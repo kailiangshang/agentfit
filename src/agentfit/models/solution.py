@@ -7,10 +7,9 @@ from typing import Any
 
 @dataclass
 class SolidAtom:
-    """L1 原子：固定可用的最小能力，对准一个真实基础设施。"""
+    """L1 semantic atom; runtime bindings are resolved outside the core."""
     id: str                        # "toggle_roaming"
     type: str                      # "read" | "write" | "human" | "notify"
-    backend: str                   # "telecom_api" | "human_team" | ...
     description: str = ""
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)

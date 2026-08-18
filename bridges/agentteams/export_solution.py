@@ -35,7 +35,7 @@ def export(run_dir: str, version: int | None = None) -> dict:
     return {
         "project": "agentfit",
         "agents": [{"id": a["id"], "role": a["role"], "knowledge": a["uses"]} for a in so["L4_topology"]["agents"]],
-        "tools": [{"id": t["id"], "backend_atoms": t["wraps"],
+        "tools": [{"id": t["id"], "solid_atoms": t["wraps"],
                    "human_gate": t["human_gate"]["condition"] if t.get("human_gate") else None}
                   for t in so["L2_tools"]],
         "routing": [{"id": r["id"], "condition": r["condition"], "target": r["dispatches_to"]}

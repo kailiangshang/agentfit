@@ -1,0 +1,99 @@
+{
+  "scenario": "telecom-demo",
+  "materials": [
+    {
+      "id": "telecom-operations-guidance",
+      "kind": "procedure",
+      "content": {
+        "roaming": "When a customer is abroad with roaming disabled, use the safe roaming capability.",
+        "airplane_mode": "When airplane mode blocks service, use the safe reset capability.",
+        "sim": "When SIM state is invalid, run safe SIM diagnostics.",
+        "compound": "Combined conditions require every matching safe action and may justify a more complex topology."
+      },
+      "metadata": {
+        "source": "AgentFit deterministic demonstration fixture"
+      }
+    }
+  ],
+  "capabilities": {
+    "atoms": [
+      {"id": "toggle_roaming", "type": "write", "description": "Toggle roaming"},
+      {"id": "reset_airplane_mode", "type": "write", "description": "Reset airplane mode"},
+      {"id": "run_sim_diagnostics", "type": "read", "description": "Run SIM diagnostics"}
+    ],
+    "tools": [
+      {"id": "safe_toggle_roaming", "wraps": ["toggle_roaming"], "description": "Safely toggle roaming"},
+      {"id": "safe_reset_airplane_mode", "wraps": ["reset_airplane_mode"], "description": "Safely reset airplane mode"},
+      {"id": "safe_run_sim_diagnostics", "wraps": ["run_sim_diagnostics"], "description": "Safely run SIM diagnostics"}
+    ]
+  },
+  "objective": {
+    "criteria": [
+      {"purpose": "adaptation", "min_pass_rate": 1.0, "max_errors": 0, "max_cost_usd": 1.0, "max_risk_events": 0},
+      {"purpose": "validation", "min_pass_rate": 1.0, "max_errors": 0, "max_cost_usd": 1.0, "max_risk_events": 0},
+      {"purpose": "sealed_holdout", "min_pass_rate": 1.0, "max_errors": 0, "max_cost_usd": 1.0, "max_risk_events": 0},
+      {"purpose": "stress_and_failure", "min_pass_rate": 1.0, "max_errors": 0, "max_cost_usd": 1.0, "max_risk_events": 0}
+    ],
+    "max_total_evaluation_cost_usd": 3.0
+  },
+  "tasks": [
+    {
+      "id": "roaming-fix",
+      "purpose": "adaptation",
+      "observation_ids": ["telecom-operations-guidance"],
+      "input_data": {"abroad": true, "roaming_off": true},
+      "expected": {
+        "actions": [{"tool": "safe_toggle_roaming", "params": {}}],
+        "outcome": {}
+      },
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "airplane-validation",
+      "purpose": "validation",
+      "observation_ids": ["telecom-operations-guidance"],
+      "input_data": {"airplane": true},
+      "expected": {
+        "actions": [{"tool": "safe_reset_airplane_mode", "params": {}}],
+        "outcome": {}
+      },
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "sim-holdout",
+      "purpose": "sealed_holdout",
+      "observation_ids": ["telecom-operations-guidance"],
+      "input_data": {"sim_ok": false},
+      "expected": {
+        "actions": [{"tool": "safe_run_sim_diagnostics", "params": {}}],
+        "outcome": {}
+      },
+      "requires_human": false,
+      "complexity": "simple"
+    },
+    {
+      "id": "compound-stress",
+      "purpose": "stress_and_failure",
+      "observation_ids": ["telecom-operations-guidance"],
+      "input_data": {"abroad": true, "roaming_off": true, "airplane": true},
+      "expected": {
+        "actions": [
+          {"tool": "safe_reset_airplane_mode", "params": {}},
+          {"tool": "safe_toggle_roaming", "params": {}}
+        ],
+        "outcome": {}
+      },
+      "requires_human": false,
+      "complexity": "compound"
+    }
+  ],
+  "freeze": {
+    "reviewer": "demo-owner",
+    "approved": true,
+    "decided_at": "2026-08-17T15:00:00+08:00",
+    "reason": "local deterministic demonstration fixture"
+  },
+  "training": {"batch_size": 1, "max_epochs": 1}
+}

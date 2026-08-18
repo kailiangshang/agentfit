@@ -1,23 +1,25 @@
 """监控（简版）：训练后健康检查。drift 检测 + 部署监控规则导出。"""
 from __future__ import annotations
 
-from ..models.loss import Sample
+from ..models.sample import TaskSample
 
 DRIFT_ALERT_RATIO = 0.15   # 分布偏移 > 15% → 建议重训练（test-scenario.md §四）
 
 
-def feature_distribution(samples: list[Sample]) -> dict[str, float]:
+def feature_distribution(samples: list[TaskSample]) -> dict[str, float]:
     """布尔特征 → 出现比例。"""
+    if any(not isinstance(item, TaskSample) for item in samples):
+        raise TypeError("monitoring accepts canonical TaskSample objects only")
     dist: dict[str, int] = {}
     for s in samples:
-        for k, v in s.features.items():
+        for k, v in s.input_data.items():
             if isinstance(v, bool) and v:
                 dist[k] = dist.get(k, 0) + 1
     n = max(1, len(samples))
     return {k: c / n for k, c in dist.items()}
 
 
-def detect_drift(baseline_samples: list[Sample], recent_samples: list[Sample]) -> dict:
+def detect_drift(baseline_samples: list[TaskSample], recent_samples: list[TaskSample]) -> dict:
     """简版漂移检测：逐特征占比差的总平均 > 15% 告警。"""
     a, b = feature_distribution(baseline_samples), feature_distribution(recent_samples)
     keys = set(a) | set(b)

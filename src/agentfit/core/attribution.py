@@ -8,14 +8,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from ..models.loss import LossTrace, Sample, SideIssue, Trace
+from ..models.loss import LossTrace, SideIssue, Trace
+from ..models.sample import TaskSample
 from ..models.solution import Solution
 
 
 class AmbiguityResolver(Protocol):
     """LLM 槽位接口：仅处理机械验证无法判定的反事实问题。生产接 LLM，测试接确定性 mock。"""
 
-    def would_fix_make_pass(self, sample: Sample, trace: Trace, anomaly: str) -> tuple[bool, float]: ...  # noqa: E704
+    def would_fix_make_pass(self, sample: TaskSample, trace: Trace, anomaly: str) -> tuple[bool, float]: ...  # noqa: E704
 
 
 class MechanicalResolver:
@@ -24,7 +25,7 @@ class MechanicalResolver:
     仅用于异常明确位于期望路径上的情形；歧义场景应由 LLM resolver 降低置信度。
     """
 
-    def would_fix_make_pass(self, sample: Sample, trace: Trace, anomaly: str) -> tuple[bool, float]:
+    def would_fix_make_pass(self, sample: TaskSample, trace: Trace, anomaly: str) -> tuple[bool, float]:
         return True, 0.7
 
 
@@ -37,8 +38,12 @@ class _Candidate:
     anomaly_key: str
 
 
-def attribute_loss(sample: Sample, trace: Trace, solution: Solution,
+def attribute_loss(sample: TaskSample, trace: Trace, solution: Solution,
                    resolver: AmbiguityResolver | None = None) -> LossTrace:
+    if not isinstance(sample, TaskSample):
+        raise TypeError("attribute_loss accepts canonical TaskSample objects only")
+    if trace.result == "ERROR":
+        raise ValueError("execution errors cannot be attributed to L1-L4")
     resolver = resolver or MechanicalResolver()
     side_issues: list[SideIssue] = []
 
@@ -70,18 +75,25 @@ def attribute_loss(sample: Sample, trace: Trace, solution: Solution,
                                      evidence={"step_index": idx})
             side_issues.append(SideIssue("L2", step.element_id, step.error or "旁路错误"))
 
+    # 执行器若在拓扑入口明确阻断，后续路由根本没有发生；不能把未执行的
+    # L3 路径臆测为根因。
+    if any(step.layer == "L4" and not step.ok for step in trace.steps):
+        return LossTrace(sample.id, "L4", "topology", "topology_mismatch",
+                         "Trace 明确记录拓扑能力不足", confidence=1.0,
+                         side_issues=side_issues)
+
     # Step 3 → L3：实际路径 vs 期望路径（缺链路 / 走错分支）。
     # 仅当路由确实发生过（routed_knowledge_id 非空）才判 routing_error；
     # 路由未发生但规则存在 → 失败不在 L3，落到 L4 检查。
     actual_tools = [s.element_id for s in trace.steps if s.layer == "L2"]
     expected_tools = [a.tool for a in sample.expected.actions]
     if trace.routed_knowledge_id is None:
-        matched = [r for r in solution.routing_rules() if _condition_match(r.condition, sample.features)]
+        matched = [r for r in solution.routing_rules() if _condition_match(r.condition, sample.input_data)]
         if not matched:
             ok, conf = resolver.would_fix_make_pass(sample, trace, "L3:missing_rule")
             if ok:
                 return LossTrace(sample.id, "L3", "-", "missing_rule",
-                                 f"无路由规则覆盖特征 {sample.features}", confidence=conf, side_issues=side_issues)
+                                 f"无路由规则覆盖特征 {sample.input_data}", confidence=conf, side_issues=side_issues)
             side_issues.append(SideIssue("L3", "-", "缺规则但非根因"))
     elif actual_tools != expected_tools:
         ok, conf = resolver.would_fix_make_pass(sample, trace, f"L3:routing:{trace.routed_knowledge_id}")

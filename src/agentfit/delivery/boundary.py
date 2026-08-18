@@ -10,7 +10,12 @@ from ..store.run_store import RunStore
 def analyze_boundary(run_dir: str | Path) -> dict:
     """Classify Samples from completed Episodes, with a legacy-run fallback."""
     store = RunStore(run_dir)
-    samples_doc = store.load_json("samples.json") if (store.root / "samples.json").is_file() else {}
+    if (store.root / "task_samples.json").is_file():
+        samples_doc = store.load_json("task_samples.json")
+    elif (store.root / "samples.json").is_file():
+        samples_doc = store.load_json("samples.json")
+    else:
+        samples_doc = {}
     samples = samples_doc.get("samples", [])
     by_id = {sample["id"]: sample for sample in samples}
     episode_paths = sorted((store.root / "episodes").glob("*.json"))

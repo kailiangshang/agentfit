@@ -21,6 +21,7 @@
 uv venv .venv --python 3.12
 uv pip install -e ".[dev]"
 pytest -q
+agentfit compile --bundle examples/telecom-materials.json --output output/telecom-case.json
 python bridges/agentteams/render_team.py --check
 python -m compileall -q src bridges tests
 git diff --check
@@ -36,7 +37,7 @@ git diff --check
 
 ## Changes to contracts
 
-Changes to Sample, Manifest, EvaluationIdentity, Solution, Human Gate, RunStore, or package schemas require:
+Changes to TaskSample, Manifest, EvaluationIdentity, Solution, Human Gate, RunStore, or package schemas require:
 
 - compatibility impact in the commit description;
 - tests for serialization and rejection paths;

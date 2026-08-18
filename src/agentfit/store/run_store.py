@@ -1,16 +1,17 @@
-"""RunStore：一次训练运行的标准产物目录（数据基座）。
+"""RunStore：训练或外部评价的一次不可变证据目录。
 
 目录结构（对应 docs/test-scenario.md §六交付树）：
   <run_dir>/
     run.json                  # 运行元信息（场景/配置/起止/最终状态）
-    samples.json              # 样本池 + 分组
+    task_samples.json         # 唯一 TaskSample 正本
     epochs/epoch_NNN.json     # 每轮：通过率/损失分布/更新/正则/回归/λ/成本
     loss_traces/epoch_NNN/<sample_id>.json   # 失败样本归因明细
     solution_versions/vNNN.json              # 每个版本四层全量快照
     messages/epoch_NNN.json   # 总线消息因果链
-    summary.json              # 收尾汇总（baseline vs final、交付建议）
+    summary.json              # 与 run_kind 对应的可重算汇总
 
-Dashboard / 报告 / 审计取证三个消费者共同读这里。
+外部评价另用 candidate_manifest.json、external_evidence/、Trace 和 Episode，
+不得伪造训练 Epoch、Solution snapshot 或 G3。Dashboard / 报告 / 审计共同读取。
 """
 from __future__ import annotations
 
@@ -21,7 +22,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from ..models.loss import Sample
 from ..models.solution import Solution
 
 
@@ -51,13 +51,6 @@ class RunStore:
     def init_run(self, meta: dict) -> None:
         _write(self.root / "run.json", meta)
 
-    def save_samples(self, samples: list[Sample]) -> None:
-        _write(self.root / "samples.json", {
-            "total": len(samples),
-            "groups": {g: [s.id for s in samples if s.group == g] for g in {s.group for s in samples}},
-            "samples": samples,
-        })
-
     def save_sample_manifests(self, collection: Any) -> Path:
         path = self.root / "sample_sets.json"
         _write(path, collection)
@@ -68,9 +61,51 @@ class RunStore:
         _write(path, {"total": len(samples), "samples": samples})
         return path
 
+    def save_source_observations(self, observations: list[Any]) -> Path:
+        path = self.root / "source_observations.json"
+        _write(path, {"total": len(observations), "observations": observations})
+        return path
+
+    def save_capability_inventory(self, inventory: Any) -> Path:
+        path = self.root / "capability_inventory.json"
+        _write(path, inventory)
+        return path
+
+    def save_objective(self, objective: Any) -> Path:
+        path = self.root / "objective.json"
+        _write(path, objective)
+        return path
+
+    def save_acceptance(self, acceptance: Any) -> Path:
+        path = self.root / "acceptance.json"
+        _write(path, acceptance)
+        return path
+
     def save_source_results(self, results: Any) -> Path:
         path = self.root / "source_results.json"
         _write(path, results)
+        return path
+
+    def save_source_results_bytes(self, results: bytes) -> Path:
+        """Preserve the uploaded bytes so its SHA-256 remains independently checkable."""
+        path = self.root / "source_results.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(results)
+        return path
+
+    def save_candidate_manifest(self, manifest: Any) -> Path:
+        path = self.root / "candidate_manifest.json"
+        _write(path, manifest)
+        return path
+
+    def save_training_candidate_manifest(self, manifest: Any) -> Path:
+        path = self.root / "candidate_manifests" / f"{manifest.content_hash}.json"
+        _write(path, manifest)
+        return path
+
+    def save_external_evidence(self, record: Any) -> Path:
+        path = self.root / "external_evidence" / f"record_{record.source_index:06d}.json"
+        _write(path, record)
         return path
 
     def save_episode(self, episode: Any) -> Path:
@@ -81,6 +116,22 @@ class RunStore:
     def save_trace(self, identity: Any, trace: Any) -> Path:
         path = self.root / "traces" / f"{identity.key}.json"
         _write(path, trace)
+        return path
+
+    def save_training_trace(self, epoch: int, phase: str, identity: Any, trace: Any) -> Path:
+        path = (
+            self.root / "training_traces" / phase / f"epoch_{epoch:03d}"
+            / f"{identity.key}.json"
+        )
+        _write(path, trace)
+        return path
+
+    def save_training_episode(self, epoch: int, phase: str, episode: Any) -> Path:
+        path = (
+            self.root / "training_episodes" / phase / f"epoch_{epoch:03d}"
+            / f"{episode.identity.key}.json"
+        )
+        _write(path, episode)
         return path
 
     def save_solution_version(self, solution: Solution, note: str = "") -> None:
@@ -115,6 +166,12 @@ class RunStore:
         d = self.root / "solution_versions"
         return sorted(int(p.stem[1:]) for p in d.glob("v*.json")) if d.is_dir() else []
 
+    def external_evidence_indices(self) -> list[int]:
+        directory = self.root / "external_evidence"
+        if not directory.is_dir():
+            return []
+        return sorted(int(path.stem.split("_")[1]) for path in directory.glob("record_*.json"))
+
     def verify_hash_chain(self) -> bool:
         """Recompute the persisted epoch chain; never trust summary metadata."""
         epochs = self.epochs()
@@ -136,12 +193,33 @@ class RunStore:
 
     def dashboard_payload(self) -> dict:
         """一次性聚合全部呈现数据。"""
-        payload: dict[str, Any] = {"run": None, "samples": None, "epochs": [],
+        payload: dict[str, Any] = {"run": None, "task_samples": None,
+                                   "source_observations": None, "sample_sets": None,
+                                   "capability_inventory": None,
+                                   "objective": None, "acceptance": None,
+                                   "candidate_manifest": None, "external_evidence": [],
+                                   "epochs": [],
                                    "loss_traces": {}, "solutions": {}, "messages": {}, "summary": None}
         if (self.root / "run.json").exists():
             payload["run"] = self.load_json("run.json")
-        if (self.root / "samples.json").exists():
-            payload["samples"] = self.load_json("samples.json")
+        if (self.root / "task_samples.json").exists():
+            payload["task_samples"] = self.load_json("task_samples.json")
+        if (self.root / "source_observations.json").exists():
+            payload["source_observations"] = self.load_json("source_observations.json")
+        if (self.root / "capability_inventory.json").exists():
+            payload["capability_inventory"] = self.load_json("capability_inventory.json")
+        if (self.root / "objective.json").exists():
+            payload["objective"] = self.load_json("objective.json")
+        if (self.root / "acceptance.json").exists():
+            payload["acceptance"] = self.load_json("acceptance.json")
+        if (self.root / "sample_sets.json").exists():
+            payload["sample_sets"] = self.load_json("sample_sets.json")
+        if (self.root / "candidate_manifest.json").exists():
+            payload["candidate_manifest"] = self.load_json("candidate_manifest.json")
+        for index in self.external_evidence_indices():
+            payload["external_evidence"].append(
+                self.load_json(f"external_evidence/record_{index:06d}.json")
+            )
         for e in self.epochs():
             payload["epochs"].append(self.load_json(f"epochs/epoch_{e:03d}.json"))
             lt_dir = self.root / "loss_traces" / f"epoch_{e:03d}"

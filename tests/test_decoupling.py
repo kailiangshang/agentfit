@@ -19,6 +19,9 @@ FORBIDDEN = ("agentteams", "tau2", "tau2bench")
 def test_no_platform_dependency_inside_library():
     violations = []
     for py in SRC.rglob("*.py"):
+        relative = py.relative_to(SRC).as_posix().lower()
+        if any(name in relative for name in FORBIDDEN):
+            violations.append(f"{py.relative_to(REPO)} is platform-specific")
         tree = ast.parse(py.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -34,6 +37,35 @@ def test_no_platform_dependency_inside_library():
     assert not violations, f"库内出现平台强依赖：\n{chr(10).join(violations)}"
 
 
+def test_task_sample_is_the_only_active_sample_model() -> None:
+    violations = []
+    excluded = {
+        SRC / "models" / "loss.py",
+        SRC / "models" / "sample.py",
+    }
+    for root in (SRC, REPO / "bridges"):
+        for path in root.rglob("*.py"):
+            if path in excluded:
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and any(
+                    alias.name == "Sample" for alias in node.names
+                ):
+                    violations.append(str(path.relative_to(REPO)))
+    assert not violations, "活跃运行路径仍导入 legacy Sample:\n" + "\n".join(
+        sorted(set(violations))
+    )
+    loss_source = (SRC / "models" / "loss.py").read_text(encoding="utf-8")
+    sample_source = (SRC / "models" / "sample.py").read_text(encoding="utf-8")
+    store_source = (SRC / "store" / "run_store.py").read_text(encoding="utf-8")
+    assert "class Sample:" not in loss_source
+    assert "task_sample_from_legacy" not in sample_source
+    assert "def save_samples(" not in store_source
+    for path in SRC.rglob("*.py"):
+        assert "legacy_group" not in path.read_text(encoding="utf-8"), path.relative_to(REPO)
+
+
 def test_architecture_level_complete():
     """架构正本的全量结构清单——子模块可逐步增强，但边界不能缺失。"""
     required_modules = [
@@ -42,6 +74,7 @@ def test_architecture_level_complete():
         "agentfit.agents.attributor", "agentfit.agents.architect", "agentfit.agents.validator",
         "agentfit.models.solution", "agentfit.models.loss", "agentfit.models.config",
         "agentfit.models.sample", "agentfit.models.manifest",
+        "agentfit.models.evidence",
         "agentfit.core.attribution", "agentfit.core.transaction", "agentfit.core.regularization",
         "agentfit.core.aggregation", "agentfit.core.proposals", "agentfit.core.regression",
         "agentfit.data.sample_pool", "agentfit.data.clustering",
@@ -62,7 +95,10 @@ def test_platform_neutral_adapter_protocols_are_reserved():
     import importlib
 
     protocols = importlib.import_module("agentfit.adapters.protocols")
-    for name in ("CognitiveAdapter", "RetrievalAdapter", "SandboxAdapter"):
+    for name in (
+        "CognitiveAdapter", "RetrievalAdapter", "SandboxAdapter",
+        "ExternalEvidenceProjector",
+    ):
         contract = getattr(protocols, name)
         assert getattr(contract, "_is_protocol", False), f"{name} 必须是平台无关 Protocol"
 

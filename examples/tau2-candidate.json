@@ -1,0 +1,10 @@
+{
+  "candidate_id": "telecom-baseline",
+  "kind": "external_system",
+  "specification": {
+    "system": "tau2-default-agent",
+    "architecture": "single-agent",
+    "declaration_scope": "operator-provided semantic identity"
+  },
+  "provenance_complete": false
+}

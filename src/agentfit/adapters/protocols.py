@@ -73,3 +73,10 @@ class SandboxResult:
 @runtime_checkable
 class SandboxAdapter(Protocol):
     def execute(self, request: SandboxRequest) -> SandboxResult: ...
+
+
+@runtime_checkable
+class ExternalEvidenceProjector(Protocol):
+    """Bridge callback that deterministically projects raw source evidence."""
+
+    def __call__(self, source_results: dict[str, Any], candidate_ref: str) -> Any: ...

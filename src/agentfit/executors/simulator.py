@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 from ..core.attribution import _condition_match
-from ..models.loss import Expected, Sample, Trace, TraceStep
+from ..models.loss import Expected, Trace, TraceStep
+from ..models.sample import TaskSample
 from ..models.solution import Solution
 from .base import ExecutorBase
 
@@ -15,7 +16,9 @@ COST_PER_SAMPLE = 0.006
 
 
 class SimulatorExecutor(ExecutorBase):
-    def execute(self, solution: Solution, sample: Sample) -> Trace:
+    def execute(self, solution: Solution, sample: TaskSample) -> Trace:
+        if not isinstance(sample, TaskSample):
+            raise TypeError("SimulatorExecutor accepts canonical TaskSample objects only")
         trace = Trace(sample_id=sample.id, cost_usd=COST_PER_SAMPLE)
 
         # L4：复合样本需要多 Agent 协同（单 Agent 拓扑撑不住）
@@ -36,7 +39,7 @@ class SimulatorExecutor(ExecutorBase):
         # L3 优先匹配排查链（多步知识 = 任务拆解），再走路由规则
         chains = [k for k in solution.L3_knowledge
                   if k.type == "chain" and not k.superseded and k.steps]
-        matched_chain = next((c for c in chains if _condition_match(c.condition, sample.features)), None)
+        matched_chain = next((c for c in chains if _condition_match(c.condition, sample.input_data)), None)
         if matched_chain is not None:
             trace.routed_knowledge_id = matched_chain.id
             for step in matched_chain.steps:
@@ -55,11 +58,11 @@ class SimulatorExecutor(ExecutorBase):
             return trace
 
         # L3 路由
-        matched = [r for r in solution.routing_rules() if _condition_match(r.condition, sample.features)]
+        matched = [r for r in solution.routing_rules() if _condition_match(r.condition, sample.input_data)]
         if not matched:
             trace.result = "FAIL"
             trace.steps.append(TraceStep(layer="L3", element_id="-", action="no_rule_matched", ok=False,
-                                         error=f"无路由规则覆盖 {sample.features}"))
+                                         error=f"无路由规则覆盖 {sample.input_data}"))
             return trace
         rule = matched[0]                      # 具体性排序由方案构建保证；模拟器取首个
         trace.routed_knowledge_id = rule.id
@@ -91,9 +94,10 @@ class SimulatorExecutor(ExecutorBase):
         return trace
 
     def evaluate(self, trace: Trace, expected: Expected) -> bool:
-        # 人工处理样本：以人审步骤收尾即为通过（交付形态 = 保留人工）
-        if any(s.element_id == "human_review" for s in trace.steps):
-            return trace.result == "PASS"
         executed = sorted(s.element_id for s in trace.steps if s.layer == "L2")
+        # 只有纯人工升级（没有执行 L2 工具）才按人工处理通过；普通工具的
+        # Human Gate 只是审批步骤，不能掩盖错误动作。
+        if not executed and any(s.element_id == "human_review" for s in trace.steps):
+            return trace.result == "PASS"
         want = sorted(a.tool for a in expected.actions)
         return executed == want and trace.result == "PASS"

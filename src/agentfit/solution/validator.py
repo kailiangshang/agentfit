@@ -6,26 +6,16 @@ from __future__ import annotations
 
 from ..models.solution import CapabilityTool, Knowledge, Solution
 
-BACKEND_REGISTRY: set[str] = set()   # 已确认存在的基础设施（测试/运行时注册）
 
-
-def register_infrastructure(backends: list[str]) -> None:
-    BACKEND_REGISTRY.update(backends)
-
-
-def validate_existence_dependencies(solution: Solution, check_backend: bool = False) -> list[str]:
+def validate_existence_dependencies(solution: Solution) -> list[str]:
     """验证所有层间依赖完整，无悬空引用。空列表 = 通过。
 
-    链条：L1→基础设施 / L2→L1 / L3→L2 / L4→L3。
+    链条：L2→L1 / L3→L2 / L4→L3。L1 的运行绑定由 Executor/bridge 验证。
     """
     errors: list[str] = []
     atom_ids = {a.id for a in solution.L1_atoms}
     tool_ids = {t.id for t in solution.L2_tools}
     knowledge_ids = {k.id for k in solution.L3_knowledge}
-
-    for atom in solution.L1_atoms:
-        if check_backend and atom.backend not in BACKEND_REGISTRY:
-            errors.append(f"L1 原子 {atom.id} 引用了未确认的基础设施 {atom.backend}")
 
     for tool in solution.L2_tools:
         for wrapped in tool.wraps:
@@ -42,16 +32,39 @@ def validate_existence_dependencies(solution: Solution, check_backend: bool = Fa
                 if step.tool not in tool_ids:
                     errors.append(f"L3 排查链 {knowledge.id} 引用了不存在的 L2 工具 {step.tool}")
 
+    agent_ids = [agent.id for agent in solution.L4_topology.agents]
+    known_agents = set(agent_ids)
+    for duplicate in sorted({agent_id for agent_id in agent_ids if agent_ids.count(agent_id) > 1}):
+        errors.append(f"duplicate L4 Agent id {duplicate}")
+
     for agent in solution.L4_topology.agents:
         for used in agent.uses:
             if used not in knowledge_ids:
                 errors.append(f"L4 Agent {agent.id} 使用了不存在的 L3 知识 {used}")
 
+    for edge in solution.L4_topology.edges:
+        if edge.from_agent not in known_agents:
+            errors.append(
+                f"L4 TopologyEdge {edge.from_agent}->{edge.to_agent} 的起点 Agent 不存在: {edge.from_agent}"
+            )
+        if edge.to_agent not in known_agents:
+            errors.append(
+                f"L4 TopologyEdge {edge.from_agent}->{edge.to_agent} 的终点 Agent 不存在: {edge.to_agent}"
+            )
+        if not edge.payload_type:
+            errors.append(
+                f"L4 TopologyEdge {edge.from_agent}->{edge.to_agent} requires payload_type"
+            )
+
+    for agent_id in solution.L4_topology.human_gate_positions:
+        if agent_id not in known_agents:
+            errors.append(f"L4 Human Gate position references unknown Agent: {agent_id}")
+
     return errors
 
 
 def validate_same_layer_constraints(solution: Solution) -> list[str]:
-    """横向约束：同层禁止执行时互调（L3 dispatch 是组织功能，合法；链步骤调用别的 Skill 是执行耦合，非法）。"""
+    """L1-L3 禁止隐藏的同层执行依赖；L4 仅允许显式 TopologyEdge。"""
     errors: list[str] = []
     knowledge_ids = {k.id for k in solution.L3_knowledge}
     for knowledge in solution.L3_knowledge:

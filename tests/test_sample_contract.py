@@ -51,6 +51,16 @@ def _frozen_manifests(sample_mod, manifest_mod):
     )
 
 
+def _safe_fix_inventory():
+    from agentfit.models.project import CapabilityInventory
+    from agentfit.models.solution import CapabilityTool, SolidAtom
+
+    return CapabilityInventory.create(
+        atoms=[SolidAtom("fix", "write")],
+        tools=[CapabilityTool("safe_fix", ["fix"])],
+    )
+
+
 def test_canonical_hash_is_independent_of_mapping_order() -> None:
     sample_mod = _sample_module()
     assert sample_mod.canonical_hash({"a": 1, "b": 2}) == sample_mod.canonical_hash({"b": 2, "a": 1})
@@ -127,7 +137,7 @@ def test_human_freeze_is_required_before_candidate_generation() -> None:
 def test_candidate_builder_enforces_manifest_freeze() -> None:
     sample_mod, manifest_mod = _sample_module(), _manifest_module()
     from agentfit.solution import builder
-    from agentfit.models.loss import Expected, Sample
+    from agentfit.models.loss import Expected
 
     build_candidate = getattr(builder, "build_candidate", None)
     assert callable(build_candidate), "缺少受 Manifest 门禁保护的 candidate builder"
@@ -141,19 +151,26 @@ def test_candidate_builder_enforces_manifest_freeze() -> None:
     )
     collection = manifest_mod.SampleSetCollection(manifests=tuple(manifests))
     with pytest.raises(PermissionError, match="Human Freeze"):
-        build_candidate([Sample("sample", {"x": True}, Expected())], collection)
+        build_candidate(
+            [sample_mod.TaskSample("sample", (), {"x": True}, Expected())],
+            collection,
+            _safe_fix_inventory(),
+        )
 
 
 def test_candidate_builder_uses_only_frozen_adaptation_samples() -> None:
     sample_mod, manifest_mod = _sample_module(), _manifest_module()
     from agentfit.solution.builder import build_candidate
-    from agentfit.models.loss import Expected, ExpectedAction, Sample
+    from agentfit.models.loss import Expected, ExpectedAction
 
-    sample = Sample(
-        "adaptation-sample", {"needs_fix": True},
+    observation = sample_mod.SourceObservation.create(
+        "procedure", "procedure", "approved fix procedure",
+    )
+    sample = sample_mod.TaskSample(
+        "adaptation-sample", (observation.ref,), {"needs_fix": True},
         Expected([ExpectedAction("safe_fix")]),
     )
-    task_ref = sample_mod.task_sample_from_legacy(sample).ref
+    task_ref = sample.ref
     freeze = manifest_mod.FreezeDecision(
         reviewer="human-owner", approved=True,
         decided_at="2026-08-17T14:00:00+08:00", reason="approved",
@@ -172,9 +189,43 @@ def test_candidate_builder_uses_only_frozen_adaptation_samples() -> None:
         )
         for purpose in manifest_mod.SampleSetPurpose
     ))
-    candidate = build_candidate([sample], collection, coverage=1.0)
+    candidate = build_candidate(
+        [sample], collection, _safe_fix_inventory(), coverage=1.0,
+    )
     assert candidate.version == 0
     assert candidate.routing_rules()[0].dispatches_to == "safe_fix"
+
+
+def test_candidate_builder_rejects_adaptation_sample_without_observation_lineage() -> None:
+    sample_mod, manifest_mod = _sample_module(), _manifest_module()
+    from agentfit.models.loss import Expected, ExpectedAction
+    from agentfit.solution.builder import build_candidate
+
+    sample = sample_mod.TaskSample(
+        "adaptation-sample", (), {"needs_fix": True},
+        Expected([ExpectedAction("safe_fix")]),
+    )
+    freeze = manifest_mod.FreezeDecision(
+        reviewer="human-owner", approved=True,
+        decided_at="2026-08-17T14:00:00+08:00", reason="approved",
+    )
+    other_refs = _refs(sample_mod)[1:]
+    refs_by_purpose = {
+        manifest_mod.SampleSetPurpose.ADAPTATION: (sample.ref,),
+        manifest_mod.SampleSetPurpose.VALIDATION: (other_refs[0],),
+        manifest_mod.SampleSetPurpose.SEALED_HOLDOUT: (other_refs[1],),
+        manifest_mod.SampleSetPurpose.STRESS_AND_FAILURE: (other_refs[2],),
+    }
+    collection = manifest_mod.SampleSetCollection(manifests=tuple(
+        manifest_mod.SampleSetManifest.create(
+            purpose, refs_by_purpose[purpose],
+            manifest_mod.default_access_policy(purpose), freeze,
+        )
+        for purpose in manifest_mod.SampleSetPurpose
+    ))
+
+    with pytest.raises(ValueError, match="ObservationRef"):
+        build_candidate([sample], collection, _safe_fix_inventory())
 
 
 def test_sealed_holdout_is_inaccessible_until_candidate_freeze() -> None:
@@ -203,22 +254,24 @@ def test_evaluation_identity_is_candidate_sample_run_triple() -> None:
         sample_mod.EvaluationIdentity("a" * 64, sample_mod.SampleRef("sample", "b" * 64), -1)
 
 
-def test_legacy_sample_converts_without_losing_semantics() -> None:
+def test_task_sample_keeps_canonical_semantics() -> None:
     sample_mod = _sample_module()
-    from agentfit.models.loss import Expected, ExpectedAction, Sample
+    from agentfit.models.loss import Expected, ExpectedAction
 
-    legacy = Sample(
-        "legacy", {"abroad": True},
-        Expected([ExpectedAction("safe_fix")]),
-        requires_human=True, complexity="compound", group="stress",
+    observation = sample_mod.SourceObservation.create(
+        "observation", "procedure", "approved operating procedure",
     )
-    task = sample_mod.task_sample_from_legacy(legacy, observation_refs=("observation",))
-    assert task.id == "legacy"
+    task = sample_mod.TaskSample(
+        "canonical", (observation.ref,), {"abroad": True},
+        Expected([ExpectedAction("safe_fix")]),
+        requires_human=True, complexity="compound",
+    )
+    assert task.id == "canonical"
     assert task.input_data == {"abroad": True}
     assert task.expected.actions[0].tool == "safe_fix"
     assert task.requires_human is True
     assert task.complexity == "compound"
-    assert task.legacy_group == "stress"
+    assert task.observation_refs == (observation.ref,)
 
 
 def test_runstore_persists_manifests_and_episode_identity(tmp_path: Path) -> None:

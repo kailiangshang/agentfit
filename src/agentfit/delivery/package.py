@@ -20,7 +20,7 @@ def export_package(solution: Solution, run_dir: str | Path,
         "agent_config": {"topology": asdict(solution.L4_topology),
                          "trigger_mode": solution.L4_topology.trigger_mode},
         "solid_atoms": [asdict(atom) for atom in solution.L1_atoms],
-        "tool_bindings": [asdict(tool) for tool in solution.L2_tools],
+        "capability_contracts": [asdict(tool) for tool in solution.L2_tools],
         "knowledge": [asdict(item) for item in solution.L3_knowledge if not item.superseded],
         "routing_rules": [{"id": r.id, "condition": r.condition, "dispatches_to": r.dispatches_to}
                           for r in solution.L3_knowledge if r.type == "routing_rule" and not r.superseded],

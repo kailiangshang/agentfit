@@ -3,7 +3,7 @@ from agentfit.core.regularization import LambdaController, RegReport, compute_st
 from agentfit.core.transaction import ChangeTransaction, UpdateProposal, ValidationError
 from agentfit.log.training_log import EpochEntry, TrainingLog
 from agentfit.models.solution import (Agent, CapabilityTool, Knowledge, Solution,
-                                      SolidAtom, Topology)
+                                      SolidAtom, Topology, TopologyEdge)
 from agentfit.solution.validator import (validate_existence_dependencies,
                                          validate_same_layer_constraints)
 
@@ -34,6 +34,50 @@ def test_dangling_l4_usage_detected():
     sol.L4_topology = Topology(agents=[Agent("a", "single", uses=["no_such_knowledge"])])
     errors = validate_existence_dependencies(sol)
     assert any("no_such_knowledge" in e for e in errors)
+
+
+def test_explicit_l4_topology_edge_is_the_only_legal_same_layer_execution_link():
+    sol = make_initial_solution()
+    sol.L4_topology = Topology(
+        agents=[
+            Agent("diagnose", "diagnostic", uses=["rule_roaming"]),
+            Agent("repair", "repair", uses=["rule_airplane"]),
+        ],
+        edges=[TopologyEdge("diagnose", "repair", "diagnosis")],
+        human_gate_positions=["repair"],
+    )
+
+    assert validate_existence_dependencies(sol) == []
+    assert validate_same_layer_constraints(sol) == []
+
+
+def test_l4_topology_rejects_dangling_edges_and_human_positions():
+    sol = make_initial_solution()
+    sol.L4_topology.edges = [TopologyEdge("solo", "ghost", "diagnosis")]
+    sol.L4_topology.human_gate_positions = ["missing_reviewer"]
+
+    errors = validate_existence_dependencies(sol)
+
+    assert any("ghost" in error and "TopologyEdge" in error for error in errors)
+    assert any("missing_reviewer" in error and "Human Gate" in error for error in errors)
+
+
+def test_l4_topology_rejects_duplicate_agent_ids():
+    sol = make_initial_solution()
+    sol.L4_topology.agents.append(Agent("solo", "repair", uses=[]))
+
+    errors = validate_existence_dependencies(sol)
+
+    assert any("duplicate L4 Agent id solo" in error for error in errors)
+
+
+def test_l4_topology_requires_typed_message_edges():
+    sol = make_initial_solution()
+    sol.L4_topology.edges = [TopologyEdge("solo", "solo", "")]
+
+    errors = validate_existence_dependencies(sol)
+
+    assert any("payload_type" in error for error in errors)
 
 
 # ---------- 同层约束 ----------
@@ -117,6 +161,34 @@ def test_attribution_missing_rule_then_l4():
 
     lt = attribute_loss(samples["F4-0"], ex.execute(sol, samples["F4-0"]), sol)
     assert (lt.root_cause_layer, lt.failure_mode) == ("L4", "topology_mismatch")
+
+
+def test_explicit_topology_failure_is_not_relabelled_as_missing_rule():
+    from agentfit.core.attribution import attribute_loss
+    from agentfit.executors.simulator import SimulatorExecutor
+
+    sol = make_initial_solution()
+    sol.L3_knowledge[0].condition = "abroad AND roaming_off AND NOT airplane"
+    sol.L3_knowledge[1].condition = "NOT abroad AND airplane"
+    sample = {item.id: item for item in make_samples()}["F4-0"]
+    trace = SimulatorExecutor().execute(sol, sample)
+
+    assert trace.steps[0].layer == "L4"
+    loss = attribute_loss(sample, trace, sol)
+    assert (loss.root_cause_layer, loss.failure_mode) == (
+        "L4", "topology_mismatch",
+    )
+
+
+def test_tool_human_gate_does_not_turn_wrong_action_into_pass():
+    from agentfit.executors.simulator import SimulatorExecutor
+
+    samples = {item.id: item for item in make_samples()}
+    executor = SimulatorExecutor()
+    trace = executor.execute(make_initial_solution(), samples["F2-0"])
+
+    assert any(step.element_id == "human_review" for step in trace.steps)
+    assert executor.evaluate(trace, samples["F1-0"].expected) is False
 
 
 def test_attribution_side_issue_not_root():

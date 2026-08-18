@@ -8,16 +8,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ..models.evidence import CandidateManifest
 from ..models.sample import canonical_hash
 from ..models.solution import solution_from_dict
 from ..store.run_store import RunStore
 
 
 EVIDENCE_ROOT_FILES = {
-    "run.json", "samples.json", "sample_sets.json", "task_samples.json", "source_results.json",
+    "run.json", "samples.json", "sample_sets.json", "task_samples.json",
+    "source_observations.json", "capability_inventory.json", "objective.json",
+    "acceptance.json", "source_results.json",
 }
 EVIDENCE_DIRECTORIES = {
     "epochs", "loss_traces", "messages", "solution_versions", "traces", "episodes",
+    "candidate_manifests", "training_traces", "training_episodes",
 }
 SIGNING_KEY_ENV = "AGENTFIT_G3_SIGNING_KEY"
 KEY_ID_ENV = "AGENTFIT_G3_KEY_ID"
@@ -52,8 +56,20 @@ def create_delivery_decision(store: RunStore, decision: Any, summary: dict[str, 
     candidate_ref = summary.get("candidate_ref")
     final_version = summary.get("final_solution_version")
     evaluations = summary.get("evaluation_by_purpose")
-    if not isinstance(candidate_ref, str) or not isinstance(final_version, int) or not isinstance(evaluations, dict):
+    objective_ref = summary.get("objective_ref")
+    acceptance_ref = summary.get("acceptance_ref")
+    acceptance_met = summary.get("acceptance_met")
+    if (
+        not isinstance(candidate_ref, str)
+        or not isinstance(final_version, int)
+        or not isinstance(evaluations, dict)
+        or not isinstance(objective_ref, str)
+        or not isinstance(acceptance_ref, str)
+        or not isinstance(acceptance_met, bool)
+    ):
         raise ValueError("complete final evaluation evidence is required before G3")
+    if decision.approved and not acceptance_met:
+        raise ValueError("G3 cannot approve a failed objective acceptance")
     signing = _signing_material() if decision.approved else None
     if decision.approved and signing is None:
         raise ValueError(f"approved G3 requires external {SIGNING_KEY_ENV}")
@@ -66,6 +82,10 @@ def create_delivery_decision(store: RunStore, decision: Any, summary: dict[str, 
         "final_solution_version": final_version,
         "evidence_hash": final_evidence_hash(store),
         "review_conditions": list(decision.conditions),
+        "objective_ref": objective_ref,
+        "acceptance_ref": acceptance_ref,
+        "acceptance_met": acceptance_met,
+        "acceptance_failures": list(summary.get("acceptance_failures") or []),
         "evidence_scope": {
             "candidate_frozen": summary.get("candidate_frozen") is True,
             "evaluation_by_purpose": evaluations,
@@ -125,6 +145,13 @@ def verify_delivery_decision(store: RunStore, summary: dict[str, Any] | None = N
         raise ValueError("delivery decision candidate mismatch")
     if decision.get("final_solution_version") != summary.get("final_solution_version"):
         raise ValueError("delivery decision solution version mismatch")
+    for key in (
+        "objective_ref", "acceptance_ref", "acceptance_met", "acceptance_failures",
+    ):
+        if decision.get(key) != summary.get(key):
+            raise ValueError(f"delivery decision acceptance mismatch: {key}")
+    if decision.get("approved") and decision.get("acceptance_met") is not True:
+        raise ValueError("approved delivery decision requires objective acceptance")
     evidence_scope = decision.get("evidence_scope") or {}
     if evidence_scope.get("candidate_frozen") is not True:
         raise ValueError("delivery decision requires a frozen candidate")
@@ -137,7 +164,23 @@ def verify_delivery_decision(store: RunStore, summary: dict[str, Any] | None = N
 
     version = decision["final_solution_version"]
     snapshot = store.load_json(f"solution_versions/v{version:03d}.json")["solution"]
-    if canonical_hash(solution_from_dict(snapshot)) != decision.get("candidate_ref"):
+    candidate_ref = decision.get("candidate_ref")
+    try:
+        manifest_data = store.load_json(f"candidate_manifests/{candidate_ref}.json")
+        manifest = CandidateManifest(
+            candidate_id=manifest_data["candidate_id"],
+            kind=manifest_data["kind"],
+            specification=manifest_data["specification"],
+            provenance_complete=manifest_data["provenance_complete"],
+            content_hash=manifest_data["content_hash"],
+        )
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        raise ValueError("delivery decision candidate manifest is invalid") from exc
+    if (
+        manifest.candidate_ref != candidate_ref
+        or manifest.specification.get("solution_ref")
+        != canonical_hash(solution_from_dict(snapshot))
+    ):
         raise ValueError("delivery decision candidate snapshot mismatch")
     return decision
 

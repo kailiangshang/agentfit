@@ -4,17 +4,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ..executors.base import ExecutorBase
-from ..models.loss import Sample
+from ..models.sample import TaskSample
 from ..models.solution import Solution
 
 
 @dataclass
 class RegressionPool:
     """分层回归池：覆盖历史全部失败模式。"""
-    samples: list[Sample] = field(default_factory=list)
+    samples: list[TaskSample] = field(default_factory=list)
     passed_ids: set[str] = field(default_factory=set)
 
-    def add(self, sample: Sample, passed: bool) -> None:
+    def add(self, sample: TaskSample, passed: bool) -> None:
         if not any(s.id == sample.id for s in self.samples):
             self.samples.append(sample)
         if passed:

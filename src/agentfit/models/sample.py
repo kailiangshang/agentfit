@@ -14,7 +14,7 @@ from enum import Enum
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .loss import Expected, Sample
+    from .loss import Expected
 
 
 HASH_PATTERN = re.compile(r"[0-9a-f]{64}")
@@ -74,6 +74,17 @@ class SampleRef:
 
 
 @dataclass(frozen=True)
+class ObservationRef:
+    observation_id: str
+    content_hash: str
+
+    def __post_init__(self) -> None:
+        if not self.observation_id:
+            raise ValueError("observation_id is required")
+        _require_hash(self.content_hash, "content_hash")
+
+
+@dataclass(frozen=True)
 class SourceObservation:
     id: str
     kind: str
@@ -85,28 +96,39 @@ class SourceObservation:
     def create(cls, id: str, kind: str, content: Any,
                metadata: dict[str, Any] | None = None) -> "SourceObservation":
         metadata = dict(metadata or {})
-        return cls(id, kind, content, canonical_hash({"kind": kind, "content": content}), metadata)
+        return cls(
+            id, kind, content,
+            canonical_hash({"kind": kind, "content": content, "metadata": metadata}),
+            metadata,
+        )
 
     def __post_init__(self) -> None:
         if not self.id or not self.kind:
             raise ValueError("observation id and kind are required")
         _require_hash(self.content_hash, "content_hash")
-        expected = canonical_hash({"kind": self.kind, "content": self.content})
+        expected = canonical_hash({
+            "kind": self.kind,
+            "content": self.content,
+            "metadata": self.metadata,
+        })
         if self.content_hash != expected:
             raise ValueError("observation content_hash does not match content")
+
+    @property
+    def ref(self) -> ObservationRef:
+        return ObservationRef(self.id, self.content_hash)
 
 
 @dataclass(frozen=True)
 class TaskSample:
     id: str
-    observation_refs: tuple[str, ...]
+    observation_refs: tuple[ObservationRef, ...]
     input_data: dict[str, Any]
     expected: "Expected"
     evaluator: str = "exact"
     constraints: dict[str, Any] = field(default_factory=dict)
     requires_human: bool = False
     complexity: str = "simple"
-    legacy_group: str | None = None
 
     @property
     def content_hash(self) -> str:
@@ -124,21 +146,6 @@ class TaskSample:
     @property
     def ref(self) -> SampleRef:
         return SampleRef(self.id, self.content_hash)
-
-
-def task_sample_from_legacy(sample: "Sample",
-                            observation_refs: tuple[str, ...] = ()) -> TaskSample:
-    """Compatibility boundary for the existing simulator Sample model."""
-    return TaskSample(
-        id=sample.id,
-        observation_refs=tuple(observation_refs),
-        input_data=dict(sample.features),
-        expected=sample.expected,
-        requires_human=sample.requires_human,
-        complexity=sample.complexity,
-        legacy_group=sample.group,
-    )
-
 
 @dataclass(frozen=True)
 class EvaluationIdentity:
@@ -164,6 +171,8 @@ class Episode:
     cost_usd: float
     evidence_hash: str
     status: str = "completed"
+    risk_events: int = 0
+    runtime_ref: str = ""
 
     def __post_init__(self) -> None:
         if not self.trace_ref:
@@ -172,4 +181,6 @@ class Episode:
             raise ValueError("result must be PASS, FAIL or ERROR")
         if self.cost_usd < 0:
             raise ValueError("cost_usd must be non-negative")
+        if not isinstance(self.risk_events, int) or self.risk_events < 0:
+            raise ValueError("risk_events must be a non-negative integer")
         _require_hash(self.evidence_hash, "evidence_hash")
