@@ -1,5 +1,6 @@
 """RunStore 落盘 + Dashboard 生成的架构完整性测试。"""
 import json
+import re
 
 from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
@@ -99,8 +100,10 @@ def test_dashboard_surfaces_learning_loop_and_per_sample_evidence(tmp_path):
     html = generate_dashboard(run_dir).read_text(encoding="utf-8")
     payload = json.loads(html.split("const DATA = ")[1].split(";\n")[0])
 
-    assert "真实联动效果" in html
-    assert "逐样本最终证据" in html
+    assert "训练阶段发生了什么" in html
+    assert "逐样本结果" in html
+    assert "真实联动效果" not in html
+    assert "逐样本最终证据" not in html
     assert payload["training_evidence"]
     assert payload["evaluation_evidence"] == [{
         "purpose": "stress_and_failure",
@@ -111,6 +114,27 @@ def test_dashboard_surfaces_learning_loop_and_per_sample_evidence(tmp_path):
         "error_code": "agentteams_result_envelope_error",
         "route": [],
     }]
+
+
+def test_dashboard_preserves_canonical_eight_section_order(tmp_path):
+    run_dir = _train_with_store(tmp_path)
+
+    html = generate_dashboard(run_dir).read_text(encoding="utf-8")
+    numbered_headings = re.findall(
+        r"el\('h2',null,'([①②③④⑤⑥⑦⑧⑨⑩][^']+)'\)",
+        html,
+    )
+
+    assert numbered_headings == [
+        "① 运行概览",
+        "② 四集合验收",
+        "③ 材料与四层映射（初始方案）",
+        "④ 样本与聚类分组",
+        "⑤ 训练曲线",
+        "⑥ 损失归因全景",
+        "⑦ L1-L4 方案证据与版本演化",
+        "⑧ 事务与中间链路",
+    ]
 
 
 def test_dashboard_contains_long_runtime_evidence_on_mobile(tmp_path):
