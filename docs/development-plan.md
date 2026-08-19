@@ -45,19 +45,22 @@ CandidateRef、SampleRef、run_index 和 runtime_ref 回到 Trace；是否通过
 
 ### 真实场景的逐批适配
 
-本地确定性闭环不代表真实模型效果。围绕一个真实项目逐步扩大样本，而不是一次建设
-所有可能的 Tool、Skill 或 Agent。DeepSeek-V4-Flash、公开 benchmark 选择、三层证据和
-Base→AgentFit 公平对照协议以 [Benchmark 评测](benchmark-evaluation.md) 为正本：
+本地确定性闭环不代表真实业务维护效果。围绕一个真实项目逐步引入 L1、L2、L3、L4
+和跨层业务变化，而不是一次建设所有可能的 Tool、Skill 或 Agent。DeepSeek-V4-Flash、
+公开数据、Flat→AgentFit 四层维护对照和外部参照边界以
+[业务维护评测](benchmark-evaluation.md) 为正本：
 
-1. 从业务材料编译并由 Human 冻结四个 SampleSetManifest；
-2. 先跑最简 Candidate 的 adaptation 小批次；
-3. 用 Trace 判断缺口属于 L1、L2、L3 还是 L4，运行 ERROR 单独处理；
-4. 只对有证据的缺口提交方案变更并回归；
-5. 候选冻结后再运行 validation、sealed_holdout 和 stress_and_failure；
-6. 比较质量、成本、风险和复杂度，达到用户 Objective 后停止。
+1. 从同一业务行为生成语义等价的 Flat 与 AgentFit 初始方案；
+2. 从业务材料编译并由 Human 冻结四个 SampleSetManifest 和连续变化波次；
+3. 两组获得相同 Trace、更新模型、Human 次数和维护预算；
+4. Flat 直接维护资产，AgentFit 判断缺口属于 L1、L2、L3 还是 L4，并用事务提交；
+5. 每波 validation 同时检查新需求和累计旧需求，运行 ERROR 单独处理；
+6. 最终方案冻结后再运行 sealed_holdout 和 stress_and_failure；
+7. 比较业务质量、累计回归、变更范围、达标成本、复用、回滚、风险和复杂度。
 
-完成定义：报告中的每个结论都可回到 `candidate_ref + sample_ref + run_index` 对应的
-Episode，评价集合结果不会反向进入 adaptation 更新。
+完成定义：报告能回答四层维护是否以更小变更和更低回归达到相同业务目标；每个结论都
+可回到 `candidate_ref + sample_ref + run_index` 对应的 Episode，评价集合结果不会反向
+进入 adaptation 更新。
 
 ### 认知角色接入
 
