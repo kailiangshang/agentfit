@@ -27,7 +27,8 @@ Agent 成绩使用内部 harness：只有 bash 和 file-edit 两类工具，最�
 业务用户模拟、工具执行、逐任务 reward 和完整 trajectory，更能检验 AgentFit 的
 业务材料、样本、Tool/Skill/Agent/Human 边界和逐批适配是否有效。Terminal-Bench
 2.0 随后用于与 DeepSeek 官网 56.9 建立同 benchmark 的量级参照；MCPAtlas 用于验证
-Tool/MCP 适配；Toolathlon 用于验证跨应用长链路；SWE-bench 系列放在软件研发场景阶段。
+Tool/MCP 适配；Toolathlon 只在许可解锁后验证跨应用长链路；SWE-bench 系列放在软件
+研发场景阶段。
 
 本方案要回答的核心问题不是“DeepSeek-V4-Flash 强不强”，而是：
 
@@ -114,11 +115,15 @@ DeepSeek 技术报告明确说明：
 | HLE / HLE with tools | 2,500 道专家级多学科题，含数据污染 canary | 自动评分；可加搜索工具 | MIT；不得进入训练语料 | 通用推理/搜索校准，不适合训练方案主线 |
 | MCPAtlas Public | 当前公开仓库 500 题、36 个 MCP server、307 个 tool | Docker MCP 沙箱；预期工具调用与 LLM judge | MIT；20 个 server 无需 key，其余需外部凭证/数据 | Tool/MCP 结构适配，优先级 3 |
 | GDPval Gold | 公开 Gold subset 220 题，9 个行业、44 个职业 | 专业工作产物；AA grader/Elo | 官方数据位于 `openai/gdpval`；再分发和 grader 条件需单独核验 | 专业工作产物验证，许可核验后再用 |
-| Toolathlon-Verified | 108 题，32 类应用，600+ 工具，长链路调用 | 每题独立容器；公共评测服务或自建服务 | 仓库未声明顶层 license；可使用公共服务 | 跨应用长链路，优先级 4 |
+| Toolathlon-Verified | 108 题，32 类应用，600+ 工具，长链路调用 | 每题独立容器；仓库描述了公共评测服务或自建服务路径 | `BLOCKED_LICENSE`：顶层许可证、数据权利和服务条款快照均未核验 | 许可解锁后的跨应用长链路候选，不进入当前运行计划 |
 | CorpusQA | 1,316 题，128K 到 10M 上下文 | 跨文档聚合与推理；accuracy | MIT | 业务材料长上下文验证，后续 |
 
 DeepSeek 报告正文一处写 `Tool-Decathlon`，Table 7 写 `Toolathlon`；当前可运行公开仓库
 是 `hkust-nlp/Toolathlon`。报告中保留这一命名差异，避免把两个字符串当成两个独立结果。
+
+Toolathlon 当前状态为 `BLOCKED_LICENSE`。在许可证、数据权利和服务条款快照全部确认前，
+禁止 clone、运行、vendor 或调用公共服务；仓库提到某条执行路径不等于 AgentFit 已获得
+使用授权。解锁决定和证据必须进入运行前冻结记录。
 
 ### 2.2 版本漂移与口径差异
 
@@ -282,10 +287,13 @@ LiteLLM 可以同时提供三类模型调用，但三者不能混成一个 rewar
 - adapter smoke：每题 1 次，只检查协议和证据完整性，不报告模型效果；
 - pilot：同一任务 Base/Candidate 各 3 次；
 - formal：优先各 5 次；预算不足时至少 3 次，并在报告中说明功效限制；
-- 按 SampleRef 配对计算 reward 差值；
-- 报告均值、通过率、95% paired bootstrap confidence interval；
-- 二元结果可同时给出 discordant pairs 和 McNemar 检验；
-- trial 级结果全部保留，不能只保存平均数；
+- 先在每个 SampleRef 内汇总同一 arm 的重复 trial，再按 SampleRef 配对计算 reward 差值；
+- 报告均值、通过率和 95% paired bootstrap confidence interval；
+- paired bootstrap 以 SampleRef 为重采样 cluster，并保留该 cluster 内的全部 trial；
+- 二元结果可同时给出 discordant pairs；McNemar 使用 sample-level paired outcome，
+  其 trial 聚合与二值化规则必须预先写入 ObjectiveSpec；
+- trial 级结果和 dispersion 全部单列保留，不能只保存平均数；
+- trial 不能作为独立样本扩大统计样本量；
 - 并发失败、限流和平台错误单列，不允许只重跑失败的一侧。
 
 正式成功条件应在 sealed_holdout 前写入 ObjectiveSpec。推荐最小定义是：Candidate 的
@@ -351,7 +359,8 @@ wall timeout 和全局停止条件。预算超限是独立停止原因，不得�
 ### 阶段 E：Tool/MCP 与长链路扩展
 
 1. MCPAtlas：先使用 20 个无需 key 的 server，验证 Tool/MCP 选择与路由；
-2. Toolathlon-Verified：使用公共服务或固定容器，验证跨应用长链路；
+2. Toolathlon-Verified：保持 `BLOCKED_LICENSE`；只有许可证、数据权利和服务条款快照
+   全部通过 Human 审核后，才允许选择公共服务或固定容器验证跨应用长链路；
 3. SWE-bench Verified/Pro/Multilingual：验证软件研发方案；
 4. CorpusQA：验证大量业务材料下的样本与上下文策略；
 5. GDPval：在数据许可与 AA grader 条件明确后，验证专业工作产物。
@@ -433,7 +442,8 @@ benchmark 的 runner、镜像和任务数据不复制进核心方案包；只保
 5. 增加四类 manifest、访问隔离、配对统计与 Dashboard 映射；
 6. 完成 5 题 smoke、20 题 pilot，证据门禁通过后再批准正式运行；
 7. τ² 正式结果稳定后实现 Terminal-Bench 2.0 bridge；
-8. 再扩展 MCPAtlas、Toolathlon 和 SWE-bench，不并行建设多套半成品 adapter。
+8. 再扩展 MCPAtlas 和 SWE-bench；Toolathlon 仅在 `BLOCKED_LICENSE` 解除后进入实施，
+   不并行建设多套半成品 adapter。
 
 行为变更必须先有失败测试；所有活构件使用稳定名称并原位迭代，Git 记录演化。不可修改
 已经冻结的 `competition/2026-08-16/submission/`。

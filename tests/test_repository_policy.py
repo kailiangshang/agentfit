@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -15,6 +16,9 @@ LEGACY_ARCHITECTURE_DOCS = {
     "agentfit-solution.md",
     "agentfit-implementation.md",
 }
+ITERATION_PATH_PATTERN = re.compile(
+    r"(?i)(?:^|[-_.])(v\d+(?:[._-]\d+)*|draft|final|stage[-_]?\d*)(?:$|[-_.])"
+)
 
 
 def _contains_active_iteration_name(line: str) -> bool:
@@ -26,7 +30,9 @@ def _contains_active_iteration_name(line: str) -> bool:
         r"(?i)\bDeepSeek-V4(?:-(?:Flash|Pro|Max))?\b", "DeepSeek", active_text,
     )
     active_text = re.sub(
-        r"(?i)/v\d+(?:[._-]\d+)*(?=/|\b)", "/api", active_text,
+        r"(?i)(\bLiteLLM\b[\s:`]*)/v1/models(?=$|[\s`'\"\])，。；、|])",
+        r"\1/api/models",
+        active_text,
     )
     active_text = re.sub(r"(?i)--[a-z0-9][a-z0-9-]*", "", active_text)
     patterns = (
@@ -35,6 +41,40 @@ def _contains_active_iteration_name(line: str) -> bool:
         re.compile(r"定稿不改|旧版本保留|可版本化重训练"),
     )
     return any(pattern.search(active_text) for pattern in patterns)
+
+
+def _contains_active_iteration_path(path: Path) -> bool:
+    """Reject iteration labels in every directory or file component."""
+    return any(ITERATION_PATH_PATTERN.search(Path(part).stem) for part in path.parts)
+
+
+def _is_immutable_evidence_path(path: Path) -> bool:
+    return (
+        path.parts[:3] == ("competition", "2026-08-16", "submission")
+        or path.parts[:1] == ("runs",)
+    )
+
+
+def _tracked_active_artifact_paths() -> list[Path]:
+    """Return repository-wide tracked paths, excluding immutable evidence archives."""
+    result = subprocess.run(
+        ("git", "ls-files", "-z"),
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+    )
+    paths = [Path(raw.decode()) for raw in result.stdout.split(b"\0") if raw]
+    return [path for path in paths if not _is_immutable_evidence_path(path)]
+
+
+def _active_doc_iteration_violations(root: Path) -> list[str]:
+    violations: list[str] = []
+    for path in sorted(root.rglob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if _contains_active_iteration_name(line):
+                violations.append(f"{path.relative_to(root)}:{line_no}: {line.strip()}")
+    return violations
 
 
 def _tree_digest(root: Path) -> str:
@@ -71,13 +111,19 @@ def test_architecture_has_one_canonical_document() -> None:
     assert leftovers == [], f"重叠架构文档必须合并后删除: {leftovers}"
 
 
+def test_active_doc_policy_scans_nested_markdown(tmp_path: Path) -> None:
+    nested = tmp_path / "architecture"
+    nested.mkdir()
+    (nested / "overview.md").write_text("AgentFit v3\n", encoding="utf-8")
+
+    violations = _active_doc_iteration_violations(tmp_path)
+
+    assert len(violations) == 1
+    assert "architecture/overview.md:1" in violations[0]
+
+
 def test_active_docs_do_not_carry_iteration_names() -> None:
-    violations: list[str] = []
-    for path in sorted((REPO / "docs").glob("*.md")):
-        text = path.read_text(encoding="utf-8")
-        for line_no, line in enumerate(text.splitlines(), 1):
-            if _contains_active_iteration_name(line):
-                violations.append(f"{path.relative_to(REPO)}:{line_no}: {line.strip()}")
+    violations = _active_doc_iteration_violations(REPO / "docs")
     assert violations == [], "活跃文档仍携带迭代名称:\n" + "\n".join(violations)
 
 
@@ -88,27 +134,60 @@ def test_iteration_name_policy_distinguishes_dependency_identities() -> None:
         "DeepSeek-V4-Pro-Max 官方成绩",
         "AgentTeams v1.1.2 平台合同",
         "tau2-bench@1.0.1 数据快照",
-        "GET /v1/models",
+        "LiteLLM `/v1/models` model discovery",
     ):
         assert not _contains_active_iteration_name(line)
     for line in (
+        "GET /v1/models",
+        "OtherGateway /v1/models",
+        "LiteLLM /v1/models/preview",
+        "LiteLLM /v1/models?preview=1",
+        "LiteLLM /v1/models#preview",
+        "LiteLLM /v1/models%2Fpreview",
+        "LiteLLM /v1/models;preview=1",
+        "LiteLLM docs: OtherGateway /v1/models",
         "AgentFit v2",
         "architecture-v3",
+        "docs/architecture/v3/overview.md",
+        "AgentFit/v2/README.md",
+        "AgentFit/v1/models",
         "final architecture",
         "旧版本保留",
     ):
         assert _contains_active_iteration_name(line)
 
 
-def test_active_artifact_filenames_are_stable() -> None:
-    pattern = re.compile(r"(?i)(?:^|[-_.])(v\d+(?:[._-]\d+)*|draft|final|stage[-_]?\d*)(?:$|[-_.])")
-    violations = []
-    for root_name in ("src", "docs", "bridges", "examples"):
-        root = REPO / root_name
-        for path in sorted(item for item in root.rglob("*") if item.is_file()):
-            if pattern.search(path.stem):
-                violations.append(path.relative_to(REPO).as_posix())
-    assert violations == [], "活构件文件名携带迭代标签:\n" + "\n".join(violations)
+def test_iteration_path_policy_rejects_versioned_active_directories() -> None:
+    for relative_path in (
+        "docs/architecture/v3/overview.md",
+        "AgentFit/v2/README.md",
+        "src/agentfit/architecture-v3.py",
+    ):
+        assert _contains_active_iteration_path(Path(relative_path))
+    for relative_path in (
+        "docs/architecture.md",
+        "src/agentfit/models.py",
+    ):
+        assert not _contains_active_iteration_path(Path(relative_path))
+
+
+def test_path_policy_only_exempts_known_evidence_archives() -> None:
+    assert _is_immutable_evidence_path(
+        Path("competition/2026-08-16/submission/slides/01-cover.html")
+    )
+    assert _is_immutable_evidence_path(Path("runs/evaluation-v001.json"))
+    assert not _is_immutable_evidence_path(
+        Path("competition/2027-01-01/submission-v2/README.md")
+    )
+
+
+def test_active_artifact_paths_are_stable() -> None:
+    violations = [
+        path.as_posix()
+        for path in _tracked_active_artifact_paths()
+        if _contains_active_iteration_path(path)
+    ]
+    assert violations == [], "活构件路径携带迭代标签:\n" + "\n".join(violations)
 
 
 def test_skills_are_stable_canonical_files() -> None:
@@ -245,3 +324,19 @@ def test_open_source_maintenance_contracts_exist() -> None:
     assert (REPO / "CONTRIBUTING.md").is_file()
     assert (REPO / "SECURITY.md").is_file()
     assert "Changes to TaskSample" in (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
+
+
+def test_benchmark_plan_blocks_unlicensed_sources_and_clusters_trials() -> None:
+    benchmark = (REPO / "docs" / "benchmark-evaluation.md").read_text(encoding="utf-8")
+
+    assert "DeepSeek 官网已经正式发布 `deepseek-v4-flash`" in benchmark
+    assert "**官方外部参照**" in benchmark
+    assert "Published Reference 只作为单独一列" in benchmark
+    assert "不参加显著性检验" in benchmark
+    assert "`BLOCKED_LICENSE`" in benchmark
+    assert "禁止 clone、运行、vendor 或调用公共服务" in benchmark
+    assert "仓库未声明顶层 license；可使用公共服务" not in benchmark
+    assert "先在每个 SampleRef 内汇总同一 arm 的重复 trial" in benchmark
+    assert "paired bootstrap 以 SampleRef 为重采样 cluster" in benchmark
+    assert "McNemar 使用 sample-level paired outcome" in benchmark
+    assert "trial 不能作为独立样本扩大统计样本量" in benchmark
