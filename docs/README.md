@@ -30,6 +30,7 @@ L1  Solid 层       最小原子能力合同 + 输入输出 + 作用语义
 | [开发计划](development-plan.md) | 稳定收敛、可信证据、运行闭环与真实桥接的实施顺序 |
 | [测试场景](test-scenario.md) | Telecom 故障诊断全链路执行方案 |
 | [AgentTeams 真实联动](agentteams-live-validation.md) | 已完成的真实模型/Matrix/Worker 往返、证据边界与复现方式 |
+| [Benchmark 评测](benchmark-evaluation.md) | DeepSeek-V4-Flash 官方结果边界、公开数据集与 Base→AgentFit 公平对照协议 |
 
 ## 快速验证
 

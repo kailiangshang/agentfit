@@ -17,6 +17,26 @@ LEGACY_ARCHITECTURE_DOCS = {
 }
 
 
+def _contains_active_iteration_name(line: str) -> bool:
+    """Reject AgentFit iteration labels without rejecting dependency identities."""
+    active_text = re.sub(
+        r"(?i)\bAgentTeams\s+v\d+(?:[._-]\d+)*\b", "AgentTeams", line,
+    )
+    active_text = re.sub(
+        r"(?i)\bDeepSeek-V4(?:-(?:Flash|Pro|Max))?\b", "DeepSeek", active_text,
+    )
+    active_text = re.sub(
+        r"(?i)/v\d+(?:[._-]\d+)*(?=/|\b)", "/api", active_text,
+    )
+    active_text = re.sub(r"(?i)--[a-z0-9][a-z0-9-]*", "", active_text)
+    patterns = (
+        re.compile(r"(?i)\bv\d+(?:[._-]\d+)*(?:-final)?\b"),
+        re.compile(r"(?i)\bfinal\b"),
+        re.compile(r"定稿不改|旧版本保留|可版本化重训练"),
+    )
+    return any(pattern.search(active_text) for pattern in patterns)
+
+
 def _tree_digest(root: Path) -> str:
     digest = hashlib.sha256()
     for path in sorted(
@@ -53,21 +73,31 @@ def test_architecture_has_one_canonical_document() -> None:
 
 def test_active_docs_do_not_carry_iteration_names() -> None:
     violations: list[str] = []
-    patterns = (
-        re.compile(r"(?i)\bv\d+(?:[._-]\d+)*(?:-final)?\b"),
-        re.compile(r"(?i)\bfinal\b"),
-        re.compile(r"定稿不改|旧版本保留|可版本化重训练"),
-    )
     for path in sorted((REPO / "docs").glob("*.md")):
         text = path.read_text(encoding="utf-8")
         for line_no, line in enumerate(text.splitlines(), 1):
-            active_text = re.sub(
-                r"(?i)\bAgentTeams\s+v\d+(?:[._-]\d+)*\b", "AgentTeams", line,
-            )
-            active_text = re.sub(r"(?i)--[a-z0-9][a-z0-9-]*", "", active_text)
-            if any(pattern.search(active_text) for pattern in patterns):
+            if _contains_active_iteration_name(line):
                 violations.append(f"{path.relative_to(REPO)}:{line_no}: {line.strip()}")
     assert violations == [], "活跃文档仍携带迭代名称:\n" + "\n".join(violations)
+
+
+def test_iteration_name_policy_distinguishes_dependency_identities() -> None:
+    for line in (
+        "DeepSeek-V4-Flash 使用说明",
+        "model_id=deepseek-v4-flash",
+        "DeepSeek-V4-Pro-Max 官方成绩",
+        "AgentTeams v1.1.2 平台合同",
+        "tau2-bench@1.0.1 数据快照",
+        "GET /v1/models",
+    ):
+        assert not _contains_active_iteration_name(line)
+    for line in (
+        "AgentFit v2",
+        "architecture-v3",
+        "final architecture",
+        "旧版本保留",
+    ):
+        assert _contains_active_iteration_name(line)
 
 
 def test_active_artifact_filenames_are_stable() -> None:

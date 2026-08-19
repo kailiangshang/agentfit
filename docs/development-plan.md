@@ -46,7 +46,8 @@ CandidateRef、SampleRef、run_index 和 runtime_ref 回到 Trace；是否通过
 ### 真实场景的逐批适配
 
 本地确定性闭环不代表真实模型效果。围绕一个真实项目逐步扩大样本，而不是一次建设
-所有可能的 Tool、Skill 或 Agent：
+所有可能的 Tool、Skill 或 Agent。DeepSeek-V4-Flash、公开 benchmark 选择、三层证据和
+Base→AgentFit 公平对照协议以 [Benchmark 评测](benchmark-evaluation.md) 为正本：
 
 1. 从业务材料编译并由 Human 冻结四个 SampleSetManifest；
 2. 先跑最简 Candidate 的 adaptation 小批次；
