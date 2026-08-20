@@ -29,8 +29,11 @@ L1  Solid 层       最小原子能力合同 + 输入输出 + 作用语义
 | [架构](architecture.md) | 唯一架构正本：双层架构、样本合同、训练闭环、桥接和验证门禁 |
 | [开发计划](development-plan.md) | 稳定收敛、可信证据、运行闭环与真实桥接的实施顺序 |
 | [测试场景](test-scenario.md) | Telecom 故障诊断全链路执行方案 |
-| [AgentTeams 真实联动](agentteams-live-validation.md) | 已完成的真实模型/Matrix/Worker 往返、证据边界与复现方式 |
+| [AgentTeams 历史联动证据](agentteams-live-validation.md) | 2026-08-18 真实模型/Matrix/Worker 往返及证据边界；当前复现入口阻断 |
 | [业务维护评测](benchmark-evaluation.md) | 唯一 τ²-bench 路线：先做透 telecom 5→20→74/40，再用 retail 验证四层资产复用 |
+
+当前评测目标模型固定为用户自有 DeepSeek 官网 API 的 `deepseek-v4-flash`；模型凭证只保存在
+本地运行环境或 AgentTeams secret 中。
 
 ## 快速验证
 

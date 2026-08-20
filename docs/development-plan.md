@@ -18,7 +18,7 @@
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
 | RunStore、报告、Dashboard、方案包、证据包 | 已实现四集合验收与 G3 状态一致呈现 | `src/agentfit/store/`、`src/agentfit/log/`、`src/agentfit/dashboard/`、`src/agentfit/delivery/` |
 | 稳定核心 CLI | 已实现四集合评价、Objective 验收、签名 G3 和拒绝导出 | `agentfit train/validate/report/export` |
-| AgentTeams 生成、状态、按运行创建 Worker、Matrix 执行与结果往返 | 已完成 12 样本 adaptation 更新和四集合真实运行；G3 因 stress ERROR 与成本不可观测拒绝 | `bridges/agentteams/`、`docs/agentteams-live-validation.md` |
+| AgentTeams 生成、状态、按运行创建 Worker、Matrix 执行与结果往返 | 历史模型路由已完成 12 样本运行；当前 `deepseek-v4-flash` 官网直连尚待预检 | `bridges/agentteams/`、`docs/agentteams-live-validation.md` |
 | τ²-bench 外部评价转换 | 已实现原始字节、CandidateManifest、逐条外部证据链、TaskSample、Trace、Episode 与原子发布 | `bridges/tau2bench/` |
 
 这张表描述已经存在的模块和已明确列出的运行证据；局部真实联动不代表真实业务效果或最终泛化已经完成。
@@ -34,7 +34,8 @@ Worker 沙箱和模型 provenance；在线 Executor 与离线 importer 共用
 
 - 为 adaptation、validation、sealed_holdout、stress_and_failure 使用独立 Worker/Matrix 会话，
   防止长会话上下文污染，同时保持同一 CandidateRef 和全局连续 `run_index`；
-- 从 AgentTeams/LiteLLM 运行证据接入可核验 token/cost，只有 `cost_observed=true` 才评价成本门槛；
+- 从 AgentTeams 和 DeepSeek 官网 API 响应接入可核验 token/cost，只有
+  `cost_observed=true` 才评价成本门槛；
 - 让 stress 产生可评价的 PASS/FAIL，而不是缺信封或身份错误；
 - 保留一次格式纠错上限，第二次协议错误仍作为 runtime ERROR；
 - 每次真实运行使用独立 RunStore，不覆盖任何成功或失败证据。
@@ -52,6 +53,9 @@ CandidateRef、SampleRef、run_index 和 runtime_ref 回到 Trace；是否通过
 
 当前只建设一个 benchmark adapter：`τ²-bench`。执行范围固定为 telecom 主证明与 retail
 复用证明，且严格按以下顺序推进：
+
+当前模型固定为用户自有 DeepSeek 官网 API 的 `deepseek-v4-flash`。Agent、用户模拟和诊断
+使用同一官网 API；secret 只从本地环境或 AgentTeams secret 读取，不进入仓库与运行证据。
 
 1. **telecom 5 题协议与证据 smoke**：先对 `small=20` 执行 pilot G0，在候选生成前冻结
    四个互不重叠的 pilot manifest、Objective、变化材料、预算和权限，再验证 AgentTeams、
@@ -89,8 +93,8 @@ Steward、Attributor、Architect 已有稳定职责和 Skill，确定性内核�
 - Architect 只提出四层语义变更，不选择运行实现；
 - Orchestrator、Validator、Auditor 继续确定性执行预算、门禁和落盘。
 
-完成定义：切换 LiteLLM、直连 API 或 AgentTeams 模型配置时，`src/agentfit` 的四层合同
-与训练状态机不改变。
+完成定义：DeepSeek 官网 API 或 AgentTeams 模型配置变化时，`src/agentfit` 的四层合同与
+训练状态机不改变。
 
 ### 控制与可信呈现
 

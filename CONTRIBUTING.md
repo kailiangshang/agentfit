@@ -6,7 +6,7 @@
 - Do not add parallel draft, stage, final, or numbered copies of source, docs, Skills, manifests, examples, or deployment objects.
 - Protocol, dependency, release-package, and immutable run-evidence versions are compatibility or evidence identities and are allowed.
 - Never modify `competition/2026-08-16/submission/`; it is the already-submitted preliminary-round archive.
-- Keep AgentTeams, τ²-bench, LiteLLM, and vendor-specific imports under `bridges/`. The core package must remain platform-independent.
+- Keep AgentTeams, τ²-bench, model-provider, and vendor-specific imports under `bridges/`. The core package must remain platform-independent.
 
 ## Development workflow
 

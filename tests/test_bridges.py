@@ -27,6 +27,25 @@ def _load(path: Path, name: str):
     return module
 
 
+def test_tau2_stock_llm_runner_is_disabled_until_direct_deepseek_adapter_exists(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        (
+            sys.executable,
+            str(REPO / "bridges" / "tau2bench" / "run_bench.py"),
+            "--tau2-dir",
+            str(tmp_path),
+        ),
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "DeepSeek 官网 API direct adapter 尚未实现" in result.stderr
+
+
 def test_agentteams_manifest_is_generated_from_canonical_registry() -> None:
     script = REPO / "bridges" / "agentteams" / "render_team.py"
     assert script.is_file(), "AgentTeams render bridge is missing"
@@ -43,7 +62,7 @@ def test_agentteams_manifest_is_generated_from_canonical_registry() -> None:
     annotations = team["metadata"]["annotations"]
     assert annotations["agentfit.io/registry-hash"]
     assert annotations["agentfit.io/source"] == "bridges/agentteams/render_team.py"
-    assert annotations["agentfit.io/model-ref"] == "deepseek/deepseek-chat"
+    assert annotations["agentfit.io/model-ref"] == "deepseek-v4-flash"
     assert annotations["agentfit.io/platform-contract"] == "hiclaw-v1.1.2-inline-team"
     assert "workerMembers" not in team["spec"]
 

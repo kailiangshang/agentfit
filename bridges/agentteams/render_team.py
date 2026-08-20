@@ -67,7 +67,7 @@ def _role_payload(role: str, model: str, registry: dict, *, runtime: bool) -> di
     return payload
 
 
-def render_resources(model: str = "deepseek/deepseek-chat") -> dict:
+def render_resources(model: str = "deepseek-v4-flash") -> dict:
     """Render the single inline Team resource accepted by HiClaw v1.1.2."""
     registry = SkillRegistry().load()
     used = sorted({name for spec in ROLE_SPECS.values() for name in spec["skills"]})
@@ -101,19 +101,19 @@ def render_resources(model: str = "deepseek/deepseek-chat") -> dict:
     }
 
 
-def render_manifest(model: str = "deepseek/deepseek-chat") -> dict:
+def render_manifest(model: str = "deepseek-v4-flash") -> dict:
     """Compatibility alias for the canonical single Team resource."""
     return render_resources(model)
 
 
-def render_text(model: str = "deepseek/deepseek-chat") -> str:
+def render_text(model: str = "deepseek-v4-flash") -> str:
     """Emit JSON, which is valid YAML for ``hiclaw apply -f``."""
     return json.dumps(render_resources(model), ensure_ascii=False, indent=2) + "\n"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="deepseek/deepseek-chat")
+    parser.add_argument("--model", default="deepseek-v4-flash")
     parser.add_argument("--output", type=Path, default=Path(__file__).with_name("team.yaml"))
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()

@@ -1,7 +1,8 @@
-# AgentTeams 真实联动验证
+# AgentTeams 2026-08-18 历史联动证据
 
-本文档记录 AgentFit 当前 AgentTeams 桥接的可复验证据与边界。运行目录是忽略的本地证据，
-仓库只保留实现、复现命令和脱敏结论，不提交 Matrix token、模型密钥或 Worker 运行密钥。
+状态：`ARCHIVAL_EVIDENCE`。本文档记录 2026-08-18 历史证据及其边界，不作为当前运行入口。
+运行目录是忽略的本地证据；仓库只保留实现身份和脱敏结论，不提交 Matrix token、模型密钥
+或 Worker 运行密钥。
 
 ## 已验证链路
 
@@ -127,47 +128,12 @@ RunStore 全局 run_index；在此之前，不能把前三集合 9/9 扩大为�
 - 候选具有泛化能力或已经达到交付 Objective；
 - token、费用或延迟已有可核验统计。
 
-## 家庭环境复现
+## 当前复现状态
 
-先按 AgentTeams 官方安装方式启动本地 Docker 栈并配置 DeepSeek 模型，确认
-`agentteams-manager` 正常运行。AgentFit 不编译或维护 AgentTeams 镜像，只通过桥接脚本使用
-其公开部署对象和 Matrix 通道。
+当前状态：`BLOCKED_NOT_VERIFIED`。历史运行使用的 `deepseek/deepseek-chat` 路由身份必须保留
+用于解释既有 RuntimeRef，但旧命令已经停用，不得据此启动新运行。
 
-```bash
-uv venv .venv --python 3.12
-uv pip install -e ".[dev]"
-
-python bridges/agentteams/render_team.py --check
-python bridges/agentteams/apply_team.py --status-only
-
-PYTHONPATH=src python bridges/agentteams/run_live.py \
-  --bundle examples/telecom-materials.json \
-  --output .local-demo/agentteams/live/run-home \
-  --run-id home-live \
-  --model deepseek/deepseek-chat \
-  --homeserver http://127.0.0.1:18080 \
-  --auto-approve
-
-agentfit validate .local-demo/agentteams/live/run-home
-agentfit report .local-demo/agentteams/live/run-home
-```
-
-显式增加 `--final-evaluation` 才会在 adaptation 后冻结 Candidate 并运行四集合：
-
-```bash
-PYTHONPATH=src python bridges/agentteams/run_live.py \
-  --bundle examples/telecom-materials.json \
-  --output .local-demo/agentteams/live/run-home-full \
-  --run-id home-live-full \
-  --model deepseek/deepseek-chat \
-  --homeserver http://127.0.0.1:18080 \
-  --auto-approve \
-  --final-evaluation
-
-agentfit validate .local-demo/agentteams/live/run-home-full
-agentfit report .local-demo/agentteams/live/run-home-full
-```
-
-复现时每次使用新的 `--run-id` 和输出目录。失败的 RunStore 与成功证据分开保留，不覆盖已有
-运行。当前 `--final-evaluation` 的预期是生成完整、可验证但 G3 拒绝的证据，而不是部署包；
-先解决集合级会话隔离和成本可观测，再重新请求交付门禁。
+当前唯一目标是用户自有 DeepSeek 官网 API 的 `deepseek-v4-flash`。AgentTeams provider 的
+官网 base、secret binding 和最小调用尚未形成可核验证据，因此当前不提供可复制的在线执行
+命令。完成 `docs/test-scenario.md` 的官网直连预检后，再把新的脱敏复现步骤写入现行指南；
+历史 RunStore 继续只读保留，不能覆盖或改写。

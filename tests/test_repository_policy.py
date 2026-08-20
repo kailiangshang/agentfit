@@ -23,8 +23,9 @@ ITERATION_PATH_PATTERN = re.compile(
 
 def _contains_active_iteration_name(line: str) -> bool:
     """Reject AgentFit iteration labels without rejecting dependency identities."""
+    active_text = re.sub(r"https?://[^\s`'\"<>]+", "", line)
     active_text = re.sub(
-        r"(?i)\bAgentTeams\s+v\d+(?:[._-]\d+)*\b", "AgentTeams", line,
+        r"(?i)\bAgentTeams\s+v\d+(?:[._-]\d+)*\b", "AgentTeams", active_text,
     )
     active_text = re.sub(
         r"(?i)\bDeepSeek-V4(?:-(?:Flash|Pro|Max))?\b", "DeepSeek", active_text,
@@ -135,6 +136,7 @@ def test_iteration_name_policy_distinguishes_dependency_identities() -> None:
         "AgentTeams v1.1.2 平台合同",
         "tau2-bench@1.0.1 数据快照",
         "LiteLLM `/v1/models` model discovery",
+        "DeepSeek API https://api.deepseek.com/v1",
     ):
         assert not _contains_active_iteration_name(line)
     for line in (
@@ -387,3 +389,44 @@ def test_benchmark_execution_scope_is_tau2_telecom_then_retail() -> None:
     assert "主实验稳定后再扩展 Terminal-Bench" not in benchmark
     assert "外部 benchmark bridge" not in benchmark
     assert not re.search(r"^### 阶段.*full", benchmark, re.MULTILINE)
+
+
+def test_current_execution_uses_user_owned_deepseek_official_api() -> None:
+    benchmark = (REPO / "docs" / "benchmark-evaluation.md").read_text(encoding="utf-8")
+    plan = (REPO / "docs" / "development-plan.md").read_text(encoding="utf-8")
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+
+    for document in (benchmark, plan, scenario):
+        assert "deepseek-v4-flash" in document
+    assert "用户自有的 DeepSeek 官网 API" in benchmark
+    assert "https://api.deepseek.com/v1" in benchmark
+    assert "https://api.deepseek.com/v1" in scenario
+    assert "DEEPSEEK_API_KEY" in benchmark
+    assert "DEEPSEEK_API_KEY" in scenario
+    assert "不使用 LiteLLM 网关、代理或路由" in benchmark
+    assert benchmark.count("LiteLLM") == 1
+    assert "LiteLLM" not in plan
+    assert "LiteLLM" not in scenario
+
+
+def test_deepseek_official_api_runtime_is_blocked_until_preflight() -> None:
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+
+    assert "BLOCKED_NOT_VERIFIED" in scenario
+    assert "DeepSeek 官网 API 直连尚未完成预检" in scenario
+
+
+def test_agentteams_live_validation_is_archival_not_a_current_runbook() -> None:
+    live_validation = (
+        REPO / "docs" / "agentteams-live-validation.md"
+    ).read_text(encoding="utf-8")
+    docs_index = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
+
+    assert "2026-08-18 历史证据" in live_validation
+    assert "ARCHIVAL_EVIDENCE" in live_validation
+    assert "不作为当前运行入口" in live_validation
+    assert "`deepseek/deepseek-chat`" in live_validation
+    assert "--model deepseek/deepseek-chat" not in live_validation
+    assert "BLOCKED_NOT_VERIFIED" in live_validation
+    assert "AgentTeams 历史联动证据" in docs_index
+    assert "证据边界；当前复现入口阻断" in docs_index

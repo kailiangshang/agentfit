@@ -6,7 +6,7 @@
     "annotations": {
       "agentfit.io/registry-hash": "f172f85de805c0a5aeefd720730093663372355e142b0a2d7d294a86162eed0e",
       "agentfit.io/source": "bridges/agentteams/render_team.py",
-      "agentfit.io/model-ref": "deepseek/deepseek-chat",
+      "agentfit.io/model-ref": "deepseek-v4-flash",
       "agentfit.io/platform-contract": "hiclaw-v1.1.2-inline-team"
     }
   },
@@ -16,7 +16,7 @@
     "peerMentions": false,
     "leader": {
       "name": "agentfit-steward",
-      "model": "deepseek/deepseek-chat",
+      "model": "deepseek-v4-flash",
       "state": "Running",
       "workerName": "agentfit-steward",
       "identity": "User-facing material intake, clarification and evidence-based explanation.",
@@ -25,7 +25,7 @@
     "workers": [
       {
         "name": "agentfit-attributor",
-        "model": "deepseek/deepseek-chat",
+        "model": "deepseek-v4-flash",
         "state": "Running",
         "workerName": "agentfit-attributor",
         "identity": "Bottom-up failure attribution with explicit confidence and no solution mutation.",
@@ -34,7 +34,7 @@
       },
       {
         "name": "agentfit-architect",
-        "model": "deepseek/deepseek-chat",
+        "model": "deepseek-v4-flash",
         "state": "Running",
         "workerName": "agentfit-architect",
         "identity": "Simple-first candidate design and evidence-backed change proposals.",

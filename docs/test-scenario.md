@@ -77,8 +77,11 @@ AgentTeams 是外部运行底座，核心库不导入其 SDK。`team.yaml` 是�
 生成的部署正本，不手工维护 Skill 副本。它是一个符合 HiClaw/AgentTeams v1.1.2 的
 `hiclaw.io/v1beta1` `Team`：内联 Leader（Steward）和两个 Workers（Attributor、Architect）。
 Leader 没有 `runtime` 字段；两个 Worker 显式使用 `runtime: copaw`。三者绑定到同一
-`agentfit.io/model-ref`，默认模型是当前 LiteLLM 清单的精确 ID `deepseek/deepseek-chat`；部署
-到其他环境时可通过渲染器的 `--model` 显式替换。
+`agentfit.io/model-ref`，当前唯一目标模型是 `deepseek-v4-flash`。目标运行环境应让
+AgentTeams 的 OpenAI-compatible provider 直连 `https://api.deepseek.com/v1`，凭证只从
+本机 `DEEPSEEK_API_KEY` 或 AgentTeams secret 读取。仓库当前只生成模型引用，不配置或验证
+provider base 与 secret binding，因此 DeepSeek 官网 API 直连尚未完成预检，状态为
+`BLOCKED_NOT_VERIFIED`。
 
 ```bash
 # 检查生成物是否与 Registry 一致
@@ -135,65 +138,29 @@ print(f"imported {count} AgentTeams episodes")
 漂移、重复评价身份或协议错误都会拒绝整批，不生成部分 Episode。沙箱不可用、超时等
 执行错误则保存为 runtime ERROR，并排除在 L1–L4 归因和方案更新之外。
 
-### 真实 adaptation 联动
+### DeepSeek 官网直连门禁
 
-前提是本机 AgentTeams 已启动，Manager 容器名为 `agentteams-manager`，模型清单中存在
-`deepseek/deepseek-chat`。命令会为本次运行创建一个独立 Candidate Worker，等待其 Matrix
-首次同步完成，执行结束后自动删除；不要使用 `--keep-sandbox` 进行正式验收。
+当前状态：`BLOCKED_NOT_VERIFIED`。在 AgentTeams 运行环境完成以下预检前，不运行
+adaptation、四集合评价或 τ²-bench 5 题：
 
-```bash
-PYTHONPATH=src python bridges/agentteams/run_live.py \
-  --bundle examples/telecom-materials.json \
-  --output .local-demo/agentteams/live/run-home \
-  --run-id home-live \
-  --model deepseek/deepseek-chat \
-  --homeserver http://127.0.0.1:18080 \
-  --auto-approve
+1. provider base 指向 `https://api.deepseek.com/v1`；
+2. provider model 精确为 `deepseek-v4-flash`；
+3. 用户自有 API key 只存在于本地环境或 AgentTeams secret；
+4. 无敏感信息的最小调用成功，并留下脱敏的 provider、model、时间和结果证据；
+5. `render_team.py --check`、只读 drift 和 dry-run 均通过。
 
-PYTHONPATH=src python -m agentfit validate \
-  .local-demo/agentteams/live/run-home
-```
-
-输出必须明确为 `Adaptation RunStore valid (overall lifecycle IN_PROGRESS)`。该入口只运行
-adaptation，不生成 Acceptance、G3 或部署包；`semantic_dry_run` 只证明真实模型、Matrix、
-隔离身份和 L1–L4 路径往返，不证明 MCP/HTTP/原生函数已经执行。当前 AgentTeams 路径拿不到
-可核验 token/cost 时，报告必须显示“不可用”，不能把内部默认数值描述为零成本。已验收的
-真实证据、故障根因和求解路径记录在 `docs/agentteams-live-validation.md`。
-
-只有显式添加 `--final-evaluation` 才会在 adaptation 后冻结 Candidate，并按访问策略运行
-validation、sealed_holdout 和 stress_and_failure：
-
-```bash
-PYTHONPATH=src python bridges/agentteams/run_live.py \
-  --bundle examples/telecom-materials.json \
-  --output .local-demo/agentteams/live/run-home-full \
-  --run-id home-live-full \
-  --model deepseek/deepseek-chat \
-  --homeserver http://127.0.0.1:18080 \
-  --auto-approve \
-  --final-evaluation
-
-PYTHONPATH=src python -m agentfit validate \
-  .local-demo/agentteams/live/run-home-full
-```
-
-当前模型路径即使质量样本通过，也会因 `cost_observed=false` 拒绝成本 Objective 和 G3；这比
-把未知成本记录成零更可信。完整运行仍是 `semantic_dry_run`，不得描述为真实 MCP 或业务写
-操作已完成。
+通过后才恢复 `run_live.py` 当前复现入口。该入口仍只证明真实模型、Matrix、隔离身份和
+L1–L4 路径往返；不能证明 MCP、HTTP、原生函数或真实业务写操作已执行。拿不到可核验
+token/cost 时必须报告“不可用”，不能记作零成本。2026-08-18 的旧模型路由结果只作为历史
+证据保留在 `docs/agentteams-live-validation.md`，不作为当前操作说明。
 
 ## τ²-bench 桥接
 
-批量运行包装器和结果转换器都位于核心库之外：
+任务、domain environment、工具和 scorer 继续取自固定的 τ²-bench。其 stock LLM client
+不属于当前正式运行路径；当前 direct adapter 完成前，不得用包装器启动 5 题或正式样本。
+已有外部结果仍可由结果转换器做只读证据转换：
 
 ```bash
-python bridges/tau2bench/run_bench.py \
-  --tau2-dir ../agentfit-labs/tau2-bench \
-  --domain telecom \
-  --num-tasks 10 \
-  --agent-llm deepseek/deepseek-chat \
-  --user-llm deepseek/deepseek-chat \
-  --output output/tau2-command.json
-
 PYTHONPATH=src python bridges/tau2bench/results_to_runstore.py \
   /absolute/path/to/tau2/results.json \
   --run-dir output/tau2-run \
@@ -236,10 +203,10 @@ output/tau2-run/
 
 1. `pytest -q`：核心、合同、桥接 fixture 和冻结目录门禁。
 2. 本地核心闭环：确认训练、验证和报告可重放，并确认严格示例被 G3 阻断导出。
-3. τ² 小批量：先固定模型清单和独立输出目录，再扩大样本。
-4. AgentTeams 只读 drift：确认精确创建、修改和遗留项。
-5. 维护者审核后 apply，并保留真实平台证据。
-6. 用相同冻结 SampleSetManifest 对比候选，不跨集合调参。
+3. AgentTeams 只读 drift：确认 `deepseek-v4-flash`、精确创建、修改和遗留项。
+4. 维护者审核后 apply，并完成 DeepSeek 官网 API 最小直连。
+5. 实现并验证 τ² direct adapter；此前 `run_bench.py` 必须保持 fail-closed。
+6. Pilot G0 后运行预先指定的 5 题，不跨集合调参。
 
 ## 结论边界
 
