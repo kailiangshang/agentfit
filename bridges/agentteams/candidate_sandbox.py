@@ -164,14 +164,21 @@ class DockerAgentTeamsControl:
         if re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", name) is None:
             raise ValueError("candidate Worker name is invalid")
         container = f"agentteams-worker-{name}"
-        sync_token = f"/root/hiclaw-fs/agents/{name}/.copaw/matrix_sync_token"
-        completed = self.runner(
-            ["docker", "exec", container, "test", "-s", sync_token],
-            capture_output=True,
-            text=True,
-            check=False,
+        # v1.2.0-beta.1 的 token 位于 .copaw-worker 主目录（hiclaw-fs 是旧布局）
+        candidates = (
+            f"/root/.copaw-worker/{name}/.copaw/matrix_sync_token",
+            f"/root/hiclaw-fs/agents/{name}/.copaw/matrix_sync_token",
         )
-        return completed.returncode == 0
+        for sync_token in candidates:
+            completed = self.runner(
+                ["docker", "exec", container, "test", "-s", sync_token],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if completed.returncode == 0:
+                return True
+        return False
 
     def delete_worker(self, name: str) -> None:
         self._run([

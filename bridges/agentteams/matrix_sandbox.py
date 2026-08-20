@@ -262,7 +262,7 @@ def _retry_message(worker_user_id: str, task: dict[str, Any]) -> str:
 def _extract_result(body: str) -> dict[str, Any] | None:
     begin = body.find(RESULT_BEGIN)
     if begin < 0:
-        return None
+        return _extract_bare_result(body)
     begin += len(RESULT_BEGIN)
     end = body.find(RESULT_END, begin)
     if end < 0:
@@ -280,6 +280,35 @@ def _extract_result(body: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return result if isinstance(result, dict) else None
+
+
+def _extract_bare_result(body: str) -> dict[str, Any] | None:
+    """容错解析：模型偶尔省略信封标记、或把 JSON 包进围栏并附加 prose。
+
+    结构性判据（不信标记信标记）：解析出的对象必须携带结果 schema 与
+    身份字段，否则视为闲聊/中间输出。身份匹配由调用方 _identity_matches
+    再校验，因此这里只需保证 schema 与字段形状。
+    """
+    text = body
+    start = text.find("{")
+    if start < 0:
+        return None
+    decoder = json.JSONDecoder()
+    for index in range(start, len(text)):
+        if text[index] != "{":
+            continue
+        try:
+            candidate, end = decoder.raw_decode(text[index:])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(candidate, dict):
+            continue
+        if candidate.get("schema") == "agentfit.agentteams-result" and all(
+            candidate.get(key) is not None
+            for key in ("task_id", "candidate_ref", "sample_ref", "run_index", "runtime_ref")
+        ):
+            return candidate
+    return None
 
 
 def _identity_matches(result: dict[str, Any], task: dict[str, Any]) -> bool:
@@ -361,10 +390,9 @@ class MatrixSandboxAdapter:
                         error="agentteams_result_envelope_error",
                     )
                 if not _identity_matches(result, task):
-                    return SandboxResult(
-                        status="error",
-                        error="agentteams_result_identity_error",
-                    )
+                    # 串行批内常见错序：这是之前任务的迟到回复（合法信封、
+                    # 别的 task_id）。跳过继续等本任务的回复，不是错误。
+                    continue
                 raw_cost = result.get("cost_usd", 0.0)
                 cost = (
                     float(raw_cost)

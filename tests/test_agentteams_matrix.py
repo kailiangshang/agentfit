@@ -139,8 +139,10 @@ def test_matrix_sandbox_rejects_wrong_identity_without_leaking_payload() -> None
         timeout_seconds=3,
     ))
 
+    # 串行批内错序语义：别的任务的迟到回复被跳过（不是错误），
+    # 本任务等不到自己的回复最终以 timeout 结束；错误信息不泄漏错配身份。
     assert result.status == "error"
-    assert result.error == "agentteams_result_identity_error"
+    assert result.error == "agentteams_matrix_timeout"
     assert "candidate-abc" not in result.error
     assert "wrong-candidate" not in result.error
 

@@ -185,10 +185,23 @@ def _rule_from_evidence(evidence: list[TaskSample], solution: Solution, replace_
 
     单动作证据 → routing_rule（调度一个 L2 工具）；
     多动作证据 → chain 排查链（任务拆解为有序步骤，骨架 L3 知识类型）。
+    混合证据（无共性特征但目标工具不同）先按期望动作分组，逐组归纳。
     """
     if any(not isinstance(item, TaskSample) for item in evidence):
         raise TypeError("proposal evidence accepts canonical TaskSample objects only")
     if not evidence:
+        return None
+    action_key = lambda s: tuple(sorted(a.tool for a in s.expected.actions))  # noqa: E731
+    groups: dict[tuple, list[TaskSample]] = {}
+    for sample in evidence:
+        groups.setdefault(action_key(sample), []).append(sample)
+    if len(groups) > 1:
+        # 混合失败模式：逐组归纳返回首个成功结果（调用方按 pattern 聚合，
+        # 同 pattern 内不同工具的样本各有自己的规则）
+        for members in groups.values():
+            rule = _rule_from_evidence(members, solution, replace_id)
+            if rule is not None:
+                return rule
         return None
     bool_keys: list[str] = []
     for key, val in evidence[0].input_data.items():
