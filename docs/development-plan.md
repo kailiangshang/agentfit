@@ -12,18 +12,38 @@
 | ObjectiveSpec 与 AcceptanceResult | 已实现四集合阈值、内容寻址验收和确定性拒绝 | `src/agentfit/models/objective.py` |
 | Material Bundle 编译与核心 CLI | 已实现确定性编译、四集合生成和 RunStore 追溯 | `src/agentfit/materials/`、`agentfit compile` |
 | 四类冻结 SampleSetManifest | 已实现合同与访问门禁 | `src/agentfit/models/manifest.py` |
-| 训练、归因、建议、事务、回归 | 已实现确定性内核 | `src/agentfit/core/`、`src/agentfit/agents/orchestrator.py` |
+| 训练、归因、建议、事务、回归 | 已实现单 Batch 确定性更新内核；规范 Epoch 与 validation 隔离尚未实现 | `src/agentfit/core/`、`src/agentfit/agents/orchestrator.py` |
 | 正则与 λ 调节 | 已接入结构、行为、成本和回归约束 | `src/agentfit/core/regularization.py` |
 | Skill Registry 与认知角色装配 | 已实现 | `src/agentfit/skills/registry.py`、`src/agentfit/agents/team.py` |
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
-| RunStore、报告、Dashboard、方案包、证据包 | 已实现四集合验收与 G3 状态一致呈现 | `src/agentfit/store/`、`src/agentfit/log/`、`src/agentfit/dashboard/`、`src/agentfit/delivery/` |
-| 稳定核心 CLI | 已实现四集合评价、Objective 验收、签名 G3 和拒绝导出 | `agentfit train/validate/report/export` |
+| RunStore、报告、Dashboard、方案包、证据包 | 已实现四集合验收与 G3 状态；Dashboard 仍依赖 JavaScript 生成基本内容 | `src/agentfit/store/`、`src/agentfit/log/`、`src/agentfit/dashboard/`、`src/agentfit/delivery/` |
+| 稳定核心 CLI | 已实现单 Batch 更新、候选冻结后四集合评价、Objective 验收、签名 G3 和拒绝导出 | `agentfit train/validate/report/export` |
 | AgentTeams 生成、状态、按运行创建 Worker、Matrix 执行与结果往返 | 历史模型路由已完成 12 样本运行；当前 `deepseek-v4-flash` 官网直连尚待预检 | `bridges/agentteams/`、`docs/agentteams-live-validation.md` |
 | τ²-bench 外部评价转换 | 已实现原始字节、CandidateManifest、逐条外部证据链、TaskSample、Trace、Episode 与原子发布 | `bridges/tau2bench/` |
 
 这张表描述已经存在的模块和已明确列出的运行证据；局部真实联动不代表真实业务效果或最终泛化已经完成。
 
 ## 最高优先级工作
+
+### 训练状态机与验证隔离
+
+先收敛训练语义，再扩大真实样本。当前 `run_epoch()` 实际只执行一个 adaptation Batch，事务
+提交后又重放完整 adaptation，并把结果写成该轮通过率；这不是规范 Epoch，也不是 validation。
+真实 AgentTeams Trace 还证明“L3 已新增但未被 L4 引用”的可达性失败会被当前归因器误落到
+`eval_error`。下一步必须按[架构正本](architecture.md)完成：
+
+- 将单 Batch 的前向、归因、局部提案、反向依赖传播、事务和回归定义为 Step；
+- 由 Epoch 调度一个或多个 Step，完整且默认不重复地覆盖 adaptation manifest；
+- Epoch 结束后冻结 Candidate，只向 Validator/Auditor 开放 validation，并禁止生成 ChangeProposal；
+- 用 validation 做候选选择、退化处理和 Early Stopping，下一轮更新仍由 adaptation 驱动；
+- 让归因器区分“缺少 L3”与“L3 存在但沿 L4→L3 连接不可达”，再由通用反向依赖传播修复上层影响；
+- 将 Batch、Step、Epoch、validation 和可选 `train_replay` 分型落盘，分别呈现 adaptation Batch 指标与 validation 曲线；
+- 让 Dashboard 的八区基本证据由静态 HTML 直接呈现，JavaScript 只增强交互。
+
+完成定义：至少一次多 Epoch 真实运行能够从 adaptation 失败产生局部更新，在下一 Epoch 正确
+归因残余失败；validation 从未进入更新输入；停止原因可重算；禁用 JavaScript 时仍能阅读完整
+Dashboard。完成前不得把单轮 `candidate_evaluation`、四集合终局评价或 3/3 adaptation replay
+描述为训练收敛。
 
 ### AgentTeams 集合级运行隔离与成本证据
 
@@ -75,8 +95,9 @@ telecom → retail 主线完成前并行建设。
 
 每个阶段仍遵守同一实验协议：从同一业务行为生成语义等价的 Flat 与 AgentFit 初始方案；
 由 Human 冻结 SampleSetManifest、变化材料和 Objective；两组获得相同 Trace、更新模型、
-Human 次数和维护预算；Flat 直接维护资产，AgentFit 按 L1–L4 归因并事务提交；validation
-检查新需求和累计旧需求，运行 ERROR 单列；最终方案冻结后再运行 sealed_holdout 和
+Human 次数和维护预算；Flat 直接维护资产，AgentFit 按 L1–L4 归因并事务提交；每个 Epoch
+完整覆盖 adaptation，结束后只用 validation 检查新需求和累计旧需求，且不从 validation
+生成更新；运行 ERROR 单列；最终方案冻结后再运行 sealed_holdout 和
 stress_and_failure。
 
 完成定义：报告能回答四层维护是否以更小变更和更低回归达到相同业务目标；每个结论都

@@ -4,6 +4,13 @@
 运行目录是忽略的本地证据；仓库只保留实现身份和脱敏结论，不提交 Matrix token、模型密钥
 或 Worker 运行密钥。
 
+## 历史术语边界
+
+本文中的 `epoch` 是当时 RunStore 的兼容字段，实际只包含一个 adaptation Batch 更新；
+`candidate evaluation` 是更新后对同一 adaptation 集合的 adaptation replay，不构成规范 Epoch 的 validation。历史结果只能证明当时的桥接、局部更新和证据往返，不能证明多 Batch Epoch、
+Validation 隔离、Early Stopping、反向依赖传播或训练收敛。表格与 CandidateRef 保持原样，
+上述解释只收紧结论边界，不改写历史 RunStore。
+
 ## 已验证链路
 
 2026-08-18 使用 AgentTeams v1.1.2、CoPaw Candidate Worker 和
@@ -60,7 +67,7 @@ L3 rule_safe_toggle_roaming_0
 | forward | `fe59d78fc66970091010fc3632ea82cdaf47adbdf744fef46149896986146232` | 漫游 PASS、飞行模式 PASS、SIM FAIL |
 | 归因 | 同上 | SIM 为 L3 `missing_rule`，置信度 0.7 |
 | 变更 | `6ec880d3cc2670743c56283f9499eac62f530583e8f644113e49a2a827a2cee1` | 新增 `rule_safe_run_sim_diagnostics_cc6cbe875e89`，事务 COMMITTED |
-| candidate evaluation | 更新后 Candidate | 3/3 PASS，ERROR 0 |
+| candidate evaluation（adaptation replay） | 更新后 Candidate | 3/3 PASS，ERROR 0 |
 
 该运行的 RuntimeRef 为
 `300edd2e87d39b0f92153ebd5ca3e5f6ea91c9405f10eb1327b40933c3cb5322`。
@@ -126,6 +133,7 @@ RunStore 全局 run_index；在此之前，不能把前三集合 9/9 扩大为�
 - 真实业务写操作、回滚或 Human Gate 已执行；
 - stress_and_failure 已获得有效方案评价结果；当前三条均为 runtime ERROR；
 - 候选具有泛化能力或已经达到交付 Objective；
+- 已完成规范 Epoch、Epoch 末 validation 或 Early Stopping；
 - token、费用或延迟已有可核验统计。
 
 ## 当前复现状态

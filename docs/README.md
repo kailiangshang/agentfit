@@ -8,8 +8,13 @@
 
 ```
 传统: 设计 → 评审 → 部署（一次性，静态，靠经验）
-AgentFit: 训练 → 评估 → 更新 → 再训练 → 收敛 → 部署（迭代，动态，靠数据）
+AgentFit: adaptation Batch → 归因与更新 → Epoch validation → 再训练/停止 → 封存验收 → 部署
 ```
+
+adaptation 负责更新，validation 负责选择：一个 Epoch 完整覆盖一次 adaptation，每个 Batch
+产生 Trace、归因和方案 Step；Epoch 结束后冻结 Candidate，只用 validation 判断继续、恢复、
+Early Stopping 或候选晋升。validation、sealed_holdout 和 stress_and_failure 都不得直接生成或
+修改 L1–L4，最终封存集合也不会回流训练。完整定义以[架构正本](architecture.md)为准。
 
 ## 四层骨架
 
@@ -69,9 +74,9 @@ agentfit report output/telecom-demo
 agentfit export output/telecom-demo
 ```
 
-当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过；本地确定性运行会完成 adaptation 更新，并在 adaptation、validation 和 sealed holdout 达到 3/3，但最简候选在两个复合 stress 样本上失败，因此 stress_and_failure 只有 1/3。`validate` 和 `report` 应成功，`export` 应返回非零状态；这证明单轮训练通过率或部分评价集合通过不能冒充全局验收。要产生可部署包，必须用失败 Trace 改进候选并重新验证四集合，而不是降低演示阈值。
+当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过；现行本地确定性实现会完成一次 adaptation Batch 更新，并在候选冻结后运行四集合评价。其 adaptation、validation 和 sealed_holdout 为 3/3，但最简候选在两个复合 stress 样本上失败，因此 stress_and_failure 只有 1/3。`validate` 和 `report` 应成功，`export` 应返回非零状态；这证明单轮更新通过率或部分评价集合通过不能冒充 Epoch 收敛或全局验收。要产生可部署包，必须先完成规范状态机，再由 adaptation 失败 Trace 改进候选并重新验证，而不是降低演示阈值。
 
-这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现材料编译、核心闭环、四集合评价调度、Objective/Acceptance、签名 G3 交付门禁、训练/外部评价分型的 RunStore，以及 AgentTeams 上真实 DeepSeek/Matrix/隔离 Worker 的 12 样本 adaptation 更新和四集合往返。当前真实运行因 stress 协议 ERROR 与成本不可观测被 G3 拒绝，只证明桥接、更新和证据门禁可运行，不代表业务副作用或最终泛化已经完成；后续收敛按[开发计划](development-plan.md)推进。
+这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现材料编译、单 Batch 更新内核、最终四集合评价调度、Objective/Acceptance、签名 G3 交付门禁、训练/外部评价分型的 RunStore，以及 AgentTeams 上真实 DeepSeek/Matrix/隔离 Worker 的往返。规范的多 Batch Epoch、Epoch 末 validation、Early Stopping、反向依赖传播和无需 JavaScript 的静态 Dashboard 仍待实现。既有真实运行只证明桥接、局部更新和证据门禁可运行，不代表训练已收敛、业务副作用或最终泛化已经完成；后续收敛按[开发计划](development-plan.md)推进。
 
 参与开发前请阅读仓库根目录的 [CONTRIBUTING](../CONTRIBUTING.md) 和 [SECURITY](../SECURITY.md)。
 

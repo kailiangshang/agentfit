@@ -39,7 +39,19 @@ agentfit report output/telecom-demo
 agentfit export output/telecom-demo
 ```
 
-当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过。本地确定性运行会完成 adaptation 更新，前三个集合均为 3/3，但最简候选在两个复合 stress 样本上失败，stress_and_failure 为 1/3。`compile`、`train`、`validate` 和 `report` 应成功，`agentfit export` 应返回非零状态。这个拒绝是可信验收链的预期证据，不是演示失败；只有基于失败 Trace 改进候选并使四集合 Objective 真正满足后才允许生成部署包。
+### 规范训练语义与当前实现边界
+
+规范流程中，一个 Epoch 完整遍历一次 adaptation，并包含一个或多个 Batch Step；每个 Step
+执行前向、归因、局部更新、反向依赖传播、G1、ChangeTransaction 和 adaptation 回归。Epoch
+结束后冻结 Candidate，只用 validation 做候选选择、退化判断和 Early Stopping。Validation 不
+产生 ChangeProposal；sealed_holdout 与 stress_and_failure 只在最终 Candidate 冻结后运行。
+
+当前 `candidate_evaluation` 是 adaptation replay，不是 validation。现行 `run_epoch()` 实际只
+执行一个 Batch，示例又配置 `batch_size=3, max_epochs=1`，所以它只能证明一次 adaptation
+更新尝试和更新后训练集重放，不能证明规范 Epoch、Early Stopping 或收敛。后续四集合评价是
+冻结候选的验收调度，也不能反过来补成 Epoch 末 validation。
+
+当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过。现行本地确定性运行会完成一次 adaptation Batch 更新；冻结候选的后续评价中，前三个集合均为 3/3，但最简候选在两个复合 stress 样本上失败，stress_and_failure 为 1/3。`compile`、`train`、`validate` 和 `report` 应成功，`agentfit export` 应返回非零状态。这个拒绝是可信验收链的预期证据，不是演示失败；它不应被描述成规范训练已经收敛。只有状态机完成修正、由 adaptation Trace 驱动改进并使四集合 Objective 真正满足后，才允许生成部署包。
 
 ### 实际产物
 
@@ -67,9 +79,9 @@ output/telecom-demo/
 └── evidence_package/manifest.json
 ```
 
-`agentfit validate` 会从磁盘重新计算 epoch 哈希链、四类冻结样本的 Episode 覆盖、Objective、AcceptanceResult 和候选身份，不接受 `summary.json` 中未经验证的布尔值。`delivery_decision.json` 将 Human G3 结果、交付条件、获评测候选、四集合指标、ObjectiveRef、AcceptanceRef 和决策前证据哈希绑定；只有 Objective 已满足的人审批准才使用外部密钥生成 HMAC-SHA256，未满足时生成确定性 unsigned 拒绝。核心与 AgentTeams 导出共用该门禁并携带交付条件。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
+`agentfit validate` 会从磁盘重新计算当前 `epochs/` 哈希链、四类冻结样本的 Episode 覆盖、Objective、AcceptanceResult 和候选身份，不接受 `summary.json` 中未经验证的布尔值。现有 `epochs/` 名称是兼容字段，在状态机修正前只代表单 Batch 更新记录，不能据此宣称完整 Epoch。`delivery_decision.json` 将 Human G3 结果、交付条件、获评测候选、四集合指标、ObjectiveRef、AcceptanceRef 和决策前证据哈希绑定；只有 Objective 已满足的人审批准才使用外部密钥生成 HMAC-SHA256，未满足时生成确定性 unsigned 拒绝。核心与 AgentTeams 导出共用该门禁并携带交付条件。`evidence_package/manifest.json` 为导出时存在的运行证据逐文件记录 SHA-256。
 
-本地命令只用 adaptation 集合驱动方案更新；候选冻结后会分别为四类集合生成 Episode 和指标，再请求 G3。validation、sealed_holdout 和 stress_and_failure 只用于评价，不把结果反向写入方案。当前 Executor 仍是确定性模拟器，因此这些结果只能证明合同和调度闭环，不得描述为真实模型泛化效果。
+本地命令只允许 adaptation 集合驱动方案更新；validation 只能在 Epoch 末决定候选选择、继续或停止，不能把样本、Trace 或逐样本结论交给 Architect。候选最终冻结后，sealed_holdout 和 stress_and_failure 只用于验收，不把结果反向写入方案。当前 CLI 尚未实现规范的 Epoch 末 validation，Executor 也仍是确定性模拟器，因此现有结果只能证明局部合同和调度，不得描述为完整训练闭环或真实模型泛化效果。
 
 ## AgentTeams 桥接
 

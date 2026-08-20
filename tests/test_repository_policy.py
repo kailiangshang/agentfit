@@ -467,3 +467,56 @@ def test_deepseek_reproduction_uses_agentteams_gateway_secret_contract() -> None
     assert "cp .env.example .env" in docs_index
     assert "chmod 600 .env" in docs_index
     assert "AgentTeams AI Gateway" in scenario
+
+
+def test_training_docs_define_batch_epoch_and_validation_boundaries() -> None:
+    architecture = (REPO / "docs" / "architecture.md").read_text(encoding="utf-8")
+    readme = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+    plan = (REPO / "docs" / "development-plan.md").read_text(encoding="utf-8")
+    benchmark = (REPO / "docs" / "benchmark-evaluation.md").read_text(encoding="utf-8")
+
+    for term in ("Batch", "Step", "Epoch", "Early Stopping"):
+        assert term in architecture
+    assert "一个 Epoch 覆盖一次完整的 adaptation 集合" in architecture
+    assert "Epoch 结束后不默认重放完整 adaptation" in architecture
+    assert "Validation 不产生 ChangeProposal" in architecture
+    assert "validation 结果不得直接生成或修改 L1–L4" in architecture
+    assert "adaptation 负责更新，validation 负责选择" in readme
+    assert "当前 `candidate_evaluation` 是 adaptation replay" in scenario
+    assert "训练状态机与验证隔离" in plan
+    assert "每个 Epoch 结束后只用 validation" in benchmark
+
+
+def test_validation_and_cascade_skills_preserve_the_training_boundary() -> None:
+    validation = (
+        REPO / "src" / "agentfit" / "skills" / "validation.md"
+    ).read_text(encoding="utf-8")
+    cascade = (
+        REPO / "src" / "agentfit" / "skills" / "cascade.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Validation 不产生 ChangeProposal" in validation
+    assert "adaptation" in validation
+    assert "validation" in validation
+    assert "反向依赖" in cascade
+    assert "ChangeTransaction" in cascade
+
+
+def test_training_dashboard_contract_is_static_and_separates_curves() -> None:
+    architecture = (REPO / "docs" / "architecture.md").read_text(encoding="utf-8")
+
+    assert "基本证据必须由静态 HTML 直接呈现" in architecture
+    assert "adaptation Batch 指标" in architecture
+    assert "validation 曲线" in architecture
+    assert "JavaScript 只允许增强交互" in architecture
+
+
+def test_archival_agentteams_evidence_does_not_claim_canonical_epoch_validation() -> None:
+    live_validation = (
+        REPO / "docs" / "agentteams-live-validation.md"
+    ).read_text(encoding="utf-8")
+
+    assert "历史术语边界" in live_validation
+    assert "adaptation replay" in live_validation
+    assert "不构成规范 Epoch 的 validation" in live_validation

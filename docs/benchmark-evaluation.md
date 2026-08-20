@@ -70,7 +70,7 @@ Terminal-Bench、MCPAtlas、SWE-bench、CorpusQA、GDPval、Toolathlon 等只保
 每轮实验都使用四个互不重叠、内容寻址、Human freeze 的 SampleSetManifest：
 
 - `adaptation`：允许两个维护组读取各自 Trace 并提出更新；
-- `validation`：决定继续、接受或回退，不作为最终效果；
+- `validation`：每个 Epoch 结束后决定继续、接受、恢复或 Early Stopping，不产生更新，也不作为最终效果；
 - `sealed_holdout`：最终候选冻结后才运行，结果不得回流；
 - `stress_and_failure`：边界、异常与运行失败压力样本。
 
@@ -86,7 +86,23 @@ Pilot 与正式实验使用不同证据身份：
 
 公开题目只能形成**本次运行内的 sealed holdout**，不能证明模型预训练时未见过题目。
 
-### 4.2 连续业务变化
+### 4.2 Batch、Epoch 与 Validation 协议
+
+两个维护组使用相同的 adaptation Batch 划分和停止规则：
+
+1. 一个 Step 只消费一个 adaptation Batch，并完成运行、诊断、维护、回归和证据落盘；
+2. 一个 Epoch 包含一个或多个 Step，并完整且默认不重复地覆盖 adaptation manifest；
+3. 每个 Epoch 结束后只用 validation 评价冻结的当轮 Candidate；两组都不能从 validation
+   样本、Trace、标签或逐样本结论生成维护动作；
+4. validation 只决定 Candidate 选择、退化处理、继续训练或 Early Stopping；下一 Epoch 的
+   更新信号仍来自 adaptation；
+5. 如需完整 adaptation 重放，必须单列为 `train_replay` 并核算成本，不得混入 validation；
+6. 最终 Candidate 冻结后才运行 sealed_holdout 和 stress_and_failure，任何结果都不回流。
+
+两组的 Batch 顺序、Epoch 上限、Early Stopping 窗口、validation 频率和预算必须在 G0 固定。
+Flat 与 AgentFit 可以采用不同维护机制，但不能获得不同的数据访问权或额外验证反馈。
+
+### 4.3 连续业务变化
 
 两个维护组接收同样的五波变化：
 
@@ -98,10 +114,10 @@ Pilot 与正式实验使用不同证据身份：
 | L4 | 角色、通信、升级关系或人工位置 | Agent/Human 拓扑 |
 | 跨层 | 同一变化同时影响能力、规则与协作 | 多层原子事务 |
 
-每波固定执行：冻结变化材料 → adaptation → Trace 诊断 → 两组各自维护 → validation 检查
-本波需求和累计旧需求 → 接受或回退 → 封存变更与成本。
+每波固定执行：冻结变化材料 → adaptation Epoch/Batch → Trace 诊断 → 两组各自维护 → Epoch
+末 validation 检查本波需求和累计旧需求 → 继续、接受、恢复或停止 → 封存变更与成本。
 
-### 4.3 AgentTeams 运行边界
+### 4.4 AgentTeams 运行边界
 
 每个 `CandidateRef × SampleRef × RunIndex` 使用独立 AgentTeams Worker/session。τ²-bench 的
 domain environment、数据库状态、工具与 scorer 是任务权威；AgentTeams 负责装载方案、
@@ -121,7 +137,7 @@ Trace、Episode 和不可变 RunStore 证据。
 ### 阶段 B：telecom 5 题协议与证据 smoke
 
 - 完成 pilot G0 和候选生成前 Human freeze；
-- Flat/AgentFit 在预先指定的 5 个 adaptation 样本各运行 1 次；
+- Flat/AgentFit 在预先指定的 5 个 adaptation 样本各运行 1 次，只验证一个 smoke Step；
 - 验证 DeepSeek 官网 API → AgentTeams → τ²-bench → Trace/Episode/RunStore 完整往返。
 
 不得报告模型或 AgentFit 效果。
@@ -129,7 +145,7 @@ Trace、Episode 和不可变 RunStore 证据。
 ### 阶段 C：telecom 20 题完整维护闭环
 
 - 沿用冻结的 pilot manifest、Objective、五波材料和初始候选；
-- 跑完 adaptation、诊断、更新、validation、回退以及最终 holdout/stress；
+- 跑完 adaptation Batch/Epoch、诊断、更新、Epoch 末 validation、候选选择以及最终 holdout/stress；
 - Dashboard 展示质量、回归、变更范围、成本、复用和错误类型。
 
 20 题仍是工程 pilot，不做显著性结论。
@@ -171,6 +187,10 @@ Trace、Episode 和不可变 RunStore 证据。
 
 所有指标的最小身份是 `CandidateVersion × SampleVersion × RunIndex`，代码中对应
 `candidate_ref + sample_ref + run_index`。
+
+adaptation Batch 指标、validation 曲线和最终 sealed_holdout 必须分别统计。训练中的 Batch
+由不同 Candidate 执行时，不得把其聚合值伪装成某个冻结 Candidate 的完整训练集通过率；候选
+选择与 Early Stopping 只读取 Epoch 末 validation 指标。
 
 - smoke 每题 1 次，只检查协议；
 - pilot 同一任务两组各 3 次；

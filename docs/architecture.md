@@ -65,7 +65,7 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 | 集合 | 用途 | 访问规则 |
 |---|---|---|
 | adaptation | 方案更新所用样本 | 训练循环可读取 |
-| validation | 候选选择与回归 | Validator 可读取，不用于直接归纳规则 |
+| validation | 每个 Epoch 结束后的候选选择、退化判断和 Early Stopping | Validator/Auditor 可读取，不用于直接归纳规则或修改方案 |
 | sealed_holdout | 最终泛化验证 | 候选冻结后仅 Auditor/Validator 可读取结果 |
 | stress_and_failure | 极端、组合与失败模式 | 用于边界和鲁棒性评估 |
 
@@ -73,17 +73,32 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 
 训练和外部评价都用持久化 `CandidateManifest` 的规范内容哈希确定候选身份，而不是用显示名称或调用方传入的裸哈希。运行绑定不进入四层 Candidate；每个 Trace/Episode 另以 `runtime_ref` 绑定本次 Executor、平台部署和沙箱 provenance。评价身份始终是 `candidate_ref + sample_ref + run_index`。外部 bench 的每条原始记录还必须生成平台无关的 `ExternalEvidenceRecord`，逐条绑定来源记录、CandidateRef、TaskSampleRef、Trace、结果和成本，并形成独立内容哈希链。内部一致性哈希用于发现证据不一致，来源真实性仍需外部签名或可信存储锚点。
 
+## Batch、Step、Epoch 与验证边界
+
+AgentFit 借鉴机器学习的训练纪律，但更新的是四层 Agent 方案而非模型权重。训练调度使用以下唯一语义：
+
+- `Batch`：从 adaptation manifest 取得的一组训练样本；不同 manifest 的样本不得混入同一 Batch。
+- `Step`：当前 Candidate 在一个 adaptation Batch 上前向执行，随后完成 Trace 归因、局部 ChangeProposal、反向依赖传播、G1、ChangeTransaction 和回归。一次 Step 不是一个 Epoch。
+- `Epoch`：一次完整的 adaptation 数据遍历，包含一个或多个 Step。一个 Epoch 覆盖一次完整的 adaptation 集合；除非 G0 明确批准有放回采样，否则每个 SampleRef 在同一 Epoch 只进入一个 Batch。
+- `Validation`：Epoch 结束后冻结当时的 Candidate，再只用 validation manifest 运行评价。Validation 不产生 ChangeProposal，不向 Architect 暴露样本内容或逐样本答案。
+- `Early Stopping`：Validator 根据连续 validation 指标、Objective、退化情况、预算和未解决风险决定候选晋升、继续训练、恢复已保留候选或停止；停止条件和窗口必须在 G0 固定。
+
+Epoch 结束后不默认重放完整 adaptation。训练指标由本 Epoch 各 Batch 的实际 Episode 聚合；如果为诊断显式执行完整训练集重放，必须记为 `train_replay`，单独核算成本，不得冒充 validation 或最终泛化证据。回归池用于检查已通过的 adaptation 行为是否遗忘，也不等同于 validation。
+
+validation 结果不得直接生成或修改 L1–L4，也不得把 validation Trace、标签或逐样本结论回流给 Attributor/Architect。Validation 只控制候选选择、退化处理、是否继续下一 Epoch 和 Early Stopping；下一轮方案更新仍只能由 adaptation Episode 驱动。sealed_holdout 与 stress_and_failure 在最终 Candidate 冻结后执行，结果同样不得回流训练。
+
 ## 训练闭环
 
 1. Steward 将材料编译为 Observation、TaskSample 和评价合同。
 2. Human 冻结四个 SampleSetManifest、目标权重、预算和权限。
 3. Architect 构建 Simple First 候选，并通过存在依赖验证。
-4. Orchestrator 在 adaptation 批次运行 Episode，Executor 返回 Trace。
-5. Attributor 对失败 Episode 归因；Architect 聚合并提出 ChangeProposal。
-6. Human Gate 批准或拒绝需要裁决的变更；Validator 原子应用并执行 validation 回归。
-7. Auditor 保存消息、Trace、事务、成本、哈希链和拒绝理由。
-8. 达到目标后冻结候选，再运行 sealed holdout 和 stress_and_failure。
-9. Human 确认交付边界，导出方案包、证据包和桥接部署包。
+4. Orchestrator 开始一个 Epoch，按预先冻结的调度把 adaptation 划为一个或多个 Batch。
+5. 每个 Step 用当前 Candidate 运行一个 Batch；Attributor 只对该 Batch 的失败 Episode 归因，Architect 提出局部 ChangeProposal，并沿反向依赖传播上层影响。
+6. Human Gate 批准或拒绝完整变更集；Validator 用 ChangeTransaction 原子应用，并用回归池检查 adaptation 历史行为，失败则整体回滚。
+7. Epoch 的所有 Batch 完成后冻结 Candidate；Validator 只用 validation manifest 评价并执行候选选择、退化判断和 Early Stopping，Validation 不产生 ChangeProposal。
+8. Auditor 保存 Batch、Step、Epoch、消息、Trace、事务、validation、成本、哈希链和拒绝理由；未停止时由下一 Epoch 的 adaptation Episode 继续驱动更新。
+9. 达到停止条件后冻结最终 Candidate，再运行 sealed_holdout 和 stress_and_failure。
+10. Human 确认交付边界，导出方案包、证据包和桥接部署包。
 
 结构化 Material Bundle 由平台无关的 `src/agentfit/materials/compiler.py` 确定性编译。非结构化文件解析或 LLM 抽取属于桥接适配，不得改变上述输出合同。仓库只跟踪材料源；编译生成的 case 是可再生输出，不作为第二个活构件正本。
 
@@ -151,7 +166,9 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 
 - 运行概览用非技术语言说明初始测试、失败原因、方案更新、回归结果和最终验收状态，同时保留平台、模型与执行边界。
 - 四集合验收同时呈现集合汇总和逐样本最终证据；运行错误不得混作业务失败或隐藏在总通过率中。
-- 训练曲线、损失归因、方案演化和事务链路分别承载过程、原因、变更和审计证据，不在概览区重复堆叠底层字段。
+- 训练曲线必须分开展示 adaptation Batch 指标和 validation 曲线；`train_replay`、validation、sealed_holdout 与 stress_and_failure 不得混成一条通过率。
+- 训练曲线、损失归因、方案演化和事务链路分别承载 Step/Epoch 过程、原因、变更和审计证据，不在概览区重复堆叠底层字段。
+- Dashboard 的基本证据必须由静态 HTML 直接呈现；JavaScript 只允许增强交互，不得成为看见八区内容的前置条件。
 - 外部评价 Dashboard 继续使用独立的最小证据视图，不伪造训练八区、Epoch、Solution 演化或 G3。
 
 ## 当前实现边界
@@ -159,12 +176,12 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 | 架构关注点 | 当前状态 | 稳定边界或缺口 |
 |---|---|---|
 | 材料、样本、四集合、能力清单和 Objective | 已实现平台无关合同 | `materials/`、`models/project.py`、`models/objective.py` |
-| 训练、归因、事务、回归和四集合验收 | 已实现确定性闭环 | 多次真实独立运行和统计比较尚未完成 |
+| 训练、归因、事务、回归和四集合验收 | 单 Batch 更新、事务、回归与最终四集合调度已实现 | 当前 `run_epoch` 实际只运行一个 Batch，并在更新后重放 adaptation；规范 Epoch、Epoch 末 validation、Early Stopping 和反向可达性归因尚未实现 |
 | 认知、检索和沙箱 | 仅有 Protocol | `adapters/protocols.py`，尚未注入认知角色和状态机 |
 | 候选与运行身份 | 已实现分离证据 | CandidateManifest 绑定四层语义；`runtime_ref` 绑定 Executor/平台/沙箱 |
 | AgentTeams | 生成、状态、按运行创建隔离 Worker、真实 Matrix/DeepSeek 执行、Candidate 更新和四集合结果往返已实现 | 12 样本已运行；集合级会话隔离、成本可观测和真实副作用尚未完成 |
 | 运行绑定 | 核心保持实现无关 | 每个 bridge 按目标平台解析能力和 Memory；不要求核心自动部署某种技术 |
-| RunStore 可信存储 | 内容哈希、验证、训练证据和外部评价原子发布已实现 | 继续按真实运行暴露的问题做完整性加固 |
+| RunStore 可信存储 | 内容哈希、验证、训练证据和外部评价原子发布已实现 | Batch/Step/Epoch、validation 与可选 `train_replay` 仍需分型落盘 |
 | 正则 | 已接入结构、行为、成本和回归约束 | 新指标只在目标函数或真实失败证据需要时增加，不追求固定数量 |
 
 最终交付包含三个独立但可追溯的部分：
@@ -179,6 +196,7 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 
 - 单元测试覆盖确定性 ID、λ 调整、边界分类、哈希链、事务和四层依赖。
 - 合同测试覆盖四类 Manifest、Human Freeze、访问隔离和评价身份。
+- 状态机测试覆盖一个 Epoch 完整且不重复地消费 adaptation、Epoch 末只运行 validation、Validation 不产生 ChangeProposal，以及 Early Stopping 的确定性判定。
 - 桥接测试覆盖双向转换、稳定名称和部署漂移检测。
 - 全链测试覆盖 `材料 → 样本 → 冻结 → 候选 → Episode → 归因 → 更新 → 回归 → 交付`。
 - 仓库级测试扫描活构件中的版本化名称，并用摘要保护冻结提交目录。
