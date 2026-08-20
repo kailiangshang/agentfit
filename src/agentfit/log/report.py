@@ -161,10 +161,20 @@ def generate_report(run_dir: str | Path) -> Path:
 
     tx = s.get("transactions_committed", [])
     if tx:
-        lines += ["", "## 提交的事务", ""]
+        lines += ["", "## 提交的事务（语义优先，术语括注）", ""]
         for t in tx:
             for c in t["changes"]:
-                lines.append(f"- v{t['version']} [{c['layer']}/{c['action']}] {c['element']} — {c.get('reason', '')}")
+                origin = {"task": "任务", "regularization": "正则"}.get(c.get("origin"), "任务")
+                semantic = c.get("semantic") or f"{c['layer']}/{c['action']} {c['element']}"
+                conflict = f"（⚔ 正则对抗: {c['reg_conflict']}）" if c.get("reg_conflict") else ""
+                lines.append(f"- v{t['version']} [{origin}] {semantic}{conflict} — {c.get('reason', '')}")
+    suggestions = s.get("optimization_suggestions") or []
+    if suggestions:
+        lines += ["", "## 整体优化建议（advisory · 非阻塞 · 决策权在用户）", ""]
+        for item in suggestions:
+            lines.append(f"- {item.get('semantic', '')}"
+                         + (f"（涉及：{', '.join(item.get('frozen_elements') or [])}）"
+                            if item.get("frozen_elements") else ""))
 
     out = store.root / "training_report.md"
     out.write_text("\n".join(lines), encoding="utf-8")

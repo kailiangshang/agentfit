@@ -138,28 +138,58 @@ def test_unreachable_knowledge_attributed_to_l4(tmp_path):
 
 
 def test_reverse_dependency_propagation_wires_new_knowledge(tmp_path):
+    """主线纪律：新增 L3 不自动接线（无依赖者无影响可传播）；接线由
+    unreachable_knowledge 归因证据驱动；supersede 才触发引用清理传播。"""
     sol = make_initial_solution()
     new_rule = Knowledge(id="rule_new_sim", type="routing_rule",
                          condition="NOT sim_ok", dispatches_to="safe_run_sim_diagnostics")
-    from agentfit.core.transaction import UpdateProposal
+    from agentfit.core.transaction import ChangeTransaction, UpdateProposal
+
+    # ① 纯新增：没有依赖者 → 不产生任何 L4 传播提案（不替归因做接线决策）
+    assert propagate_reverse_dependencies(
+        [UpdateProposal("L3", "add", new_rule, reason="test")], sol) == []
+
+    # ② 接线走归因证据路径：unreachable_knowledge → 带证据的 L4 接线提案
+    from agentfit.core.aggregation import aggregate
+    from agentfit.core.attribution import attribute_loss
+    from agentfit.core.proposals import propose_updates
+    sol_orphan = make_initial_solution()
+    orphan = Knowledge(id="rule_sim_orphan", type="routing_rule",
+                       condition="NOT sim_ok", dispatches_to="safe_run_sim_diagnostics")
+    sol_orphan.L3_knowledge.append(orphan)
+    samples = {s.id: s for s in make_samples()}
+    f3 = next(s for s in samples.values() if s.id.startswith("F3-"))
+    trace = SimulatorExecutor().execute(sol_orphan, f3)
+    lt = attribute_loss(f3, trace, sol_orphan)
+    assert (lt.root_cause_layer, lt.failure_mode) == ("L4", "unreachable_knowledge")
+    proposals, _ = propose_updates(aggregate([lt]), samples, sol_orphan)
+    wiring = [p for p in proposals if p.layer == "L4"]
+    assert wiring and any(p.evidence_sample_ids for p in wiring), "接线提案必须带失败证据"
+    tx = ChangeTransaction(sol_orphan, proposals)
+    wired = tx.execute()
+    uses = {u for a in wired.L4_topology.agents for u in a.uses}
+    assert "rule_sim_orphan" in uses
+
+    # ③ supersede 下线已有元素 → 传播清理 L4 引用
+    old = sol.knowledge("rule_roaming")
+    fixed = Knowledge(id="rule_roaming_v2", type="routing_rule",
+                      condition="abroad AND roaming_off", dispatches_to="safe_toggle_roaming")
     extra = propagate_reverse_dependencies(
-        [UpdateProposal("L3", "add", new_rule, reason="test")], sol)
-    assert extra, "新增 L3 未被任何 Agent 引用时必须产生反向依赖传播提案"
-    assert all(p.layer == "L4" for p in extra)
-    # 应用后 Agent 引用新知识
-    tx_result = None
-    from agentfit.core.transaction import ChangeTransaction
-    tx = ChangeTransaction(sol, [UpdateProposal("L3", "add", new_rule)] + extra)
-    tx_result = tx.execute()
-    uses = {u for agent in tx_result.L4_topology.agents for u in agent.uses}
-    assert "rule_new_sim" in uses
-    # 完整训练：新增规则可达 → 下一 Epoch F3 通过
+        [UpdateProposal("L3", "supersede", old, reason="test"),
+         UpdateProposal("L3", "add", fixed, reason="test")], sol)
+    assert extra and all(p.layer == "L4" for p in extra)
+    cleaned = ChangeTransaction(sol, [UpdateProposal("L3", "supersede", old),
+                                      UpdateProposal("L3", "add", fixed)] + extra).execute()
+    uses_after = {u for a in cleaned.L4_topology.agents for u in a.uses}
+    assert "rule_roaming" not in uses_after and "rule_roaming_v2" in uses_after
+
+    # ④ 完整训练自愈：训练归纳的新规则最终可达（经归因接线，非自动赠送）
     orch, adaptation, validation, run_dir = _build(tmp_path)
     orch.train()
-    uses_after = {u for agent in orch.solution.L4_topology.agents for u in agent.uses}
+    uses_final = {u for a in orch.solution.L4_topology.agents for u in a.uses}
     sim_rules = [k.id for k in orch.solution.routing_rules()
                  if k.dispatches_to == "safe_run_sim_diagnostics"]
-    assert all(r in uses_after for r in sim_rules), "训练新增的规则必须被 L4 引用"
+    assert all(r in uses_final for r in sim_rules), "训练新增的规则经归因接线后必须可达"
 
 
 def test_train_replay_is_typed_separately(tmp_path):

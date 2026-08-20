@@ -160,6 +160,26 @@ class RunStore:
     def save_messages(self, epoch: int, traffic: list[dict]) -> None:
         _write(self.root / "messages" / f"epoch_{epoch:03d}.json", traffic)
 
+    def save_taxonomy(self, registry) -> Path:
+        """G0 冻结的类型学注册表（core + case 级扩展）。"""
+        from ..models.taxonomy import TypeRegistry
+        if not isinstance(registry, TypeRegistry):
+            registry = TypeRegistry()
+        document = {
+            "customs": [{"name": c.name, "layer": c.layer, "parent": c.parent,
+                         "label": c.label, "description": c.description}
+                        for c in registry.customs],
+            "selected_l1_domains": sorted(registry.selected_l1_domains),
+            "selected_l2_capability_types": sorted(registry.selected_l2_capability_types),
+        }
+        return _write(self.root / "taxonomy.json", document)
+
+    def save_optimization_suggestion(self, record: dict) -> Path:
+        """advisory 落盘：可追踪、非阻塞、非提案（给用户的整体优化建议）。"""
+        directory = self.root / "optimization_suggestions"
+        existing = len(list(directory.glob("*.json"))) if directory.is_dir() else 0
+        return _write(directory / f"suggestion_{existing + 1:03d}.json", record)
+
     def save_summary(self, summary: dict) -> None:
         _write(self.root / "summary.json", summary)
 
@@ -214,7 +234,8 @@ class RunStore:
                                    "candidate_manifest": None, "external_evidence": [],
                                    "training_evidence": [], "evaluation_evidence": [],
                                    "epochs": [], "steps": [], "validation": [],
-                                   "train_replay": [],
+                                   "train_replay": [], "optimization_suggestions": [],
+                                   "taxonomy": None,
                                    "loss_traces": {}, "solutions": {}, "messages": {}, "summary": None}
         if (self.root / "run.json").exists():
             payload["run"] = self.load_json("run.json")
@@ -238,6 +259,10 @@ class RunStore:
             payload["validation"].append(json.loads(path.read_text(encoding="utf-8")))
         for path in sorted((self.root / "train_replay").glob("*.json")) if (self.root / "train_replay").is_dir() else []:
             payload["train_replay"].append(json.loads(path.read_text(encoding="utf-8")))
+        for path in sorted((self.root / "optimization_suggestions").glob("*.json")) if (self.root / "optimization_suggestions").is_dir() else []:
+            payload["optimization_suggestions"].append(json.loads(path.read_text(encoding="utf-8")))
+        if (self.root / "taxonomy.json").exists():
+            payload["taxonomy"] = self.load_json("taxonomy.json")
         for index in self.external_evidence_indices():
             payload["external_evidence"].append(
                 self.load_json(f"external_evidence/record_{index:06d}.json")

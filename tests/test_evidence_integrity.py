@@ -97,6 +97,7 @@ def test_solution_package_contains_structured_topology(tmp_path: Path) -> None:
     assert topology["agents"][0] == {
         "id": "solo",
         "role": "single",
+        "frozen": False,
         "uses": ["rule_roaming", "rule_airplane"],
     }
     assert topology["edges"] == []

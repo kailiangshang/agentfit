@@ -7,6 +7,35 @@ from __future__ import annotations
 from ..models.solution import CapabilityTool, Knowledge, Solution
 
 
+def validate_taxonomy(solution: Solution, registry=None) -> list[str]:
+    """类型合同（第一道检查）：每个元素的类型值必须在 core ∪ 注册表内。"""
+    from ..models.taxonomy import (CORE_L1_ACCESS, CORE_L4_TRIGGER_MODES,
+                                   DEFAULT_REGISTRY)
+    registry = registry or DEFAULT_REGISTRY
+    errors: list[str] = []
+    l1_domains = registry.l1_domains()
+    for atom in solution.L1_atoms:
+        if atom.type not in CORE_L1_ACCESS:
+            errors.append(f"L1 原子 {atom.id} 读写语义非法: {atom.type}")
+        if atom.domain not in l1_domains:
+            errors.append(f"L1 原子 {atom.id} 能力域非法: {atom.domain}（不在 core ∪ 注册表）")
+    l2_types = registry.l2_capability_types()
+    for tool in solution.L2_tools:
+        if tool.capability_type not in l2_types:
+            errors.append(f"L2 工具 {tool.id} 封装类型非法: {tool.capability_type}")
+    l3_types = registry.l3_knowledge_types()
+    for knowledge in solution.L3_knowledge:
+        if knowledge.type not in l3_types:
+            errors.append(f"L3 知识 {knowledge.id} 类型非法: {knowledge.type}")
+    l4_roles = registry.l4_roles()
+    for agent in solution.L4_topology.agents:
+        if agent.role not in l4_roles:
+            errors.append(f"L4 Agent {agent.id} 角色非法: {agent.role}")
+    if solution.L4_topology.trigger_mode not in CORE_L4_TRIGGER_MODES:
+        errors.append(f"L4 触发方式非法: {solution.L4_topology.trigger_mode}")
+    return errors
+
+
 def validate_existence_dependencies(solution: Solution) -> list[str]:
     """验证所有层间依赖完整，无悬空引用。空列表 = 通过。
 

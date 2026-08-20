@@ -44,13 +44,16 @@ class RegReport:
 
 
 def compute_structural(solution: Solution) -> RegReport:
-    """结构性正则 7 项（静态分析）。"""
+    """结构性正则 7 项（静态分析，trained 子集：frozen 元素不计入违规）。"""
     r = RegReport()
-    n_rules = max(1, len(solution.routing_rules()))
+    trained_atoms = [a for a in solution.L1_atoms if not a.frozen]
+    trained_tools = [t for t in solution.L2_tools if not t.frozen]
 
     # L1：原子使用率（被 L3 引用最多的原子占总引用比）+ 稀缺率
     refs: dict[str, int] = {}
     for k in solution.L3_knowledge:
+        if k.frozen:
+            continue          # frozen 知识的引用不计入 trained 违规统计
         if k.steps:
             for s in k.steps:
                 for t in solution.L2_tools:
@@ -63,21 +66,23 @@ def compute_structural(solution: Solution) -> RegReport:
                 for a in t.wraps:
                     refs[a] = refs.get(a, 0) + 1
     total_refs = sum(refs.values())
-    if total_refs:
+    if total_refs and trained_atoms:
         usage = max(refs.values()) / total_refs
         r.values["atom_usage"] = max(0.0, usage / STRUCTURAL_THRESHOLDS["atom_usage"] - 1)
-        scarce = sum(1 for a in solution.L1_atoms if refs.get(a.id, 0) / total_refs < 0.05) / max(1, len(solution.L1_atoms))
+        scarce = sum(1 for a in trained_atoms if refs.get(a.id, 0) / total_refs < 0.05) / max(1, len(trained_atoms))
         r.values["atom_scarcity"] = max(0.0, scarce / STRUCTURAL_THRESHOLDS["atom_scarcity"] - 1)
     r.over_threshold["L1"] = [k for k in ("atom_usage", "atom_scarcity") if r.values.get(k, 0) > 0]
 
-    # L2：封装复杂度 + 工具复用
-    worst_wrap = max((len(t.wraps) for t in solution.L2_tools), default=0)
+    # L2：封装复杂度 + 工具复用（trained 工具）
+    worst_wrap = max((len(t.wraps) for t in trained_tools), default=0)
     r.values["wrapper_complexity"] = max(0.0, worst_wrap / STRUCTURAL_THRESHOLDS["wrapper_complexity"] - 1)
     ref_count: dict[str, int] = {}
     for k in solution.L3_knowledge:
+        if k.frozen:
+            continue
         for tid in ([s.tool for s in (k.steps or [])] + ([k.dispatches_to] if k.dispatches_to else [])):
             ref_count[tid] = ref_count.get(tid, 0) + 1
-    min_reuse = min((ref_count.get(t.id, 0) for t in solution.L2_tools), default=STRUCTURAL_THRESHOLDS["tool_reuse"])
+    min_reuse = min((ref_count.get(t.id, 0) for t in trained_tools), default=STRUCTURAL_THRESHOLDS["tool_reuse"])
     if ref_count:
         r.values["tool_reuse"] = max(0.0, (STRUCTURAL_THRESHOLDS["tool_reuse"] - min_reuse) / STRUCTURAL_THRESHOLDS["tool_reuse"])
     r.over_threshold["L2"] = [k for k in ("wrapper_complexity", "tool_reuse") if r.values.get(k, 0) > 0]
@@ -181,3 +186,104 @@ class LambdaController:
                               "from": self.initial[layer] / 1.2, "to": new_val}]
         self.initial = lambdas
         return lambdas, level2
+
+
+def regularization_proposals(report: RegReport, solution: Solution,
+                             registry=None) -> tuple[list, list[dict]]:
+    """正则简化提案（λᵢ∇Rᵢ 的离散版）+ 冻结元素 advisory。
+
+    只针对 trained 元素：超阈指标 → 简化提案（origin=regularization，metric 证据+语义句）。
+    超阈源于 frozen 元素 → advisory（non_blocking，给用户的整体优化建议）。
+    L1 只增不删铁律：L1 简化只出人审级建议（不自动删原子）。
+    """
+    from ..models.taxonomy import DEFAULT_REGISTRY
+    registry = registry or DEFAULT_REGISTRY
+    from .transaction import UpdateProposal
+    proposals: list[UpdateProposal] = []
+    advisories: list[dict] = []
+
+    # 冻结资产诊断（advisory 独立于违规统计：可追踪、非阻塞、非提案）
+    unused_frozen = [a for a in solution.L1_atoms
+                     if a.frozen and not _is_atom_referenced(a.id, solution)]
+    if unused_frozen:
+        names = ", ".join(a.id for a in unused_frozen[:5])
+        advisories.append({
+            "kind": "frozen_metric", "layer": "L1", "metric": "unused_inventory",
+            "semantic": f"用户提供的 {len(unused_frozen)} 个原子接口从未被引用（如 {names}），"
+                        f"建议复核工具清单（决策权在用户，训练不自动处理）",
+            "frozen_elements": [a.id for a in unused_frozen],
+            "non_blocking": True,
+        })
+    wired = {u for agent in solution.L4_topology.agents for u in agent.uses}
+    unwired_frozen = [k for k in solution.routing_rules() if k.frozen and k.id not in wired]
+    if unwired_frozen:
+        advisories.append({
+            "kind": "frozen_metric", "layer": "L3", "metric": "unwired_knowledge",
+            "semantic": f"用户提供的 {len(unwired_frozen)} 条路由规则未被任何 Agent 引用"
+                        f"（如 {', '.join(k.id for k in unwired_frozen[:3])}），"
+                        f"如需启用请调整预指定拓扑",
+            "frozen_elements": [k.id for k in unwired_frozen],
+            "non_blocking": True,
+        })
+
+    def metric_evidence(name, threshold):
+        return {"type": "metric", "name": name, "value": round(report.values.get(name, 0), 4),
+                "threshold": threshold, "rounds": None}
+
+    for layer, metrics in report.over_threshold.items():
+        for metric in metrics:
+            if layer == "L1" and metric == "atom_usage":
+                # 单点耦合：找被过度引用的 trained 原子 → 拆分建议（人审级，出提案）
+                busiest = max((a for a in solution.L1_atoms if not a.frozen),
+                              key=lambda a: 1, default=None)
+                if busiest is not None:
+                    proposals.append(UpdateProposal(
+                        "L1", "modify", busiest,
+                        reason=f"原子使用率超阈（{report.values.get(metric, 0):.2f}），建议拆分",
+                        origin="regularization", reg_evidence=metric_evidence(metric, STRUCTURAL_THRESHOLDS[metric]),
+                        semantic=f"L1 原子接口“{busiest.id}”承载了过多职责，建议拆分为多个更小的接口"))
+            elif layer == "L2" and metric in ("wrapper_complexity", "tool_reuse"):
+                heavy = [t for t in solution.L2_tools if not t.frozen
+                         and len(t.wraps) > STRUCTURAL_THRESHOLDS["wrapper_complexity"]]
+                for tool in heavy:
+                    label = registry.semantic_l2_type(tool.capability_type)
+                    proposals.append(UpdateProposal(
+                        "L2", "modify", tool,
+                        reason=f"封装复杂度超阈（{len(tool.wraps)} 原子）",
+                        origin="regularization", reg_evidence=metric_evidence(metric, STRUCTURAL_THRESHOLDS[metric]),
+                        semantic=f"{label}“{tool.id}”封装了 {len(tool.wraps)} 个原子接口，超过复杂度阈值，建议拆分"))
+            elif layer == "L3" and metric == "chain_coverage":
+                over_concentrated = [k for k in solution.routing_rules() if not k.frozen]
+                if over_concentrated:
+                    target = over_concentrated[0]
+                    proposals.append(UpdateProposal(
+                        "L3", "modify", target,
+                        reason=f"链路覆盖度超阈（{report.values.get(metric, 0):.2f}），万能路由风险",
+                        origin="regularization", reg_evidence=metric_evidence(metric, STRUCTURAL_THRESHOLDS[metric]),
+                        semantic=f"路由规则“{target.id}”覆盖了过高比例的样本分发，建议按故障类型拆分为更专门的规则"))
+            elif layer == "L4" and metric in ("agent_count", "human_intervention"):
+                gate_tools = [t for t in solution.L2_tools if t.human_gate and t.frozen]
+                if metric == "human_intervention" and gate_tools:
+                    advisories.append({
+                        "kind": "frozen_metric", "layer": "L4", "metric": metric,
+                        "semantic": f"人工介入率超阈主要来自用户指定的审核门禁"
+                                    f"（{', '.join(t.human_gate.reviewer for t in gate_tools[:3])}）；"
+                                    f"如可放宽窗口或阈值可降低介入率（合规决定，训练不自动处理）",
+                        "frozen_elements": [t.id for t in gate_tools],
+                        "non_blocking": True,
+                    })
+    return proposals, advisories
+
+
+def _is_atom_referenced(atom_id: str, solution: Solution) -> bool:
+    for k in solution.L3_knowledge:
+        if k.steps:
+            for step in k.steps:
+                tool = solution.tool(step.tool)
+                if tool and atom_id in tool.wraps:
+                    return True
+        elif k.dispatches_to:
+            tool = solution.tool(k.dispatches_to)
+            if tool and atom_id in tool.wraps:
+                return True
+    return False

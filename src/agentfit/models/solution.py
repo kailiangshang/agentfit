@@ -9,10 +9,19 @@ from typing import Any
 class SolidAtom:
     """L1 semantic atom; runtime bindings are resolved outside the core."""
     id: str                        # "toggle_roaming"
-    type: str                      # "read" | "write" | "human" | "notify"
+    type: str                      # 读写语义: "read" | "write" | "human" | "notify"
     description: str = ""
+    domain: str = "data_interface"  # 能力域: data_interface/knowledge_interface/external_system/human_review/notification 或注册的自定义域
+    frozen: bool = False           # 用户预指定（frozen：不计正则、不可被提案修改）
     input_schema: dict[str, Any] = field(default_factory=dict)
     output_schema: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # 读写语义与能力域的一致性（human 原子默认归 human_review 域）
+        if self.type == "human" and self.domain == "data_interface":
+            self.domain = "human_review"
+        if self.type == "notify" and self.domain == "data_interface":
+            self.domain = "notification"
 
 
 @dataclass
@@ -28,6 +37,8 @@ class CapabilityTool:
     id: str                        # "safe_toggle_roaming"
     wraps: list[str]               # L1 原子 ID（存在依赖锚点）
     description: str = ""
+    capability_type: str = "safe_wrapper"  # safe_wrapper/composite/caliber/review_routing 或注册类型
+    frozen: bool = False
     preconditions: list[str] = field(default_factory=list)
     postconditions: list[str] = field(default_factory=list)
     human_gate: HumanGate | None = None
@@ -47,6 +58,7 @@ class Knowledge:
     id: str
     type: str                      # 五类之一
     description: str = ""
+    frozen: bool = False
     # routing_rule
     condition: str | None = None   # 特征表达式，如 "abroad AND roaming_off"
     dispatches_to: str | None = None   # L2 工具 ID（调度≠调用）
@@ -64,8 +76,9 @@ class Knowledge:
 class Agent:
     """L4 Agent（对象层被训练方案的组成单元）。"""
     id: str
-    role: str = "single"           # "single" | "diagnostic" | "repair" | ...
+    role: str = "single"           # core 默认集: single/diagnostic/repair/orchestrate 或注册角色
     uses: list[str] = field(default_factory=list)   # 依赖的 L3 知识 ID
+    frozen: bool = False
 
 
 @dataclass

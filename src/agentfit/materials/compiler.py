@@ -27,6 +27,7 @@ class CompiledProjectCase:
     capability_inventory: CapabilityInventory
     objective_spec: ObjectiveSpec
     training: dict[str, Any]
+    taxonomy_registry: object = None   # TypeRegistry（core + case 级注册，G0 冻结）
 
     def to_case_document(self) -> dict[str, Any]:
         return {
@@ -77,6 +78,12 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
     capability_data = bundle.get("capabilities")
     if not isinstance(capability_data, dict):
         raise ValueError("capability inventory is required")
+    from ..models.taxonomy import registry_from_dict
+    taxonomy_data = bundle.get("taxonomy") or {}
+    try:
+        registry = registry_from_dict(taxonomy_data)
+    except ValueError as exc:
+        raise ValueError(f"invalid taxonomy section: {exc}") from exc
     try:
         raw_atoms = capability_data.get("atoms", [])
         raw_tools = capability_data.get("tools", [])
@@ -92,6 +99,8 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
                     id=str(item.get("id", "")).strip(),
                     type=str(item.get("type", "")).strip(),
                     description=str(item.get("description", "")),
+                    domain=str(item.get("domain", "data_interface")),
+                    frozen=True,
                     input_schema=dict(item.get("input_schema") or {}),
                     output_schema=dict(item.get("output_schema") or {}),
                 )
@@ -102,6 +111,8 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
                     id=str(item.get("id", "")).strip(),
                     wraps=list(item.get("wraps") or []),
                     description=str(item.get("description", "")),
+                    capability_type=str(item.get("capability_type", "safe_wrapper")),
+                    frozen=True,
                     preconditions=list(item.get("preconditions") or []),
                     postconditions=list(item.get("postconditions") or []),
                     human_gate=(
@@ -204,4 +215,19 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
         capability_inventory=capability_inventory,
         objective_spec=objective_spec,
         training=dict(bundle.get("training") or {}),
+        taxonomy_registry=registry,
     )
+
+
+def _taxonomy_document(registry) -> dict[str, Any]:
+    from ..models.taxonomy import CustomType, TypeRegistry
+    if not isinstance(registry, TypeRegistry):
+        registry = TypeRegistry()
+    return {
+        "customs": [vars(c) if not hasattr(c, "__dataclass_fields__") else {
+            "name": c.name, "layer": c.layer, "parent": c.parent,
+            "label": c.label, "description": c.description,
+        } for c in registry.customs],
+        "selected_l1_domains": sorted(registry.selected_l1_domains),
+        "selected_l2_capability_types": sorted(registry.selected_l2_capability_types),
+    }

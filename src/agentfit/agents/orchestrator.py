@@ -44,6 +44,9 @@ class StepOutcome:
     rolled_back: bool = False
     cost_usd: float = 0.0
     loss_traces: list = field(default_factory=list)
+    behavioral: dict = field(default_factory=dict)   # 本步行为正则值（供 λ 聚合）
+    task_proposals: int = 0
+    regularization_proposals: int = 0
     notes: list[str] = field(default_factory=list)
 
 
@@ -131,8 +134,13 @@ class Orchestrator:
         step.loss_traces = loss_traces
 
         actionable_loss_traces = list(loss_traces)
+        # 冻结分流：根因落在冻结元素的失败 → advisory（可追踪、非阻塞），不进提案聚合
+        for trace in loss_traces:
+            if self._root_element_frozen(trace):
+                self._record_frozen_advisory(trace, epoch)
+                actionable_loss_traces.remove(trace)
         low_confidence = [
-            trace for trace in loss_traces
+            trace for trace in actionable_loss_traces
             if trace.confidence < self.config.attribution_confidence_floor
         ]
         if low_confidence:
@@ -151,23 +159,45 @@ class Orchestrator:
         # ③ 聚合
         agg = aggregate(actionable_loss_traces)
 
-        # ④ 更新建议（Architect）+ 反向依赖传播（新增 L3 必须接入 L4）
+        # ③' 正则计算（trained 子集；行为项用本步真实 traces）
+        from ..core.regularization import compute_structural, compute_behavioral, \
+            merge_behavioral, regularization_proposals
+        step_reg = compute_structural(self.solution)
+        step.behavioral = compute_behavioral(self.solution, traces, self._prev_solution)
+
+        # ④ 更新建议 = 任务梯度提案 ∪ 正则简化提案（λᵢ∇Rᵢ）+ 反向依赖传播
         proposals, notes = self._send(MsgType.PROPOSE, ctx,
                                       {"loss_traces": actionable_loss_traces},
                                       lambda _: propose_updates(aggregate(actionable_loss_traces), self.pool.by_id(), self.solution))
-        from ..core.proposals import propagate_reverse_dependencies
-        proposals = proposals + propagate_reverse_dependencies(proposals, self.solution)
+        from ..core.proposals import (propagate_reverse_dependencies,
+                                      annotate_reg_conflicts, semantic_for_proposal)
+        reg_proposals, reg_advisories = regularization_proposals(step_reg, self.solution)
+        proposals = list(proposals) + reg_proposals + propagate_reverse_dependencies(proposals, self.solution)
+        for advisory in reg_advisories:
+            self._save_advisory(advisory)
+        # 冲突标注 + 语义补全（提案带 semantic 落盘，重渲染一致）
+        annotate_reg_conflicts(proposals, step_reg, self.solution)
+        for proposal in proposals:
+            if not proposal.semantic:
+                proposal.semantic = semantic_for_proposal(proposal)
         step.notes.extend(notes)
+        step.task_proposals = sum(1 for p in proposals if p.origin == "task")
+        step.regularization_proposals = sum(1 for p in proposals if p.origin == "regularization")
         step.proposals = len(proposals)
 
-        # ⑥ 人审 G1（硬同步点；不批准 = 本 Step 空转）
+        # ⑥ 人审 G1（同一扇门，两类提案证据可辨：任务=样本证据 / 正则=指标证据）
         g1_decision = self.config.review_policy.review(ReviewRequest(
             GateType.G1, "solution updates",
-            {"count": len(proposals), "evidence_sample_ids": sorted({
-                sample_id
-                for proposal in proposals
-                for sample_id in (proposal.evidence_sample_ids or [])
-            })},
+            {"count": len(proposals),
+             "proposals": [{
+                 "origin": p.origin,
+                 "layer": p.layer, "action": p.action,
+                 "element": getattr(p.element, "id", str(p.element)),
+                 "semantic": p.semantic,
+                 "evidence": ({"type": "samples", "sample_ids": p.evidence_sample_ids}
+                              if p.origin == "task" else p.reg_evidence),
+                 "reg_conflict": p.reg_conflict,
+             } for p in proposals]},
         ))
         approved = proposals if g1_decision.approved else []
         if proposals and not g1_decision.approved:
@@ -182,11 +212,22 @@ class Orchestrator:
             tx = ChangeTransaction(self.solution, approved)
             try:
                 candidate = tx.execute()
-            except ValidationError:
+            except ValidationError as exc:
                 step.rolled_back = True
+                reason = "; ".join(exc.errors)
                 step.notes.append("存在依赖验证失败：事务回滚")
+                if "冻结" in reason:
+                    self._save_advisory({
+                        "kind": "frozen_boundary_rejected", "layer": "mixed",
+                        "semantic": f"训练提出的变更触碰冻结边界被整体回滚（{reason}）；"
+                                    f"建议用户复核冻结清单或自行调整预指定配置",
+                        "rejected_changes": [
+                            {"layer": p_.layer, "action": p_.action, "semantic": p_.semantic}
+                            for p_ in approved],
+                        "non_blocking": True,
+                    })
                 if self.auditor:
-                    self.auditor.record_transaction(tx, rolled_back=True, reason="依赖验证失败")
+                    self.auditor.record_transaction(tx, rolled_back=True, reason=reason)
                 candidate = None
             if candidate is not None:
                 regression_traces = {
@@ -247,6 +288,8 @@ class Orchestrator:
                 "passed": step.passed, "failed": step.failed,
                 "execution_errors": step.execution_errors,
                 "proposals": step.proposals, "applied": step.applied,
+                "task_proposals": step.task_proposals,
+                "regularization_proposals": step.regularization_proposals,
                 "rolled_back": step.rolled_back, "cost_usd": round(step.cost_usd, 6),
                 "loss_attribution": {k: int(v * agg.total) for k, v in agg.layer_share.items()},
                 "notes": step.notes,
@@ -294,9 +337,12 @@ class Orchestrator:
         executed = sum(s.passed + s.failed for s in steps)
         outcome.adaptation_pass_rate = (sum(s.passed for s in steps) / executed) if executed else 0.0
 
-        # λ 调节（Epoch 级，基于结构正则 + 行为正则）
-        reg = merge_behavioral(compute_structural(self.solution),
-                               compute_behavioral(self.solution, [], self._prev_solution))
+        # λ 调节（Epoch 级）：结构正则 + 各 Step 行为正则聚合（真实 traces 派生）
+        merged_behavioral: dict[str, float] = {}
+        for s_step in steps:
+            for key, value in s_step.behavioral.items():
+                merged_behavioral[key] = max(merged_behavioral.get(key, 0.0), value)
+        reg = merge_behavioral(compute_structural(self.solution), merged_behavioral)
         new_lambdas, lambda_events = self.lambda_ctl.observe(reg)
         for event in lambda_events:
             if event.get("gate") != GateType.G2.value:
@@ -391,6 +437,34 @@ class Orchestrator:
 
     def budget_exceeded(self) -> bool:
         return self.total_cost() > self.config.budget_usd
+
+    # ---------- 冻结分流与 advisory ----------
+    def _root_element_frozen(self, loss_trace) -> bool:
+        element_id = loss_trace.root_cause_element
+        if not element_id or element_id == "-":
+            return False
+        for lookup in (self.solution.knowledge(element_id),
+                       self.solution.tool(element_id),
+                       self.solution.atom(element_id)):
+            if lookup is not None:
+                return bool(getattr(lookup, "frozen", False))
+        return False
+
+    def _record_frozen_advisory(self, loss_trace, epoch: int) -> None:
+        self._save_advisory({
+            "kind": "frozen_root_cause", "layer": loss_trace.root_cause_layer,
+            "metric": None,
+            "semantic": f"样本 {loss_trace.sample_id} 失败的根因在用户预指定的元素 "
+                        f"“{loss_trace.root_cause_element}”（{loss_trace.detail}）；"
+                        f"训练不修改冻结元素，建议用户复核该配置",
+            "frozen_elements": [loss_trace.root_cause_element],
+            "sample_id": loss_trace.sample_id, "epoch": epoch,
+            "non_blocking": True,
+        })
+
+    def _save_advisory(self, record: dict) -> None:
+        if self.auditor:
+            self.auditor.store.save_optimization_suggestion(record)
 
     # ---------- 总线 ----------
     def _execute_recorded(

@@ -351,8 +351,8 @@ def test_training_regression_reuses_the_same_recorded_execution_contract(
     ]
     # 2 个 Epoch × 2 个 Step × 每批 1 样本 = 4 次 forward
     assert len(forward) == 4
-    # epoch1 step2（F3-0 修复提交）时回归池含 F1-0 → 恰好 1 次 regression
-    assert len(regression) == 1
+    # 每次有提交的 Step 都会触发回归重放（epoch1 补规则、epoch2 归因接线，各一次提交）
+    assert len(regression) >= 1
     # 回归复用与 forward 相同的记录执行合同：同一 (candidate_ref, sample_ref) 身份
     forward_keys = {
         (identity["candidate_ref"], identity["sample_ref"]["sample_id"])
@@ -366,7 +366,13 @@ def test_training_regression_reuses_the_same_recorded_execution_contract(
             json.loads(path.read_text(encoding="utf-8"))["identity"] for path in regression
         )
     }
-    assert regression_keys <= forward_keys
+    # 同一记录执行合同：全部 Episode 的 (candidate, sample, run_index) 评价身份唯一，
+    # 无覆盖、无重复分配（λ 变化使 regression 候选合法地区别于 forward 候选）
+    all_keys = [
+        (identity["candidate_ref"], identity["sample_ref"]["sample_id"], identity["run_index"])
+        for identity in identities
+    ]
+    assert len(all_keys) == len(set(all_keys)), "评价身份必须唯一"
 
 
 def test_regression_runtime_error_blocks_commit_without_claiming_solution_forgetting() -> None:

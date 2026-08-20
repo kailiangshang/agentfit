@@ -41,10 +41,16 @@ AgentFit 不实现新的 Agent 运行时，也不把某个平台写入核心库�
 
 | 层 | 内容 | 约束 |
 |---|---|---|
-| L1 Solid | 最小原子能力合同：标识、读写类型、输入输出与作用语义 | 不声明 API、MCP、函数或供应商后端 |
+| L1 Solid | 最小原子能力合同：标识、能力域（data_interface/knowledge_interface/external_system/human_review/notification 或注册域）× 读写语义（read/write/human/notify）、输入输出与作用语义 | 不声明 API、MCP、函数或供应商后端 |
 | L2 Capability | 可复用能力合同：组合哪些 L1、前后置条件、聚合和 Human Gate | 只能引用 L1，不同 L2 不形成隐藏调用链 |
 | L3 Knowledge | Skill、路由规则、排查链、阈值和经验 | 只能使用 L2，不形成隐藏的同层执行依赖 |
 | L4 Topology | Agent、角色、显式通信边、触发方式和人工位置 | 只能使用 L3；同层协作必须是可审计的显式边 |
+
+层级类型学为 core 闭集 + Case 注册制扩展：用户在 Intake 时可挑选适用子集并注册自定义类型（必须挂靠 core 超类 + 提供语义描述，随 G0 冻结，作用域为本次 ProjectCase）；系统机制（验证规则、语义兜底、正则分组）只依赖 core，自定义类型按超类生效、语义呈现优先用用户描述。
+
+元素带 provenance：`frozen`（用户预指定）不计入正则违规、不触发 λ、不可被提案 modify/supersede（验证器与事务双重拒绝，frozen Agent 的拓扑接线同样受保护）；其问题只产生 advisory（可追踪、非阻塞、非提案，决策权在用户）。ML 对应：冻结参数——无梯度、无正则项、有诊断报告。
+
+正则按训练范式传播：每 Step 在 trained 子集上计算各层正则，与任务损失并行——正则超阈产出简化提案（origin=regularization，metric 证据），任务提案加剧超阈指标时标注 `reg_conflict` 强制人审可见，λ 权重因此具有真实下游。两类提案走同一 G1 门禁（一次一批、同一事务、同一回归），证据类型可辨（任务=样本证据，正则=指标证据）。所有提案带语义双轨呈现：语义句为主（人话，来源为元素描述→类型映射→最小兜底，不编造），术语为附注，随提案落盘保证重渲染一致。
 
 纵向存在依赖遵守 `L4 → L3 → L2 → L1`。L1–L3 禁止隐藏的同层执行依赖，L4 只允许通过显式 TopologyEdge 通信。多层变更由 `ChangeTransaction` 自底向上原子应用，验证或回归失败则整体回滚。
 

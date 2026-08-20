@@ -169,6 +169,13 @@ def _render_training(payload: dict) -> str:
     if final_evidence:
         story.append(f'<div class="final-verdict">最终验收：{_e(_outcome_counts(final_evidence))}</div>')
     story.append("</div>")
+    suggestions = payload.get("optimization_suggestions") or []
+    if suggestions:
+        story.append("<h3>整体优化建议（advisory · 非阻塞 · 决策权在用户）</h3>")
+        story.append(_table(["建议", "涉及冻结元素"],
+                            [[item.get("semantic") or "—",
+                              ", ".join(item.get("frozen_elements") or []) or "—"]
+                             for item in suggestions[:10]]))
     sections.append('<section class="wide"><h2>① 运行概览</h2>'
                     + _kpis(overview_kpis) + status_line + runtime_line + "".join(story) + "</section>")
 
@@ -222,7 +229,8 @@ def _render_training(payload: dict) -> str:
         solution = first.get("solution") or {}
         mapping_html += _table(["层", "元素数", "清单"], [
             ["L1 Solid", len(solution.get("L1_atoms") or []),
-             _badges([f"{item.get('id')} ({item.get('type')})" for item in solution.get("L1_atoms") or []])],
+             _badges([f"{item.get('id')}（{item.get('domain', 'data_interface')}·{item.get('type')}）"
+                      for item in solution.get("L1_atoms") or []])],
             ["L2 能力", len(solution.get("L2_tools") or []),
              _badges([f"{item.get('id')} → [{', '.join(item.get('wraps') or [])}]"
                       for item in solution.get("L2_tools") or []])],
@@ -300,12 +308,22 @@ def _render_training(payload: dict) -> str:
         (count, f"{layer} {count / total_losses * 100:.0f}%") for layer, count in layer_count.items()
     ] or [("—", "无失败归因")])
     loss_rows = []
+    solutions_payload = payload.get("solutions") or {}
+    _versions = sorted(solutions_payload.keys(), key=lambda v: int(v)) if solutions_payload else []
+    _last_solution = (solutions_payload.get(_versions[-1]) or {}).get("solution") or {} if _versions else {}
+    _desc_by_id = {item.get("id"): item.get("description") or ""
+                   for pool in (_last_solution.get("L1_atoms") or [], _last_solution.get("L2_tools") or [],
+                                _last_solution.get("L3_knowledge") or [])
+                   for item in pool}
     for epoch, values in (payload.get("loss_traces") or {}).items():
         for item in values:
             layer = item.get("root_cause_layer")
+            element_id = item.get("root_cause_element")
+            element_semantic = _desc_by_id.get(element_id, "")
             loss_rows.append([f"e{epoch}", item.get("sample_id"),
                               _badge(layer, layer if layer in ("L1", "L2", "L3", "L4") else "mut"),
-                              item.get("failure_mode"), item.get("root_cause_element"),
+                              item.get("failure_mode"),
+                              f"{element_id}" + (f"（{element_semantic}）" if element_semantic else ""),
                               f"{item.get('confidence', 1):.2f}",
                               f"⚠ {len(item.get('side_issues') or [])} 附带"
                               if item.get("side_issues") else "-"])
@@ -323,10 +341,13 @@ def _render_training(payload: dict) -> str:
         rules = [item for item in solution.get("L3_knowledge") or []
                  if item.get("type") == "routing_rule" and not item.get("superseded")]
         evolution_html += _table(["L3 路由规则（当前）"],
-                                 [[f"{item.get('id')} {item.get('condition') or ''} → {item.get('dispatches_to') or ''}"]
+                                 [[f"{item.get('id')} {item.get('condition') or ''} → {item.get('dispatches_to') or ''}"
+                                   + (f" · {item.get('description')}" if item.get("description") else "")
+                                   + (" · 🔒冻结" if item.get("frozen") else "")]
                                   for item in rules])
         evolution_html += _table(["L4 Agent"],
-                                 [[f"{item.get('id')} ({item.get('role')}) · 引用 {len(item.get('uses') or [])} 条知识"]
+                                 [[f"{item.get('id')} ({item.get('role')}) · 引用 {len(item.get('uses') or [])} 条知识"
+                                   + (" · 🔒冻结" if item.get("frozen") else "")]
                                   for item in (solution.get("L4_topology") or {}).get("agents") or []])
     sections.append(evolution_html + "</section>")
 
@@ -334,9 +355,12 @@ def _render_training(payload: dict) -> str:
     transactions_html = "<section><h2>⑧ 事务与中间链路</h2>"
     tx = (summary.get("transactions_committed") or []) + (summary.get("transactions_rolled_back") or [])
     transactions_html += _table(
-        ["状态", "版本", "层", "动作", "元素", "理由"],
+        ["状态", "来源", "变更摘要（人话）", "层·动作·元素", "理由"],
         [[_status("回滚", bad=True) if t.get("rolled_back") else _status("提交", good=True),
-          f"v{t.get('version')}", c.get("layer"), c.get("action"), c.get("element"),
+          _status("正则", good=True) if c.get("origin") == "regularization" else _status("任务", good=True),
+          c.get("semantic") or "—",
+          f"{c.get('layer')}·{c.get('action')}·{c.get('element')}"
+          + (f" ⚔冲突:{c['reg_conflict']}" if c.get("reg_conflict") else ""),
           str(c.get("reason") or "")[:40]]
          for t in tx for c in (t.get("changes") or [])])
     transactions_html += "<h3>消息因果链（按轮）</h3>"

@@ -13,7 +13,8 @@
 | Material Bundle 编译与核心 CLI | 已实现确定性编译、四集合生成和 RunStore 追溯 | `src/agentfit/materials/`、`agentfit compile` |
 | 四类冻结 SampleSetManifest | 已实现合同与访问门禁 | `src/agentfit/models/manifest.py` |
 | 训练、归因、建议、事务、回归 | 已实现 Batch/Step/Epoch/validation 状态机：每 Epoch 分批完整且不重复地覆盖 adaptation，Step 含反向依赖传播与事务回归，Epoch 末冻结候选并只读 validation，Early Stopping 停止原因可重算；`train_replay` 单独分型 | `src/agentfit/core/`、`src/agentfit/agents/orchestrator.py`、`tests/test_training_state_machine.py` |
-| 正则与 λ 调节 | 已接入结构、行为、成本和回归约束 | `src/agentfit/core/regularization.py` |
+| 正则与 λ 调节 | 已接入结构、行为、成本和回归约束；正则按 trained 子集计算并传播为简化提案（与任务提案同门禁、metric 证据、冲突标注），λ 有真实下游 | `src/agentfit/core/regularization.py`、`tests/test_regularization_propagation.py` |
+| 层级类型学与 provenance | core 闭集 + Case 注册制扩展（挂靠超类 + 语义描述 + G0 冻结）；frozen 元素受双重保护并只产生 advisory | `src/agentfit/models/taxonomy.py`、`solution/validator.py` |
 | Skill Registry 与认知角色装配 | 已实现 | `src/agentfit/skills/registry.py`、`src/agentfit/agents/team.py` |
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
 | RunStore、报告、Dashboard、方案包、证据包 | 已实现四集合验收与 G3 状态；Dashboard 仍依赖 JavaScript 生成基本内容 | `src/agentfit/store/`、`src/agentfit/log/`、`src/agentfit/dashboard/`、`src/agentfit/delivery/` |

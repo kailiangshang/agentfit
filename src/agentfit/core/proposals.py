@@ -19,6 +19,60 @@ from ..models.sample import TaskSample
 from ..models.solution import Agent, Knowledge, Solution, Topology
 
 
+def semantic_for_element(element, registry=None) -> str:
+    """语义双轨的人话句（三层保底：description → 类型映射 → 最小人话，不编造）。"""
+    from ..models.taxonomy import (CORE_L1_ACCESS, DEFAULT_REGISTRY)
+    registry = registry or DEFAULT_REGISTRY
+    eid = getattr(element, "id", str(element))
+    desc = (getattr(element, "description", "") or "").strip()
+    etype = getattr(element, "type", None)
+    layer_cls = type(element).__name__
+    if layer_cls == "SolidAtom":
+        access = CORE_L1_ACCESS.get(getattr(element, "type", ""), getattr(element, "type", ""))
+        domain = registry.semantic_l1_domain(getattr(element, "domain", "data_interface"))
+        return f"原子接口“{eid}”（{domain}·{access}）——{desc}" if desc else \
+               f"原子接口“{eid}”（{domain}·{access}，未提供用途描述）"
+    if layer_cls == "CapabilityTool":
+        label = registry.semantic_l2_type(getattr(element, "capability_type", "safe_wrapper"))
+        return f"{label}“{eid}”——{desc}" if desc else f"{label}“{eid}”（未提供用途描述）"
+    if layer_cls == "Knowledge":
+        label = registry.semantic_l3_type(etype or "")
+        return f"{label}“{eid}”——{desc}" if desc else f"{label}“{eid}”（未提供用途描述）"
+    if layer_cls == "Topology":
+        agents = getattr(element, "agents", [])
+        return f"Agent 拓扑（{len(agents)} 个角色：{', '.join(a.role for a in agents)}）"
+    return f"{layer_cls}“{eid}”"
+
+
+_ACTION_SEMANTIC = {"add": "新增", "modify": "调整", "supersede": "下线", "remove": "删除"}
+
+
+def semantic_for_proposal(proposal, registry=None) -> str:
+    action = _ACTION_SEMANTIC.get(proposal.action, proposal.action)
+    return f"维护{action}了{semantic_for_element(proposal.element, registry)}"
+
+
+def annotate_reg_conflicts(proposals: list, report, solution: Solution) -> None:
+    """任务提案加剧已超阈指标 → 标注 reg_conflict（人审可见对抗关系）。"""
+    over = set(report.over_threshold.get("L3", [])) | set(report.over_threshold.get("L2", []))
+    if not over:
+        return
+    ref_count: dict[str, int] = {}
+    for k in solution.L3_knowledge:
+        if k.steps:
+            for step in k.steps:
+                ref_count[step.tool] = ref_count.get(step.tool, 0) + 1
+        elif k.dispatches_to:
+            ref_count[k.dispatches_to] = ref_count.get(k.dispatches_to, 0) + 1
+    for proposal in proposals:
+        if proposal.origin != "task" or proposal.reg_conflict:
+            continue
+        if proposal.layer == "L3" and "chain_coverage" in over:
+            element = proposal.element
+            if getattr(element, "dispatches_to", None) and ref_count.get(element.dispatches_to, 0) > 0:
+                proposal.reg_conflict = "chain_coverage"
+
+
 def stable_element_id(prefix: str, payload: object) -> str:
     """Build a reproducible identifier from canonical content."""
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True,
@@ -29,32 +83,40 @@ def stable_element_id(prefix: str, payload: object) -> str:
 
 def propagate_reverse_dependencies(proposals: list[UpdateProposal],
                                    solution: Solution) -> list[UpdateProposal]:
-    """反向依赖传播：新增 L3 知识必须被 L4 Agent 引用，否则沿 L4→L3 不可达。
+    """反向依赖传播：修复"变更对已有依赖者的影响"，不替归因做接线决策。
 
-    确定性规则：引用了同类型知识的 Agent 获得新元素；没有任何 Agent 引用过
-    该类型时，所有 Agent 获得（Simple First 单 Agent 场景即该 Agent）。
+    语义边界（防止旁路化）：
+    - 纯新增（add）没有依赖者，无影响可传播——新增知识是否接入 L4 由训练循环
+      通过 unreachable_knowledge 归因驱动（失败证据 → 建议 → G1 → 事务），不自动送。
+    - supersede 下线已有元素时，依赖它的上层引用（L4 uses）是真实的变更影响，
+      由传播修复：移除被下线引用，替换为同批新增的修正元素。
     """
     extra: list[UpdateProposal] = []
-    if not proposals:
+    if not proposals or not solution.L4_topology.agents:
         return extra
-    referenced = {u for agent in solution.L4_topology.agents for u in agent.uses}
-    new_knowledge = [p.element for p in proposals
-                     if p.layer == "L3" and p.action == "add"
-                     and isinstance(p.element, Knowledge) and p.element.id not in referenced]
-    if not new_knowledge:
+    superseded_ids = {p.element.id for p in proposals
+                      if p.layer == "L3" and p.action == "supersede"
+                      and isinstance(p.element, Knowledge)}
+    added_ids = {p.element.id for p in proposals
+                 if p.layer == "L3" and p.action == "add"
+                 and isinstance(p.element, Knowledge)}
+    if not superseded_ids:
         return extra
+    replacement = next(iter(added_ids), None) if len(added_ids) == 1 else None
     import copy
     topology = copy.deepcopy(solution.L4_topology)
-    for element in new_knowledge:
-        same_type_ids = {k.id for k in solution.L3_knowledge if k.type == element.type}
-        holders = [a for a in topology.agents if any(k in same_type_ids for k in a.uses)]
-        targets = holders or topology.agents
-        for agent in targets:
-            if element.id not in agent.uses:
-                agent.uses.append(element.id)
+    changed = False
+    for agent in topology.agents:
+        for stale in [u for u in agent.uses if u in superseded_ids]:
+            agent.uses.remove(stale)
+            if replacement and replacement not in agent.uses:
+                agent.uses.append(replacement)
+            changed = True
+    if not changed:
+        return extra
     extra.append(UpdateProposal(
         "L4", "modify", topology,
-        reason=f"反向依赖传播：{len(new_knowledge)} 个新增 L3 知识接入拓扑",
+        reason=f"反向依赖传播：{len(superseded_ids)} 个下线元素的 L4 引用清理",
         evidence_sample_ids=sorted({sid for p in proposals
                                     for sid in (p.evidence_sample_ids or [])}) or None,
     ))
@@ -74,6 +136,7 @@ def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, TaskSample],
             if rule is not None:
                 proposals.append(UpdateProposal("L3", "add", rule,
                                                 reason=f"{len(sample_ids)} 个样本缺路由覆盖",
+                                                semantic=semantic_for_proposal(UpdateProposal("L3", "add", rule)),
                                                 evidence_sample_ids=sample_ids))
         elif layer == "L3" and mode == "routing_error" and element != "-":
             old = solution.knowledge(element)
@@ -86,10 +149,20 @@ def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, TaskSample],
                                                 evidence_sample_ids=sample_ids))
         elif layer == "L4" and mode == "unreachable_knowledge" and element != "-":
             orphan = solution.knowledge(element)
-            if orphan is not None:
-                proposals.extend(propagate_reverse_dependencies(
-                    [UpdateProposal("L3", "add", orphan, reason="不可达知识重新接入",
-                                    evidence_sample_ids=sample_ids)], solution))
+            if orphan is not None and solution.L4_topology.agents:
+                import copy
+                topology = copy.deepcopy(solution.L4_topology)
+                same_type_ids = {k.id for k in solution.L3_knowledge
+                                 if k.type == orphan.type and k.id != orphan.id}
+                holders = [a for a in topology.agents if any(k in same_type_ids for k in a.uses)]
+                targets = holders or topology.agents
+                for agent in targets:
+                    if orphan.id not in agent.uses:
+                        agent.uses.append(orphan.id)
+                proposals.append(UpdateProposal(
+                    "L4", "modify", topology,
+                    reason=f"不可达知识 {element} 接入拓扑（unreachable_knowledge 归因证据驱动）",
+                    evidence_sample_ids=sample_ids))
         elif layer == "L4" and mode == "topology_mismatch":
             all_knowledge_ids = [k.id for k in solution.L3_knowledge if not k.superseded]
             dual = Topology(agents=[Agent("triage", "diagnostic", uses=list(all_knowledge_ids)),

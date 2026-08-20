@@ -16,7 +16,11 @@ class Auditor:
         record = {
             "status": tx.status,
             "changes": [{"layer": c.layer, "action": c.action,
-                         "element": getattr(c.element, "id", str(c.element)), "reason": c.reason}
+                         "element": getattr(c.element, "id", str(c.element)), "reason": c.reason,
+                         "origin": getattr(c, "origin", "task"),
+                         "semantic": getattr(c, "semantic", ""),
+                         "reg_evidence": getattr(c, "reg_evidence", None),
+                         "reg_conflict": getattr(c, "reg_conflict", None)}
                         for c in tx.changes],
             "version": tx.solution.version,
             "rolled_back": rolled_back,

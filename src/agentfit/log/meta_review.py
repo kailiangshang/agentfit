@@ -85,6 +85,11 @@ def generate_meta_review(run_dir: str | Path) -> Path:
                 suggestions.append(("LambdaController", f"λ_{k[-1]} 累计变化 >40%——"
                                   "通过率与正则可能对抗，考虑生成 Level 2 人审建议"))
 
+    frozen_advisories = []
+    sug_dir = store.root / "optimization_suggestions"
+    if sug_dir.is_dir():
+        frozen_advisories = [store.load_json(f"optimization_suggestions/{p.name}")
+                             for p in sorted(sug_dir.glob("*.json"))]
     lines = [f"# AgentFit 自身改进建议 · {store.root.name}", "",
              "> 运行完成仪制：训练结果见 training_report.md / dashboard.html；", "> "
              "本文件是对训练系统本身（元层）的建议——训练系统训练方案，运行经验反过来训练训练系统。", "",
@@ -97,6 +102,10 @@ def generate_meta_review(run_dir: str | Path) -> Path:
             lines.append(f"- **{target}**：{text}")
     else:
         lines += ["## 建议", "", "- 本轮无系统性问题信号——元层维持当前版本"]
+    if frozen_advisories:
+        lines += ["", "## 冻结边界 advisory（给用户，非阻塞）", ""]
+        for item in frozen_advisories[:8]:
+            lines.append(f"- {item.get('semantic', '')}")
     out = store.root / "meta_review.md"
     out.write_text("\n".join(lines), encoding="utf-8")
     return out
