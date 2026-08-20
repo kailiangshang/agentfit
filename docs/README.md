@@ -76,7 +76,7 @@ agentfit export output/telecom-demo
 
 当前严格示例会被 G3 拒绝导出：四集合各有 3 个样本并要求 100% 通过；现行本地确定性实现会完成一次 adaptation Batch 更新，并在候选冻结后运行四集合评价。其 adaptation、validation 和 sealed_holdout 为 3/3，但最简候选在两个复合 stress 样本上失败，因此 stress_and_failure 只有 1/3。`validate` 和 `report` 应成功，`export` 应返回非零状态；这证明单轮更新通过率或部分评价集合通过不能冒充 Epoch 收敛或全局验收。要产生可部署包，必须先完成规范状态机，再由 adaptation 失败 Trace 改进候选并重新验证，而不是降低演示阈值。
 
-这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现材料编译、单 Batch 更新内核、最终四集合评价调度、Objective/Acceptance、签名 G3 交付门禁、训练/外部评价分型的 RunStore，以及 AgentTeams 上真实 DeepSeek/Matrix/隔离 Worker 的往返。规范的多 Batch Epoch、Epoch 末 validation、Early Stopping、反向依赖传播和无需 JavaScript 的静态 Dashboard 仍待实现。既有真实运行只证明桥接、局部更新和证据门禁可运行，不代表训练已收敛、业务副作用或最终泛化已经完成；后续收敛按[开发计划](development-plan.md)推进。
+这里的自动批准仅用于本地确定性演示；G3 签名密钥只从运行环境读取，不写入仓库或 RunStore。当前已经实现材料编译、Batch/Step/Epoch/validation 训练状态机（每 Epoch 完整不重复覆盖 adaptation、Epoch 末只读 validation、Early Stopping 停止原因可重算、反向可达性归因与反向依赖传播、`train_replay` 分型）、最终四集合评价调度、Objective/Acceptance、签名 G3 交付门禁、训练/外部评价分型的 RunStore、禁用 JavaScript 仍可完整阅读的静态 Dashboard，以及 AgentTeams 上真实 DeepSeek/Matrix/隔离 Worker 的往返。多 Epoch 真实（非模拟器）运行证据仍待积累。既有真实运行只证明桥接、局部更新和证据门禁可运行，不代表训练已收敛、业务副作用或最终泛化已经完成；后续收敛按[开发计划](development-plan.md)推进。
 
 参与开发前请阅读仓库根目录的 [CONTRIBUTING](../CONTRIBUTING.md) 和 [SECURITY](../SECURITY.md)。
 

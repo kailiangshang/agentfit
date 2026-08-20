@@ -33,3 +33,7 @@ class TrainingConfig:
     lambda_level1_cap: float = 0.5         # 累计变化上限 ±50%
     lambda_consecutive_rounds: int = 2     # 连续 N 轮超阈值触发 Level 1
     review_policy: HumanGatePolicy = field(default_factory=BlockingHumanGate)
+    # ---- Epoch 末 validation 与 Early Stopping（架构正本 §Batch、Step、Epoch 与验证边界）----
+    validation_patience: int = 2           # 连续 N 个 Epoch validation 无提升 → 停止
+    validation_min_improvement: float = 0.02   # 判定提升的最小差值
+    validation_degradation: float = 0.10   # 低于历史最佳该幅度 → 恢复最佳候选并停止

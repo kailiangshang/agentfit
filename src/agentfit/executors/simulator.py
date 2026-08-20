@@ -36,11 +36,20 @@ class SimulatorExecutor(ExecutorBase):
             trace.result = "PASS"
             return trace
 
+        # L4→L3 可达性：只有被 Agent uses 引用的知识才可被路由（真实平台语义）
+        reachable = {u for agent in solution.L4_topology.agents for u in agent.uses}
+
         # L3 优先匹配排查链（多步知识 = 任务拆解），再走路由规则
         chains = [k for k in solution.L3_knowledge
                   if k.type == "chain" and not k.superseded and k.steps]
         matched_chain = next((c for c in chains if _condition_match(c.condition, sample.input_data)), None)
         if matched_chain is not None:
+            if matched_chain.id not in reachable:
+                trace.result = "FAIL"
+                trace.steps.append(TraceStep(layer="L4", element_id=matched_chain.id,
+                                             action="unreachable_knowledge", ok=False,
+                                             error=f"L3 知识 {matched_chain.id} 存在但未被任何 Agent 引用"))
+                return trace
             trace.routed_knowledge_id = matched_chain.id
             for step in matched_chain.steps:
                 tool = solution.tool(step.tool)
@@ -64,12 +73,20 @@ class SimulatorExecutor(ExecutorBase):
             trace.steps.append(TraceStep(layer="L3", element_id="-", action="no_rule_matched", ok=False,
                                          error=f"无路由规则覆盖 {sample.input_data}"))
             return trace
-        rule = matched[0]                      # 具体性排序由方案构建保证；模拟器取首个
+        reachable_matched = [r for r in matched if r.id in reachable]
+        if not reachable_matched:
+            unreachable_ids = [r.id for r in matched]
+            trace.result = "FAIL"
+            trace.steps.append(TraceStep(layer="L4", element_id=unreachable_ids[0],
+                                         action="unreachable_knowledge", ok=False,
+                                         error=f"L3 知识 {unreachable_ids} 存在但未被任何 Agent 引用"))
+            return trace
+        rule = reachable_matched[0]              # 具体性排序由方案构建保证；模拟器取首个
         trace.routed_knowledge_id = rule.id
 
         # 派发到 L2 工具（调度）。复合样本 + 多 Agent 拓扑 = 并行诊断，执行全部命中规则
-        dispatch_targets = matched if (sample.complexity == "compound"
-                                       and len(solution.L4_topology.agents) > 1) else [rule]
+        dispatch_targets = reachable_matched if (sample.complexity == "compound"
+                                                 and len(solution.L4_topology.agents) > 1) else [rule]
         for r in dispatch_targets:
             if r.dispatches_to is None:
                 trace.result = "FAIL"

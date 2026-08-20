@@ -12,7 +12,7 @@
 | ObjectiveSpec 与 AcceptanceResult | 已实现四集合阈值、内容寻址验收和确定性拒绝 | `src/agentfit/models/objective.py` |
 | Material Bundle 编译与核心 CLI | 已实现确定性编译、四集合生成和 RunStore 追溯 | `src/agentfit/materials/`、`agentfit compile` |
 | 四类冻结 SampleSetManifest | 已实现合同与访问门禁 | `src/agentfit/models/manifest.py` |
-| 训练、归因、建议、事务、回归 | 已实现单 Batch 确定性更新内核；规范 Epoch 与 validation 隔离尚未实现 | `src/agentfit/core/`、`src/agentfit/agents/orchestrator.py` |
+| 训练、归因、建议、事务、回归 | 已实现 Batch/Step/Epoch/validation 状态机：每 Epoch 分批完整且不重复地覆盖 adaptation，Step 含反向依赖传播与事务回归，Epoch 末冻结候选并只读 validation，Early Stopping 停止原因可重算；`train_replay` 单独分型 | `src/agentfit/core/`、`src/agentfit/agents/orchestrator.py`、`tests/test_training_state_machine.py` |
 | 正则与 λ 调节 | 已接入结构、行为、成本和回归约束 | `src/agentfit/core/regularization.py` |
 | Skill Registry 与认知角色装配 | 已实现 | `src/agentfit/skills/registry.py`、`src/agentfit/agents/team.py` |
 | 生产 Human Gate 默认阻断 | 已实现 | `src/agentfit/gates/human.py` |
@@ -25,12 +25,14 @@
 
 ## 最高优先级工作
 
-### 训练状态机与验证隔离
+### 训练状态机与验证隔离（已落地，持续以真实运行验证）
 
-先收敛训练语义，再扩大真实样本。当前 `run_epoch()` 实际只执行一个 adaptation Batch，事务
-提交后又重放完整 adaptation，并把结果写成该轮通过率；这不是规范 Epoch，也不是 validation。
-真实 AgentTeams Trace 还证明“L3 已新增但未被 L4 引用”的可达性失败会被当前归因器误落到
-`eval_error`。下一步必须按[架构正本](architecture.md)完成：
+`tests/test_training_state_machine.py` 固化以下合同：一个 Epoch 完整且不重复地消费
+adaptation（无默认全量重放）；Epoch 末只读 validation 且不产生 ChangeProposal；validation
+失败不回流更新（V-marker 合同样本）；Early Stopping 停止原因可从曲线重算；归因器区分
+“缺少 L3”与“L3 存在但沿 L4→L3 不可达”（`unreachable_knowledge` → L4），由
+`propagate_reverse_dependencies` 把新增知识接入拓扑；`train_replay` 单独分型核算。
+原始目标（保留作验收口径）：
 
 - 将单 Batch 的前向、归因、局部提案、反向依赖传播、事务和回归定义为 Step；
 - 由 Epoch 调度一个或多个 Step，完整且默认不重复地覆盖 adaptation manifest；

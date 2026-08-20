@@ -42,11 +42,15 @@ def test_full_chain_intake_to_delivery(tmp_path, monkeypatch):
         decided_at="2026-08-17T15:00:00+08:00", reason="full-chain fixture",
     )
     refs = [sample.ref for sample in samples]
+    by_prefix: dict[str, list] = {}
+    for sample in samples:
+        by_prefix.setdefault(sample.id.split("-")[0], []).append(sample.ref)
+    held_out = {by_prefix["F1"][1], by_prefix["F2"][1], by_prefix["F3"][4]}
     refs_by_purpose = {
-        SampleSetPurpose.ADAPTATION: tuple(refs[:18]),
-        SampleSetPurpose.VALIDATION: (refs[18],),
-        SampleSetPurpose.SEALED_HOLDOUT: (refs[19],),
-        SampleSetPurpose.STRESS_AND_FAILURE: (refs[20],),
+        SampleSetPurpose.ADAPTATION: tuple(ref for ref in refs if ref not in held_out),
+        SampleSetPurpose.VALIDATION: (by_prefix["F1"][1],),      # 训练后通过
+        SampleSetPurpose.SEALED_HOLDOUT: (by_prefix["F2"][1],),  # 训练后通过
+        SampleSetPurpose.STRESS_AND_FAILURE: (by_prefix["F3"][4],),  # 由训练归纳修复
     }
     collection = SampleSetCollection(tuple(
         SampleSetManifest.create(

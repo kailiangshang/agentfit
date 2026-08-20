@@ -165,11 +165,18 @@ def _adaptation_samples(samples: list[TaskSample], collection: SampleSetCollecti
     return [sample for sample in samples if sample.id in ids]
 
 
+def _validation_samples(samples: list[TaskSample], collection: SampleSetCollection) -> list[TaskSample]:
+    validation = collection.by_purpose(SampleSetPurpose.VALIDATION)
+    ids = {ref.sample_id for ref in validation.sample_refs}
+    return [sample for sample in samples if sample.id in ids]
+
+
 def _train(args: argparse.Namespace) -> int:
     if args.output.exists():
         raise CliError(f"output already exists: {args.output}")
     doc, task_samples, collection, capability_inventory, objective = _read_case(args.case)
     adaptation = _adaptation_samples(task_samples, collection)
+    validation = _validation_samples(task_samples, collection)
     solution = build_candidate(task_samples, collection, capability_inventory)
     training = doc.get("training", {})
     config_args: dict[str, Any] = {
@@ -182,6 +189,7 @@ def _train(args: argparse.Namespace) -> int:
     orchestrator = Orchestrator(
         solution, SamplePool(adaptation), executor, TrainingConfig(**config_args),
         run_dir=str(args.output), scenario=doc.get("scenario", "default"),
+        validation_samples=validation,
     )
     build_team(orchestrator)
     orchestrator.train()

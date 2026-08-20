@@ -120,8 +120,9 @@ def test_dashboard_preserves_canonical_eight_section_order(tmp_path):
     run_dir = _train_with_store(tmp_path)
 
     html = generate_dashboard(run_dir).read_text(encoding="utf-8")
+    # 八区基本证据由静态 HTML 直接呈现（禁用 JS 仍可阅读），顺序即合同
     numbered_headings = re.findall(
-        r"el\('h2',null,'([①②③④⑤⑥⑦⑧⑨⑩][^']+)'\)",
+        r"<h2>([①②③④⑤⑥⑦⑧][^<]+)</h2>",
         html,
     )
 
@@ -135,6 +136,19 @@ def test_dashboard_preserves_canonical_eight_section_order(tmp_path):
         "⑦ L1-L4 方案证据与版本演化",
         "⑧ 事务与中间链路",
     ]
+
+
+def test_dashboard_is_readable_without_javascript(tmp_path):
+    run_dir = _train_with_store(tmp_path)
+
+    html = generate_dashboard(run_dir).read_text(encoding="utf-8")
+
+    # 静态正本合同：基本证据不依赖 JavaScript 渲染（无挂载点、无 DOM 构建）
+    assert 'id="app"' not in html
+    assert "createElement" not in html
+    # 训练曲线分列呈现 adaptation 与 validation，不混成一条通过率
+    assert "adaptation 通过率" in html
+    assert "validation 通过率" in html
 
 
 def test_dashboard_contains_long_runtime_evidence_on_mobile(tmp_path):

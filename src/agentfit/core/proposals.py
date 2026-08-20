@@ -27,6 +27,40 @@ def stable_element_id(prefix: str, payload: object) -> str:
     return f"{prefix}_{digest}"
 
 
+def propagate_reverse_dependencies(proposals: list[UpdateProposal],
+                                   solution: Solution) -> list[UpdateProposal]:
+    """反向依赖传播：新增 L3 知识必须被 L4 Agent 引用，否则沿 L4→L3 不可达。
+
+    确定性规则：引用了同类型知识的 Agent 获得新元素；没有任何 Agent 引用过
+    该类型时，所有 Agent 获得（Simple First 单 Agent 场景即该 Agent）。
+    """
+    extra: list[UpdateProposal] = []
+    if not proposals:
+        return extra
+    referenced = {u for agent in solution.L4_topology.agents for u in agent.uses}
+    new_knowledge = [p.element for p in proposals
+                     if p.layer == "L3" and p.action == "add"
+                     and isinstance(p.element, Knowledge) and p.element.id not in referenced]
+    if not new_knowledge:
+        return extra
+    import copy
+    topology = copy.deepcopy(solution.L4_topology)
+    for element in new_knowledge:
+        same_type_ids = {k.id for k in solution.L3_knowledge if k.type == element.type}
+        holders = [a for a in topology.agents if any(k in same_type_ids for k in a.uses)]
+        targets = holders or topology.agents
+        for agent in targets:
+            if element.id not in agent.uses:
+                agent.uses.append(element.id)
+    extra.append(UpdateProposal(
+        "L4", "modify", topology,
+        reason=f"反向依赖传播：{len(new_knowledge)} 个新增 L3 知识接入拓扑",
+        evidence_sample_ids=sorted({sid for p in proposals
+                                    for sid in (p.evidence_sample_ids or [])}) or None,
+    ))
+    return extra
+
+
 def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, TaskSample],
                     solution: Solution) -> tuple[list[UpdateProposal], list[str]]:
     """返回 (建议列表, 边界备注列表)。"""
@@ -50,9 +84,16 @@ def propose_updates(agg: AggregatedLoss, samples_by_id: dict[str, TaskSample],
                 proposals.append(UpdateProposal("L3", "add", fixed,
                                                 reason=f"{len(sample_ids)} 个样本路由错误修正",
                                                 evidence_sample_ids=sample_ids))
+        elif layer == "L4" and mode == "unreachable_knowledge" and element != "-":
+            orphan = solution.knowledge(element)
+            if orphan is not None:
+                proposals.extend(propagate_reverse_dependencies(
+                    [UpdateProposal("L3", "add", orphan, reason="不可达知识重新接入",
+                                    evidence_sample_ids=sample_ids)], solution))
         elif layer == "L4" and mode == "topology_mismatch":
-            dual = Topology(agents=[Agent("triage", "diagnostic", uses=[k.id for k in solution.routing_rules()]),
-                                    Agent("resolver", "repair", uses=[k.id for k in solution.routing_rules()])],
+            all_knowledge_ids = [k.id for k in solution.L3_knowledge if not k.superseded]
+            dual = Topology(agents=[Agent("triage", "diagnostic", uses=list(all_knowledge_ids)),
+                                    Agent("resolver", "repair", uses=list(all_knowledge_ids))],
                             edges=[], human_gate_positions=[], trigger_mode="passive")
             proposals.append(UpdateProposal("L4", "add", dual,
                                             reason="复合样本证据：需要诊断+修复双 Agent",
@@ -85,7 +126,9 @@ def _rule_from_evidence(evidence: list[TaskSample], solution: Solution, replace_
     tool_counter = Counter(a.tool for s in evidence for a in s.expected.actions)
     if not tool_counter:
         return None
-    condition = " AND ".join(bool_keys) if bool_keys else None
+    if not bool_keys:
+        return None            # 无共性布尔特征 → 拒绝生成无条件兜底规则（会匹配一切）
+    condition = " AND ".join(bool_keys)
 
     if len(actions) > 1:      # 多动作 → 排查链（任务拆解）
         if any(solution.tool(a.tool) is None for a in actions):

@@ -176,12 +176,12 @@ RunStore 是一次运行的不可变证据目录，至少包含：
 | 架构关注点 | 当前状态 | 稳定边界或缺口 |
 |---|---|---|
 | 材料、样本、四集合、能力清单和 Objective | 已实现平台无关合同 | `materials/`、`models/project.py`、`models/objective.py` |
-| 训练、归因、事务、回归和四集合验收 | 单 Batch 更新、事务、回归与最终四集合调度已实现 | 当前 `run_epoch` 实际只运行一个 Batch，并在更新后重放 adaptation；规范 Epoch、Epoch 末 validation、Early Stopping 和反向可达性归因尚未实现 |
+| 训练、归因、事务、回归和四集合验收 | Batch/Step/Epoch/validation 状态机、Early Stopping、反向可达性归因（`unreachable_knowledge`）与反向依赖传播已实现；`train_replay` 单独分型 | 合同由 `tests/test_training_state_machine.py` 固化；多 Epoch 真实（非模拟器）运行证据仍待积累 |
 | 认知、检索和沙箱 | 仅有 Protocol | `adapters/protocols.py`，尚未注入认知角色和状态机 |
 | 候选与运行身份 | 已实现分离证据 | CandidateManifest 绑定四层语义；`runtime_ref` 绑定 Executor/平台/沙箱 |
 | AgentTeams | 生成、状态、按运行创建隔离 Worker、真实 Matrix/DeepSeek 执行、Candidate 更新和四集合结果往返已实现 | 12 样本已运行；集合级会话隔离、成本可观测和真实副作用尚未完成 |
 | 运行绑定 | 核心保持实现无关 | 每个 bridge 按目标平台解析能力和 Memory；不要求核心自动部署某种技术 |
-| RunStore 可信存储 | 内容哈希、验证、训练证据和外部评价原子发布已实现 | Batch/Step/Epoch、validation 与可选 `train_replay` 仍需分型落盘 |
+| RunStore 可信存储 | 内容哈希、验证、训练证据和外部评价原子发布已实现 | Step/validation/train_replay 已分型落盘（`steps/`、`validation/`、`train_replay/`） |
 | 正则 | 已接入结构、行为、成本和回归约束 | 新指标只在目标函数或真实失败证据需要时增加，不追求固定数量 |
 
 最终交付包含三个独立但可追溯的部分：

@@ -52,6 +52,12 @@ def make_samples() -> list[TaskSample]:
     # 边界样本：需人工（不该被训练成自动化）
     samples.append(_task("H-1", {"vip": True, "contract_dispute": True},
                          Expected([ExpectedAction("safe_escalate_human")]), requires_human=True))
+    # validation 专用样本：带唯一标记特征；若 validation 泄漏进更新，会为它生成路由规则
+    samples.append(_task("V-marker-1", {"validation_only_marker": True},
+                         Expected([ExpectedAction("safe_run_sim_diagnostics")])))
+    samples.append(_task("V-known-1", {"abroad": True, "roaming_off": True,
+                                       "airplane": False, "sim_ok": True},
+                         Expected([ExpectedAction("safe_toggle_roaming")])))
     return samples
 
 

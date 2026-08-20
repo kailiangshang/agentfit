@@ -77,14 +77,20 @@ def attribute_loss(sample: TaskSample, trace: Trace, solution: Solution,
 
     # 执行器若在拓扑入口明确阻断，后续路由根本没有发生；不能把未执行的
     # L3 路径臆测为根因。
-    if any(step.layer == "L4" and not step.ok for step in trace.steps):
-        return LossTrace(sample.id, "L4", "topology", "topology_mismatch",
-                         "Trace 明确记录拓扑能力不足", confidence=1.0,
-                         side_issues=side_issues)
+    for step in trace.steps:
+        if step.layer == "L4" and not step.ok:
+            if step.action == "unreachable_knowledge":
+                # L3 内容存在但沿 L4→L3 不可达 → 根因在 L4 接线，由反向依赖传播修复
+                return LossTrace(sample.id, "L4", step.element_id, "unreachable_knowledge",
+                                 step.error or "L3 知识存在但不可达", confidence=1.0,
+                                 side_issues=side_issues)
+            return LossTrace(sample.id, "L4", "topology", "topology_mismatch",
+                             "Trace 明确记录拓扑能力不足", confidence=1.0,
+                             side_issues=side_issues)
 
     # Step 3 → L3：实际路径 vs 期望路径（缺链路 / 走错分支）。
-    # 仅当路由确实发生过（routed_knowledge_id 非空）才判 routing_error；
-    # 路由未发生但规则存在 → 失败不在 L3，落到 L4 检查。
+    # 区分"缺少 L3"与"L3 存在但不可达"：内容匹配但 Trace 未路由 → 可达性已在上方
+    # L4 分支处理；此处 routed 为 None 且无内容匹配才是 missing_rule。
     actual_tools = [s.element_id for s in trace.steps if s.layer == "L2"]
     expected_tools = [a.tool for a in sample.expected.actions]
     if trace.routed_knowledge_id is None:

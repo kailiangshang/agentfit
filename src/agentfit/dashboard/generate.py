@@ -1,4 +1,9 @@
-"""Render a self-contained, script-safe Dashboard from one RunStore."""
+"""Render a self-contained, script-safe Dashboard from one RunStore.
+
+八区基本证据全部由静态 HTML 直接呈现（禁用 JavaScript 仍可完整阅读）；
+内嵌 DATA 仅供后续交互增强，不承担内容渲染。训练曲线分开展示
+adaptation Batch 指标与 validation 曲线（正本 §Dashboard 呈现合同）。
+"""
 from __future__ import annotations
 
 import datetime
@@ -31,58 +36,329 @@ th{color:#74d0c7;text-align:left;padding:5px 8px;border-bottom:1px solid #28516d
 """
 
 
+# ---------- 静态渲染小工具（全部经 html.escape，值即文本） ----------
+class _Raw(str):
+    """预构建的安全 HTML 片段标记；其余一切值按纯文本转义。"""
+
+
+def _e(value: Any) -> str:
+    return html.escape("" if value is None else str(value), quote=True)
+
+
+def _cell(value: Any) -> str:
+    if isinstance(value, _Raw):
+        return f"<td>{value}</td>"
+    return f"<td>{_e(value)}</td>"
+
+
+def _table(columns: list[str], rows: list[list[Any]]) -> str:
+    head = "".join(f"<th>{_e(c)}</th>" for c in columns)
+    body = "".join("<tr>" + "".join(_cell(v) for v in row) + "</tr>" for row in rows)
+    return f"<table><tr>{head}</tr>{body}</table>"
+
+
+def _kpi(value: Any, label: str) -> str:
+    return f"<div><b>{_e(value)}</b><span>{_e(label)}</span></div>"
+
+
+def _kpis(items: list[tuple[Any, str]]) -> str:
+    return '<div class="kpi">' + "".join(_kpi(v, label) for v, label in items) + "</div>"
+
+
+def _badge(value: Any, cls: str = "tag") -> _Raw:
+    return _Raw(f'<span class="{cls}">{_e(value)}</span>')
+
+
+def _badges(values: list[Any]) -> _Raw:
+    return _Raw("".join(_badge(v) for v in values))
+
+
+def _bar(rate: float | None) -> _Raw:
+    width = 0 if not isinstance(rate, (int, float)) else max(0, min(1, rate)) * 100
+    text = "—" if not isinstance(rate, (int, float)) else f"{rate * 100:.0f}%"
+    return _Raw(f'<span class="bar"><i style="width:{width:.0f}%"></i></span> {_e(text)}')
+
+
+def _status(value: Any, good: bool = False, bad: bool = False) -> _Raw:
+    cls = "ok" if good else "bad" if bad else "mut"
+    return _badge(value, cls)
+
+
+def _short_ref(value: Any) -> str:
+    text = str(value or "")
+    return f"{text[:12]}…" if text else "—"
+
+
+def _outcome_counts(items: list[dict]) -> str:
+    count = {"PASS": 0, "FAIL": 0, "ERROR": 0}
+    for item in items:
+        if item.get("result") in count:
+            count[item["result"]] += 1
+    return (f"{len(items)} 个样本 · {count['PASS']} 通过 / "
+            f"{count['FAIL']} 失败 / {count['ERROR']} 运行错误")
+
+
+_FAILURE_LABELS = {"missing_rule": "缺少路由规则", "tool_error": "工具调用错误",
+                   "permission_denied": "权限不足",
+                   "unreachable_knowledge": "知识未被拓扑引用",
+                   "topology_mismatch": "拓扑能力不足"}
+_ACTION_LABELS = {"add": "新增", "update": "更新", "remove": "删除", "modify": "修改",
+                  "supersede": "下线"}
+
+
+def _flow_step(title: str, value: Any, detail: Any) -> str:
+    return (f'<div class="flow-step"><b>{_e(title)}</b>'
+            f"<strong>{_e(value)}</strong><span>{_e(detail)}</span></div>")
+
+
+def _render_training(payload: dict) -> str:
+    sections: list[str] = []
+    summary = payload.get("summary") or {}
+    run = payload.get("run") or {}
+    training_evidence = payload.get("training_evidence") or []
+    forward = [item for item in training_evidence if item.get("phase") == "forward"]
+    loss_items = [lt for values in (payload.get("loss_traces") or {}).values() for lt in values]
+    first_loss = loss_items[0] if loss_items else {}
+    committed = [c for t in (summary.get("transactions_committed") or []) for c in (t.get("changes") or [])]
+    first_change = committed[0] if committed else {}
+    final_evidence = payload.get("evaluation_evidence") or []
+
+    # ① 运行概览
+    overview_kpis: list[tuple[Any, str]] = []
+    if summary:
+        valid = isinstance(summary.get("final_pass_rate"), (int, float))
+        cost_observed = not run.get("runtime_provenance", {}).get("cost_accounting") == "unavailable"
+        overview_kpis.append((
+            f"{summary['final_pass_rate'] * 100:.0f}%" if valid else "—",
+            "训练批次通过率" if valid else "训练批次通过率 · 无有效方案评测"))
+        overview_kpis.append((f"v{summary.get('final_solution_version')}", "方案版本"))
+        overview_kpis.append((f"${summary.get('total_cost_usd')}" if cost_observed else "不可用", "总成本"))
+        overview_kpis.append(("✓" if summary.get("log_chain_valid") else "✗", "哈希链"))
+        overview_kpis.append((summary.get("stop_reason") or "进行中", "停止原因"))
+    else:
+        overview_kpis.append(("—", "无 summary（训练未完成）"))
+    runtime = run.get("runtime_provenance") or {}
+    runtime_line = '<div class="runtime-line">' + _badges([
+        f"平台 {runtime.get('platform') or '未记录'}",
+        f"模型 {runtime.get('model_ref') or '未记录'}",
+        f"边界 {runtime.get('execution_boundary') or '未记录'}",
+        f"模式 {runtime.get('binding_mode') or '未记录'}",
+    ]) + "</div>"
+    acceptance = payload.get("acceptance") or {}
+    acceptance_state = ("PASS" if acceptance.get("met") is True
+                        else "REJECT" if acceptance.get("met") is False else "PENDING")
+    g3_state = ("APPROVED" if summary.get("delivery_approved") is True
+                else "REJECTED" if summary.get("acceptance_met") is False else "PENDING")
+    status_line = f'<div class="status">验收 {_e(acceptance_state)} · G3 {_e(g3_state)}</div>'
+    story = ['<div class="learning-story"><h3>训练阶段发生了什么</h3>']
+    if training_evidence:
+        failure = _FAILURE_LABELS.get(first_loss.get("failure_mode"), first_loss.get("failure_mode") or "没有失败")
+        story.append('<div class="flow">' + "".join([
+            _flow_step("1 · 初始测试", _outcome_counts(forward), "用 adaptation 样本检验当前方案"),
+            _flow_step("2 · 找到原因", failure,
+                       f"{first_loss.get('sample_id') or '—'} · 归因到 {first_loss.get('root_cause_layer') or '未定位'}"),
+            _flow_step("3 · 修改方案",
+                       f"{first_change.get('layer') or '方案'} · {_ACTION_LABELS.get(first_change.get('action'), first_change.get('action') or '无变更')}",
+                       first_change.get("element") or "没有产生变更"),
+            _flow_step("4 · 再次测试", _outcome_counts(
+                [item for item in training_evidence if item.get("phase") == "regression"]),
+                "对回归池样本执行回归"),
+        ]) + "</div>")
+    else:
+        story.append('<div class="mut">本次 RunStore 没有训练前后 Episode。</div>')
+    if final_evidence:
+        story.append(f'<div class="final-verdict">最终验收：{_e(_outcome_counts(final_evidence))}</div>')
+    story.append("</div>")
+    sections.append('<section class="wide"><h2>① 运行概览</h2>'
+                    + _kpis(overview_kpis) + status_line + runtime_line + "".join(story) + "</section>")
+
+    # ② 四集合验收
+    evaluations = summary.get("evaluation_by_purpose") or {}
+    criterion_by_purpose = {item.get("purpose"): item
+                            for item in ((payload.get("objective") or {}).get("criteria") or [])}
+    criteria_met = (acceptance or {}).get("criteria_met") or {}
+    acceptance_rows = []
+    for purpose in ("adaptation", "validation", "sealed_holdout", "stress_and_failure"):
+        metric = evaluations.get(purpose) or {}
+        criterion = criterion_by_purpose.get(purpose)
+        rate = f"{metric['pass_rate'] * 100:.0f}%" if isinstance(metric.get("pass_rate"), (int, float)) else "—"
+        threshold = (f"通过率≥{criterion['min_pass_rate'] * 100:.0f}%; ERROR≤{criterion.get('max_errors')}; "
+                     f"成本≤${criterion.get('max_cost_usd')}; 风险≤{criterion.get('max_risk_events')}"
+                     if criterion else "未定义")
+        verdict = (_status("PASS", good=True) if criteria_met.get(purpose) is True
+                   else _status("REJECT", bad=True) if criteria_met.get(purpose) is False
+                   else _status("PENDING"))
+        cost = ("不可用" if metric.get("cost_observed") is False
+                else f"${metric['cost_usd']}" if isinstance(metric.get("cost_usd"), (int, float)) else "—")
+        acceptance_rows.append([purpose, rate,
+                                f"{metric.get('passed', '—')} / {metric.get('failed', '—')} / {metric.get('errors', '—')}",
+                                cost, metric.get("risk_events", 0), threshold, verdict])
+    acceptance_html = '<section class="wide"><h2>② 四集合验收</h2>' + _table(
+        ["集合", "通过率", "PASS / FAIL / ERROR", "成本", "风险事件", "验收门槛", "结果"],
+        acceptance_rows)
+    failures = (acceptance or {}).get("failures") or []
+    if failures:
+        acceptance_html += f'<div class="bad">未满足条件：{_e(" · ".join(failures))}</div>'
+    acceptance_html += "<h3>逐样本结果</h3>"
+    if final_evidence:
+        rows = [[item.get("purpose") or "—", item.get("sample_id"),
+                 _status(item.get("result"), good=item.get("result") == "PASS",
+                         bad=item.get("result") != "PASS"),
+                 item.get("run_index"),
+                 item.get("error_code") or " → ".join(item.get("route") or []) or "—",
+                 _Raw(f"<code>{_e(_short_ref(item.get('candidate_ref')))}</code>")]
+                for item in final_evidence]
+        acceptance_html += '<div class="evidence-wrap">' + _table(
+            ["集合", "样本", "结果", "RunIndex", "实际路径 / 运行错误", "Candidate"], rows) + "</div>"
+    else:
+        acceptance_html += '<div class="mut">最终评价尚未运行；当前只展示 adaptation 学习证据。</div>'
+    sections.append(acceptance_html + "</section>")
+
+    # ③ 材料与四层映射
+    versions = sorted((payload.get("solutions") or {}).keys(), key=lambda v: int(v))
+    first = (payload.get("solutions") or {}).get(versions[0]) if versions else None
+    mapping_html = "<section><h2>③ 材料与四层映射（初始方案）</h2>"
+    if first:
+        solution = first.get("solution") or {}
+        mapping_html += _table(["层", "元素数", "清单"], [
+            ["L1 Solid", len(solution.get("L1_atoms") or []),
+             _badges([f"{item.get('id')} ({item.get('type')})" for item in solution.get("L1_atoms") or []])],
+            ["L2 能力", len(solution.get("L2_tools") or []),
+             _badges([f"{item.get('id')} → [{', '.join(item.get('wraps') or [])}]"
+                      for item in solution.get("L2_tools") or []])],
+            ["L3 知识", len(solution.get("L3_knowledge") or []),
+             _badges([f"{item.get('id')}: {item.get('type')}" for item in solution.get("L3_knowledge") or []])],
+            ["L4 拓扑", len((solution.get("L4_topology") or {}).get("agents") or []),
+             _badges([item.get("id") for item in (solution.get("L4_topology") or {}).get("agents") or []])],
+        ])
+    sections.append(mapping_html + "</section>")
+
+    # ④ 样本与聚类分组
+    samples_html = "<section><h2>④ 样本与聚类分组</h2>"
+    task_samples = payload.get("task_samples") or {}
+    if task_samples.get("samples"):
+        groups: dict[str, list[str]] = {}
+        for sample in task_samples["samples"]:
+            key = ", ".join(f"{k}={v}" for k, v in sorted((sample.get("input_data") or {}).items()))
+            groups.setdefault(key, []).append(sample.get("id"))
+        rows = [[_badge(key, "mut"), len(ids),
+                 ", ".join(ids[:4]) + (" …" if len(ids) > 4 else "")]
+                for key, ids in groups.items()]
+        if payload.get("sample_sets"):
+            rows.append(["集合", "—", " · ".join(
+                f"{m.get('purpose')} × {len(m.get('sample_refs') or [])}"
+                for m in (payload["sample_sets"].get("manifests") or []))])
+        samples_html += _table(["特征签名（聚类）", "样本数", "示例"], rows)
+    sections.append(samples_html + "</section>")
+
+    # ⑤ 训练曲线：adaptation Batch 指标与 validation 曲线分列（不混成一条通过率）
+    curve_html = "<section><h2>⑤ 训练曲线</h2><h3>Epoch 汇总（adaptation / validation 分列）</h3>"
+    epoch_rows = []
+    for record in payload.get("epochs") or []:
+        entry = record.get("entry") or {}
+        adaptation_rate = entry.get("adaptation_pass_rate")
+        validation_rate = entry.get("pass_rate")
+        had_validation = isinstance((entry.get("validation") or {}).get("pass_rate"), (int, float)) \
+            if isinstance(entry.get("validation"), dict) else isinstance(validation_rate, (int, float)) and bool(payload.get("validation"))
+        epoch_rows.append([
+            entry.get("epoch"),
+            _bar(adaptation_rate),
+            _bar(validation_rate) if payload.get("validation") else _Raw('<span class="mut">未运行</span>'),
+            f"${entry.get('cost_usd', 0):.3f}",
+            "/".join(f"{v:.2f}" for v in (entry.get("lambda_values") or {}).values()),
+            len(entry.get("updates_applied") or []),
+            _status("是", bad=True) if entry.get("rolled_back") else _status("否", good=True),
+        ])
+    curve_html += _table(["epoch", "adaptation 通过率", "validation 通过率", "成本", "λ(L1/L2/L3/L4)", "更新数", "回滚"],
+                         epoch_rows)
+    steps = payload.get("steps") or []
+    if steps:
+        curve_html += "<h3>adaptation Batch（Step 级指标）</h3>"
+        curve_html += _table(
+            ["epoch.step", "批大小", "通过/失败", "运行错误", "建议", "应用", "回滚", "成本"],
+            [[f"{s.get('epoch')}.{s.get('step_index')}", s.get("batch_size"),
+              f"{s.get('passed')}/{s.get('failed')}", s.get("execution_errors"),
+              s.get("proposals"), s.get("applied"),
+              _status("是", bad=True) if s.get("rolled_back") else _status("否", good=True),
+              f"${s.get('cost_usd', 0):.3f}"] for s in steps])
+    replay = payload.get("train_replay") or []
+    if replay:
+        curve_html += "<h3>train_replay（诊断重放，单独核算）</h3>"
+        curve_html += _table(["次数", "total", "passed", "failed", "errors", "通过率", "成本"],
+                             [[i + 1, r.get("total"), r.get("passed"), r.get("failed"),
+                               r.get("errors"), _bar(r.get("pass_rate")), f"${r.get('cost_usd', 0):.3f}"]
+                              for i, r in enumerate(replay)])
+    sections.append(curve_html + "</section>")
+
+    # ⑥ 损失归因全景
+    layer_count: dict[str, int] = {}
+    for values in (payload.get("loss_traces") or {}).values():
+        for item in values:
+            layer_count[item.get("root_cause_layer")] = layer_count.get(item.get("root_cause_layer"), 0) + 1
+    total_losses = sum(layer_count.values())
+    losses_html = "<section><h2>⑥ 损失归因全景</h2>" + _kpis([
+        (count, f"{layer} {count / total_losses * 100:.0f}%") for layer, count in layer_count.items()
+    ] or [("—", "无失败归因")])
+    loss_rows = []
+    for epoch, values in (payload.get("loss_traces") or {}).items():
+        for item in values:
+            layer = item.get("root_cause_layer")
+            loss_rows.append([f"e{epoch}", item.get("sample_id"),
+                              _badge(layer, layer if layer in ("L1", "L2", "L3", "L4") else "mut"),
+                              item.get("failure_mode"), item.get("root_cause_element"),
+                              f"{item.get('confidence', 1):.2f}",
+                              f"⚠ {len(item.get('side_issues') or [])} 附带"
+                              if item.get("side_issues") else "-"])
+    losses_html += _table(["轮", "样本", "层", "模式", "元素", "置信度", "附带问题"], loss_rows[:40])
+    sections.append(losses_html + "</section>")
+
+    # ⑦ L1-L4 方案证据与版本演化
+    evolution_html = "<section><h2>⑦ L1-L4 方案证据与版本演化</h2>"
+    solutions = payload.get("solutions") or {}
+    last = solutions.get(versions[-1]) if versions else None
+    if last:
+        evolution_html += _table(["版本", "演化说明"],
+                                 [[f"v{v}", solutions[v].get("note") or "-"] for v in versions])
+        solution = last.get("solution") or {}
+        rules = [item for item in solution.get("L3_knowledge") or []
+                 if item.get("type") == "routing_rule" and not item.get("superseded")]
+        evolution_html += _table(["L3 路由规则（当前）"],
+                                 [[f"{item.get('id')} {item.get('condition') or ''} → {item.get('dispatches_to') or ''}"]
+                                  for item in rules])
+        evolution_html += _table(["L4 Agent"],
+                                 [[f"{item.get('id')} ({item.get('role')}) · 引用 {len(item.get('uses') or [])} 条知识"]
+                                  for item in (solution.get("L4_topology") or {}).get("agents") or []])
+    sections.append(evolution_html + "</section>")
+
+    # ⑧ 事务与中间链路
+    transactions_html = "<section><h2>⑧ 事务与中间链路</h2>"
+    tx = (summary.get("transactions_committed") or []) + (summary.get("transactions_rolled_back") or [])
+    transactions_html += _table(
+        ["状态", "版本", "层", "动作", "元素", "理由"],
+        [[_status("回滚", bad=True) if t.get("rolled_back") else _status("提交", good=True),
+          f"v{t.get('version')}", c.get("layer"), c.get("action"), c.get("element"),
+          str(c.get("reason") or "")[:40]]
+         for t in tx for c in (t.get("changes") or [])])
+    transactions_html += "<h3>消息因果链（按轮）</h3>"
+    transactions_html += _table(
+        ["轮", "消息数", "类型流"],
+        [[f"e{epoch}", len(items),
+          " · ".join(i.get("type", "") for i in items if i.get("dir") == "task")[:80]]
+         for epoch, items in (payload.get("messages") or {}).items()])
+    sections.append(transactions_html + "</section>")
+
+    return "<main>" + "".join(sections) + "</main>"
+
+
+_EXTERNAL_BODY = """<main><section class="wide"><h2>外部评价证据 · 评价概览</h2><div class="kpi" id="kpis"></div></section>
+<section><h2>候选与证据边界</h2><div id="candidate"></div></section><section><h2>逐条证据链</h2><div id="records"></div></section></main>"""
+
 _DOM_HELPERS = r"""
 function el(tag, cls, text){const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined&&text!==null)node.textContent=String(text);return node;}
 function add(parent,...children){children.flat().forEach(child=>{if(child!==undefined&&child!==null)parent.appendChild(child instanceof Node?child:document.createTextNode(String(child)));});return parent;}
 function table(columns,rows){const out=el('table');const head=el('tr');columns.forEach(value=>head.appendChild(el('th',null,value)));out.appendChild(head);rows.forEach(row=>{const tr=el('tr');row.forEach(value=>{const td=el('td');add(td,value);tr.appendChild(td);});out.appendChild(tr);});return out;}
 function kpi(value,label){const box=el('div');add(box,el('b',null,value),el('span',null,label));return box;}
-function badge(value,cls='tag'){return el('span',cls,value);}
-function badges(values){const box=el('span');values.forEach(value=>box.appendChild(badge(value)));return box;}
-function status(value,good,bad){return badge(value,good?'ok':bad?'bad':'mut');}
-function code(value){return el('code',null,value);}
-function shortRef(value){const text=String(value||'');return text?text.slice(0,12)+'…':'—';}
-function humanOutcomeCounts(items){const count={PASS:0,FAIL:0,ERROR:0};items.forEach(item=>{if(item.result in count)count[item.result]++;});return items.length+' 个样本 · '+count.PASS+' 通过 / '+count.FAIL+' 失败 / '+count.ERROR+' 运行错误';}
-function failureLabel(value){return({missing_rule:'缺少路由规则',tool_error:'工具调用错误',permission_denied:'权限不足'})[value]||value||'没有失败';}
-function actionLabel(value){return({add:'新增',update:'更新',remove:'删除'})[value]||value||'无变更';}
-function resultBadge(value){return badge(value,'result-'+String(value||'').toLowerCase());}
-function flowStep(title,value,detail){const box=el('div','flow-step');add(box,el('b',null,title),el('strong',null,value),el('span',null,detail));return box;}
 """
-
-
-_TRAINING_SCRIPT = r"""
-const app=document.getElementById('app');
-const trainingEvidence=DATA.training_evidence||[];const forward=trainingEvidence.filter(item=>item.phase==='forward');const candidateEvaluation=trainingEvidence.filter(item=>item.phase==='candidate_evaluation');const lossItems=Object.values(DATA.loss_traces||{}).flat();const firstLoss=lossItems[0]||{};const committed=((DATA.summary&&DATA.summary.transactions_committed)||[]).flatMap(item=>item.changes||[]);const firstChange=committed[0]||{};const finalEvidence=DATA.evaluation_evidence||[];
-
-const overview=el('section','wide');overview.appendChild(el('h2',null,'① 运行概览'));const overviewKpis=el('div','kpi');
-if(DATA.summary){const valid=typeof DATA.summary.final_pass_rate==='number';const costObserved=!DATA.run||!DATA.run.runtime_provenance||DATA.run.runtime_provenance.cost_accounting!=='unavailable';overviewKpis.appendChild(kpi(valid?(DATA.summary.final_pass_rate*100).toFixed(0)+'%':'—',valid?'训练批次通过率':'训练批次通过率 · 无有效方案评测'));overviewKpis.appendChild(kpi('v'+DATA.summary.final_solution_version,'方案版本'));overviewKpis.appendChild(kpi(costObserved?'$'+DATA.summary.total_cost_usd:'不可用','总成本'));overviewKpis.appendChild(kpi(DATA.summary.log_chain_valid?'✓':'✗','哈希链'));overviewKpis.appendChild(kpi(DATA.summary.converged?'收敛':'进行中','状态'));}
-else overviewKpis.appendChild(el('span','mut','无 summary（训练未完成）'));
-const runtime=(DATA.run&&DATA.run.runtime_provenance)||{};const runtimeLine=el('div','runtime-line');['平台 '+(runtime.platform||'未记录'),'模型 '+(runtime.model_ref||'未记录'),'边界 '+(runtime.execution_boundary||'未记录'),'模式 '+(runtime.binding_mode||'未记录')].forEach(value=>runtimeLine.appendChild(badge(value)));
-add(overview,overviewKpis,el('div','status',ACCEPTANCE_STATUS),runtimeLine);
-const learningStory=el('div','learning-story');learningStory.appendChild(el('h3',null,'训练阶段发生了什么'));
-if(trainingEvidence.length){const flow=el('div','flow');add(flow,flowStep('1 · 初始测试',humanOutcomeCounts(forward),'用 adaptation 样本检验当前方案'),flowStep('2 · 找到原因',failureLabel(firstLoss.failure_mode),(firstLoss.sample_id||'—')+' · 归因到 '+(firstLoss.root_cause_layer||'未定位')),flowStep('3 · 修改方案',(firstChange.layer||'方案')+' · '+actionLabel(firstChange.action),firstChange.element||'没有产生变更'),flowStep('4 · 再次测试',humanOutcomeCounts(candidateEvaluation),'对同一批样本执行回归'));learningStory.appendChild(flow);}else learningStory.appendChild(el('div','mut','本次 RunStore 没有训练前后 Episode。'));
-if(finalEvidence.length)learningStory.appendChild(el('div','final-verdict','最终验收：'+humanOutcomeCounts(finalEvidence)+'；'+ACCEPTANCE_STATUS));
-overview.appendChild(learningStory);app.appendChild(overview);
-
-const acceptance=el('section','wide');acceptance.appendChild(el('h2',null,'② 四集合验收'));
-const purposeOrder=['adaptation','validation','sealed_holdout','stress_and_failure'];const evaluations=(DATA.summary&&DATA.summary.evaluation_by_purpose)||{};const criterionByPurpose={};(DATA.objective&&DATA.objective.criteria||[]).forEach(item=>criterionByPurpose[item.purpose]=item);const criteriaMet=(DATA.acceptance&&DATA.acceptance.criteria_met)||{};
-const acceptanceRows=purposeOrder.map(purpose=>{const metric=evaluations[purpose]||{};const criterion=criterionByPurpose[purpose];const rate=typeof metric.pass_rate==='number'?(metric.pass_rate*100).toFixed(0)+'%':'—';const threshold=criterion?'通过率≥'+(criterion.min_pass_rate*100).toFixed(0)+'%; ERROR≤'+criterion.max_errors+'; 成本≤$'+criterion.max_cost_usd+'; 风险≤'+criterion.max_risk_events:'未定义';const verdict=criteriaMet[purpose]===true?status('PASS',true,false):criteriaMet[purpose]===false?status('REJECT',false,true):status('PENDING',false,false);const cost=metric.cost_observed===false?'不可用':typeof metric.cost_usd==='number'?'$'+metric.cost_usd:'—';return[purpose,rate,(metric.passed??'—')+' / '+(metric.failed??'—')+' / '+(metric.errors??'—'),cost,metric.risk_events??0,threshold,verdict];});
-acceptance.appendChild(table(['集合','通过率','PASS / FAIL / ERROR','成本','风险事件','验收门槛','结果'],acceptanceRows));const failures=(DATA.acceptance&&DATA.acceptance.failures)||[];if(failures.length)acceptance.appendChild(el('div','bad','未满足条件：'+failures.join(' · ')));
-acceptance.appendChild(el('h3',null,'逐样本结果'));if(finalEvidence.length){const rows=finalEvidence.map(item=>[item.purpose||'—',item.sample_id,resultBadge(item.result),item.run_index,item.error_code||(item.route||[]).join(' → ')||'—',code(shortRef(item.candidate_ref))]);const wrap=el('div','evidence-wrap');wrap.appendChild(table(['集合','样本','结果','RunIndex','实际路径 / 运行错误','Candidate'],rows));acceptance.appendChild(wrap);}else acceptance.appendChild(el('div','mut','最终评价尚未运行；当前只展示 adaptation 学习证据。'));app.appendChild(acceptance);
-
-const mapping=el('section');mapping.appendChild(el('h2',null,'③ 材料与四层映射（初始方案）'));const first=DATA.solutions[Object.keys(DATA.solutions).sort((a,b)=>Number(a)-Number(b))[0]];
-if(first){const solution=first.solution;mapping.appendChild(table(['层','元素数','清单'],[['L1 Solid',solution.L1_atoms.length,badges(solution.L1_atoms.map(item=>item.id+' ('+item.type+')'))],['L2 能力',solution.L2_tools.length,badges(solution.L2_tools.map(item=>item.id+' → ['+item.wraps.join(', ')+']'))],['L3 知识',solution.L3_knowledge.length,badges(solution.L3_knowledge.map(item=>item.id+': '+item.type))],['L4 拓扑',solution.L4_topology.agents.length,badges(solution.L4_topology.agents.map(item=>item.id))]]));}app.appendChild(mapping);
-
-const samples=el('section');samples.appendChild(el('h2',null,'④ 样本与聚类分组'));if(DATA.task_samples){const groups={};DATA.task_samples.samples.forEach(sample=>{const key=Object.entries(sample.input_data||{}).map(([name,value])=>name+'='+String(value)).sort().join(', ');(groups[key]=groups[key]||[]).push(sample.id);});const rows=Object.entries(groups).map(([key,ids])=>[badge(key,'mut'),ids.length,ids.slice(0,4).join(', ')+(ids.length>4?' …':'')]);if(DATA.sample_sets)rows.push(['集合','—',DATA.sample_sets.manifests.map(item=>item.purpose+' × '+item.sample_refs.length).join(' · ')]);samples.appendChild(table(['特征签名（聚类）','样本数','示例'],rows));}app.appendChild(samples);
-
-const curve=el('section');curve.appendChild(el('h2',null,'⑤ 训练曲线'));const epochRows=(DATA.epochs||[]).map(epoch=>{const rate=Math.max(0,Math.min(1,Number(epoch.entry.pass_rate)||0));const bar=el('span','bar');const fill=el('i');fill.style.width=(rate*100)+'%';bar.appendChild(fill);const rateCell=el('span');add(rateCell,bar,' '+(rate*100).toFixed(0)+'%');return[epoch.entry.epoch,rateCell,'$'+Number(epoch.entry.cost_usd||0).toFixed(3),Object.values(epoch.entry.lambda_values||{}).map(value=>Number(value).toFixed(2)).join('/'),(epoch.entry.updates_applied||[]).length,status(epoch.entry.rolled_back?'是':'否',!epoch.entry.rolled_back,epoch.entry.rolled_back)];});curve.appendChild(table(['epoch','通过率','成本','λ(L1/L2/L3/L4)','更新数','回滚'],epochRows));app.appendChild(curve);
-
-const losses=el('section');losses.appendChild(el('h2',null,'⑥ 损失归因全景'));const layerCount={};let totalLosses=0;Object.values(DATA.loss_traces||{}).forEach(items=>items.forEach(item=>{layerCount[item.root_cause_layer]=(layerCount[item.root_cause_layer]||0)+1;totalLosses++;}));const lossKpis=el('div','kpi');Object.entries(layerCount).forEach(([layer,count])=>lossKpis.appendChild(kpi(count,layer+' '+(totalLosses?(count/totalLosses*100).toFixed(0):0)+'%')));losses.appendChild(lossKpis);const lossRows=[];Object.entries(DATA.loss_traces||{}).forEach(([epoch,items])=>items.forEach(item=>lossRows.push(['e'+epoch,item.sample_id,badge(item.root_cause_layer,['L1','L2','L3','L4'].includes(item.root_cause_layer)?item.root_cause_layer:'mut'),item.failure_mode,item.root_cause_element,Number(item.confidence??1).toFixed(2),(item.side_issues||[]).length?'⚠ '+item.side_issues.length+' 附带':'-'])));losses.appendChild(table(['轮','样本','层','模式','元素','置信度','附带问题'],lossRows.slice(0,40)));app.appendChild(losses);
-
-const evolution=el('section');evolution.appendChild(el('h2',null,'⑦ L1-L4 方案证据与版本演化'));const versions=Object.keys(DATA.solutions||{}).sort((a,b)=>Number(a)-Number(b));const last=DATA.solutions[versions[versions.length-1]];if(last){const solution=last.solution;evolution.appendChild(table(['版本','演化说明'],versions.map(version=>['v'+version,DATA.solutions[version].note||'-'])));evolution.appendChild(table(['L3 路由规则（当前）'],solution.L3_knowledge.filter(item=>item.type==='routing_rule'&&!item.superseded).map(item=>[item.id+' '+(item.condition||'')+' → '+(item.dispatches_to||'')])));evolution.appendChild(table(['L4 Agent'],solution.L4_topology.agents.map(item=>[item.id+' ('+item.role+')'])));}app.appendChild(evolution);
-
-const transactions=el('section');transactions.appendChild(el('h2',null,'⑧ 事务与中间链路'));if(DATA.summary){const tx=[...(DATA.summary.transactions_committed||[]),...(DATA.summary.transactions_rolled_back||[])];transactions.appendChild(table(['状态','版本','层','动作','元素','理由'],tx.flatMap(item=>(item.changes||[]).map(change=>[status(item.rolled_back?'回滚':'提交',!item.rolled_back,item.rolled_back),'v'+item.version,change.layer,change.action,change.element,String(change.reason||'').slice(0,40)]))));const messages=Object.entries(DATA.messages||{}).map(([epoch,items])=>['e'+epoch,items.length,items.filter(item=>item.dir==='task').map(item=>item.type).join(' · ').slice(0,80)]);transactions.appendChild(el('h2',null,'消息因果链（按轮）'));transactions.appendChild(table(['轮','消息数','类型流'],messages));}app.appendChild(transactions);
-"""
-
 
 _EXTERNAL_SCRIPT = r"""
 const summary=DATA.summary||{};const evaluation=summary.evaluation||{};const kpis=document.getElementById('kpis');[['通过率',(Number(evaluation.pass_rate||0)*100).toFixed(0)+'%'],['PASS/FAIL/ERROR',(evaluation.passed||0)+'/'+(evaluation.failed||0)+'/'+(evaluation.errors||0)],['成本','$'+(evaluation.cost_usd||0)],['风险事件',evaluation.risk_events||0],['证据记录',summary.evidence_records||0]].forEach(item=>kpis.appendChild(kpi(item[1],item[0])));
@@ -104,17 +380,14 @@ def _script_json(value: Any) -> str:
 
 
 def _document(*, run_name: str, generated_at: str, body: str,
-              payload_json: str, script: str,
-              acceptance_status: str = "") -> str:
+              payload_json: str, script: str = "") -> str:
     safe_name = html.escape(run_name, quote=True)
     safe_generated = html.escape(generated_at, quote=True)
+    script_block = (f"<script>\nconst DATA = {payload_json};\n{script}</script>") if script or payload_json else ""
     return f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <title>AgentFit Dashboard · {safe_name}</title><style>{_STYLE}</style></head><body>
 <header><h1>AgentFit 训练全景 · {safe_name}</h1><div class="sub">方案不是设计出来的，是训练出来的 · 生成于 {safe_generated}</div></header>
-{body}<script>
-const DATA = {payload_json};
-const ACCEPTANCE_STATUS = {_script_json(acceptance_status)};
-{_DOM_HELPERS}{script}</script></body></html>"""
+{body}{script_block}</body></html>"""
 
 
 def generate_dashboard(run_dir: str | Path, output: str | Path | None = None) -> Path:
@@ -124,35 +397,17 @@ def generate_dashboard(run_dir: str | Path, output: str | Path | None = None) ->
     generated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     is_external = (payload.get("run") or {}).get("run_kind") == "external_evaluation"
     if is_external:
-        body = """<main><section class="wide"><h2>外部评价证据 · 评价概览</h2><div class="kpi" id="kpis"></div></section>
-<section><h2>候选与证据边界</h2><div id="candidate"></div></section><section><h2>逐条证据链</h2><div id="records"></div></section></main>"""
         document = _document(
-            run_name=run_name,
-            generated_at=generated_at,
-            body=body,
+            run_name=run_name, generated_at=generated_at, body=_EXTERNAL_BODY,
             payload_json=_script_json(payload),
-            script=_EXTERNAL_SCRIPT,
+            script=_DOM_HELPERS + _EXTERNAL_SCRIPT,
         )
     else:
-        acceptance = payload.get("acceptance") or {}
-        summary = payload.get("summary") or {}
-        acceptance_state = (
-            "PASS" if acceptance.get("met") is True
-            else "REJECT" if acceptance.get("met") is False
-            else "PENDING"
-        )
-        g3_state = (
-            "APPROVED" if summary.get("delivery_approved") is True
-            else "REJECTED" if summary.get("acceptance_met") is False
-            else "PENDING"
-        )
+        # 八区静态直出；DATA 仅供后续交互增强（禁用 JS 仍可完整阅读）
         document = _document(
-            run_name=run_name,
-            generated_at=generated_at,
-            body='<main id="app"></main>',
+            run_name=run_name, generated_at=generated_at,
+            body=_render_training(payload),
             payload_json=_script_json(payload),
-            script=_TRAINING_SCRIPT,
-            acceptance_status=f"验收 {acceptance_state} · G3 {g3_state}",
         )
     out = Path(output) if output else Path(run_dir) / "dashboard.html"
     out.parent.mkdir(parents=True, exist_ok=True)

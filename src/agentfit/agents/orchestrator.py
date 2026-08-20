@@ -30,21 +30,44 @@ from ..models.solution import Solution
 
 
 @dataclass
+class StepOutcome:
+    """一个 Step = 一个 adaptation Batch 的完整更新单元（正本 §Batch、Step、Epoch）。"""
+    epoch: int
+    step_index: int
+    batch_size: int = 0
+    passed: int = 0
+    failed: int = 0
+    execution_errors: int = 0
+    proposals: int = 0
+    applied: int = 0
+    applied_changes: list = field(default_factory=list)
+    rolled_back: bool = False
+    cost_usd: float = 0.0
+    loss_traces: list = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass
 class EpochOutcome:
     epoch: int
-    pass_rate: float
+    pass_rate: float                      # Epoch 级指标：validation 通过率（无 validation 样本时为 adaptation 聚合）
+    adaptation_pass_rate: float = 0.0     # 本 Epoch 各 Batch 实际 Episode 聚合（不是重放）
     regression_verdict: str = "COMMIT"
     rolled_back: bool = False
     proposals_count: int = 0
     notes: list[str] = field(default_factory=list)
     converged: bool = False
     execution_errors: int = 0
+    steps: int = 0
+    validation: dict | None = None        # {total, passed, failed, errors, pass_rate, cost_usd}
+    stop_reason: str | None = None
 
 
 class Orchestrator:
     def __init__(self, solution: Solution, pool: SamplePool, executor: ExecutorBase,
                  config: TrainingConfig, bus: MessageBus | None = None,
-                 run_dir: str | None = None, scenario: str = "default"):
+                 run_dir: str | None = None, scenario: str = "default",
+                 validation_samples: list | None = None):
         self.solution = solution
         self.pool = pool
         self.executor = executor
@@ -55,7 +78,12 @@ class Orchestrator:
         self.lambda_ctl = LambdaController(initial=dict(solution.lambda_values))
         self.outcomes: list[EpochOutcome] = []
         self.delivery_decision: ReviewDecision | None = None
+        self.validation_samples = list(validation_samples or [])
         self._prev_solution = copy.deepcopy(solution)
+        self._best = {"rate": -1.0, "solution": copy.deepcopy(solution), "version": solution.version}
+        self._patience = 0
+        self._stop_reason: str | None = None
+        self.validation_series: list[float] = []
         self.runtime_provenance = executor.runtime_provenance()
         self.runtime_ref = canonical_hash(self.runtime_provenance)
         self._run_indices: dict[tuple[str, str], int] = {}
@@ -74,13 +102,12 @@ class Orchestrator:
             store.save_solution_version(solution, note="初始最简方案（Simple First）")
             self.auditor = Auditor(store)
 
-    # ---------- 单轮九步 ----------
-    def run_epoch(self, epoch: int) -> EpochOutcome:
-        ctx = f"epoch{epoch}"
-        outcome = EpochOutcome(epoch, 0.0)
+    # ---------- Step：一个 adaptation Batch 的完整更新单元 ----------
+    def run_step(self, epoch: int, step_index: int, batch: list) -> StepOutcome:
+        ctx = f"epoch{epoch}.step{step_index}"
+        step = StepOutcome(epoch=epoch, step_index=step_index, batch_size=len(batch))
 
         # ① 前向执行
-        batch = self.pool.next_batch(self.config.batch_size)
         traces = [
             self._send(
                 MsgType.EXECUTE_BATCH,
@@ -90,18 +117,18 @@ class Orchestrator:
             )
             for s in batch
         ]
-        outcome.execution_errors = sum(trace.result == "ERROR" for trace in traces)
-        if outcome.execution_errors:
-            outcome.notes.append(
-                f"{outcome.execution_errors} execution error(s) excluded from L1-L4 attribution"
-            )
+        step.execution_errors = sum(trace.result == "ERROR" for trace in traces)
+        step.cost_usd = sum(t.cost_usd for t in traces)
+        if step.execution_errors:
+            step.notes.append(f"{step.execution_errors} execution error(s) excluded from L1-L4 attribution")
 
-        # ② 损失归因（Attributor 扇出）
+        # ② 损失归因（Attributor 扇出；只对非 ERROR 失败归因）
         loss_traces = []
         for s, t in zip(batch, traces):
             if t.result != "ERROR" and not self.executor.evaluate(t, s.expected):
                 loss_traces.append(self._send(MsgType.ATTRIBUTE, ctx, {"sample": s, "trace": t},
                                               lambda _, s=s, t=t: attribute_loss(s, t, self.solution)))
+        step.loss_traces = loss_traces
 
         actionable_loss_traces = list(loss_traces)
         low_confidence = [
@@ -119,37 +146,21 @@ class Orchestrator:
                 actionable_loss_traces = [
                     trace for trace in loss_traces if trace.sample_id not in blocked_ids
                 ]
-                outcome.notes.append("Human Gate blocked low-confidence attribution")
+                step.notes.append("Human Gate blocked low-confidence attribution")
 
-        # ③ 聚合 + 正则（Validator/Auditor 计算）
-        prev = self._prev_solution
-        reg = merge_behavioral(compute_structural(self.solution),
-                               compute_behavioral(self.solution, traces, prev))
+        # ③ 聚合
         agg = aggregate(actionable_loss_traces)
 
-        # ④ 更新建议（Architect）
+        # ④ 更新建议（Architect）+ 反向依赖传播（新增 L3 必须接入 L4）
         proposals, notes = self._send(MsgType.PROPOSE, ctx,
                                       {"loss_traces": actionable_loss_traces},
                                       lambda _: propose_updates(aggregate(actionable_loss_traces), self.pool.by_id(), self.solution))
-        outcome.notes.extend(notes)
-        outcome.proposals_count = len(proposals)
+        from ..core.proposals import propagate_reverse_dependencies
+        proposals = proposals + propagate_reverse_dependencies(proposals, self.solution)
+        step.notes.extend(notes)
+        step.proposals = len(proposals)
 
-        # ⑤ λ 调节
-        new_lambdas, lambda_events = self.lambda_ctl.observe(reg)
-        for event in lambda_events:
-            if event.get("gate") != GateType.G2.value:
-                continue
-            decision = self.config.review_policy.review(
-                ReviewRequest(GateType.G2, "lambda adjustment", event)
-            )
-            if decision.approved:
-                new_lambdas.update(event["proposed"])
-                self.lambda_ctl.initial = dict(new_lambdas)
-            else:
-                outcome.notes.append("Human Gate blocked G2 lambda adjustment")
-        self.solution.lambda_values = new_lambdas
-
-        # ⑥ 人审 G1（硬同步点；不批准 = 本轮空转）
+        # ⑥ 人审 G1（硬同步点；不批准 = 本 Step 空转）
         g1_decision = self.config.review_policy.review(ReviewRequest(
             GateType.G1, "solution updates",
             {"count": len(proposals), "evidence_sample_ids": sorted({
@@ -160,20 +171,20 @@ class Orchestrator:
         ))
         approved = proposals if g1_decision.approved else []
         if proposals and not g1_decision.approved:
-            outcome.notes.append("Human Gate blocked G1")
+            step.notes.append("Human Gate blocked G1")
 
-        passed = sum(1 for s, t in zip(batch, traces) if self.executor.evaluate(t, s.expected))
-        outcome.pass_rate = passed / len(batch)
+        step.passed = sum(1 for s, t in zip(batch, traces) if self.executor.evaluate(t, s.expected))
+        step.failed = len(batch) - step.passed - step.execution_errors
 
-        # ⑦ 原子应用（机械）+ ⑧ 回归验证
+        # ⑦ 原子应用（机械）+ ⑧ 回归验证（回归池 = adaptation 历史行为）
         if approved:
             previous_solution = copy.deepcopy(self.solution)
             tx = ChangeTransaction(self.solution, approved)
             try:
                 candidate = tx.execute()
             except ValidationError:
-                outcome.rolled_back = True
-                outcome.notes.append("存在依赖验证失败：事务回滚")
+                step.rolled_back = True
+                step.notes.append("存在依赖验证失败：事务回滚")
                 if self.auditor:
                     self.auditor.record_transaction(tx, rolled_back=True, reason="依赖验证失败")
                 candidate = None
@@ -195,81 +206,179 @@ class Orchestrator:
                 forgot = self.regression_pool.forget_check(reg_results)
                 if regression_errors:
                     tx.rollback()
-                    outcome.rolled_back = True
-                    outcome.execution_errors += len(regression_errors)
-                    outcome.notes.append(
-                        "regression blocked by execution error: "
-                        + ", ".join(regression_errors)
+                    step.rolled_back = True
+                    step.execution_errors += len(regression_errors)
+                    step.notes.append(
+                        "regression blocked by execution error: " + ", ".join(regression_errors)
                     )
                     if self.auditor:
                         self.auditor.record_transaction(
-                            tx,
-                            rolled_back=True,
+                            tx, rolled_back=True,
                             reason=f"regression execution error: {regression_errors}",
                         )
                 elif forgot:
                     tx.rollback()
-                    outcome.rolled_back = True
-                    outcome.notes.append(f"回归遗忘 {len(forgot)} 个样本：回滚")
+                    step.rolled_back = True
+                    step.notes.append(f"回归遗忘 {len(forgot)} 个样本：回滚")
                     if self.auditor:
                         self.auditor.record_transaction(tx, rolled_back=True, reason=f"回归遗忘 {forgot}")
                 else:
                     self._prev_solution = previous_solution
                     self.solution = candidate
+                    step.applied = len(approved)
+                    step.applied_changes = [
+                        {"layer": p.layer, "action": p.action,
+                         "element": getattr(p.element, "id", str(p.element))}
+                        for p in approved
+                    ]
                     if self.auditor:
                         self.auditor.record_transaction(tx, rolled_back=False)
-                        self.auditor.store.save_solution_version(candidate, note=f"epoch {epoch} 更新")
-                    passed_c = sum(
-                        1
-                        for s in self.pool.group("train")
-                        if self.executor.evaluate(
-                            self._execute_recorded(
-                                candidate, s, epoch, "candidate_evaluation",
-                            ),
-                            s.expected,
-                        )
-                    )
-                    outcome.pass_rate = passed_c / max(1, len(self.pool.group("train")))
+                        self.auditor.store.save_solution_version(
+                            candidate, note=f"epoch {epoch} step {step_index} 更新")
+
+        # 回归池只由 adaptation Episode 更新
+        for s, t in zip(batch, traces):
+            if t.result != "ERROR":
+                self.regression_pool.add(s, self.executor.evaluate(t, s.expected))
+
+        if self.auditor:
+            self.auditor.store.save_step(epoch, step_index, {
+                "epoch": epoch, "step_index": step_index, "batch_size": step.batch_size,
+                "passed": step.passed, "failed": step.failed,
+                "execution_errors": step.execution_errors,
+                "proposals": step.proposals, "applied": step.applied,
+                "rolled_back": step.rolled_back, "cost_usd": round(step.cost_usd, 6),
+                "loss_attribution": {k: int(v * agg.total) for k, v in agg.layer_share.items()},
+                "notes": step.notes,
+            })
+        return step
+
+    # ---------- Validation：Epoch 末、只读、不产生 ChangeProposal ----------
+    def run_validation(self, epoch: int) -> dict:
+        total = passed = errors = 0
+        cost = 0.0
+        for sample in self.validation_samples:
+            trace = self._execute_recorded(self.solution, sample, epoch, "validation")
+            total += 1
+            cost += trace.cost_usd
+            if trace.result == "ERROR":
+                errors += 1
+            elif self.executor.evaluate(trace, sample.expected):
+                passed += 1
+        record = {
+            "epoch": epoch, "total": total, "passed": passed,
+            "failed": total - passed - errors, "errors": errors,
+            "pass_rate": (passed / total) if total else None,
+            "cost_usd": round(cost, 6),
+            "candidate_version": self.solution.version,
+        }
+        if self.auditor:
+            self.auditor.store.save_validation(epoch, record)
+        return record
+
+    # ---------- Epoch：完整覆盖 adaptation + 冻结 + validation + Early Stopping ----------
+    def run_epoch(self, epoch: int) -> EpochOutcome:
+        batches = self.pool.epoch_batches(self.config.batch_size, epoch)
+        outcome = EpochOutcome(epoch=epoch, pass_rate=0.0, steps=len(batches))
+
+        steps: list[StepOutcome] = []
+        for index, batch in enumerate(batches, start=1):
+            steps.append(self.run_step(epoch, index, batch))
+        all_loss_traces = [lt for s in steps for lt in s.loss_traces]
+        applied_changes = [c for s in steps for c in s.applied_changes]
+        outcome.execution_errors = sum(s.execution_errors for s in steps)
+        outcome.proposals_count = sum(s.proposals for s in steps)
+        outcome.rolled_back = any(s.rolled_back for s in steps)
+        outcome.notes = [n for s in steps for n in s.notes]
+
+        executed = sum(s.passed + s.failed for s in steps)
+        outcome.adaptation_pass_rate = (sum(s.passed for s in steps) / executed) if executed else 0.0
+
+        # λ 调节（Epoch 级，基于结构正则 + 行为正则）
+        reg = merge_behavioral(compute_structural(self.solution),
+                               compute_behavioral(self.solution, [], self._prev_solution))
+        new_lambdas, lambda_events = self.lambda_ctl.observe(reg)
+        for event in lambda_events:
+            if event.get("gate") != GateType.G2.value:
+                continue
+            decision = self.config.review_policy.review(
+                ReviewRequest(GateType.G2, "lambda adjustment", event)
+            )
+            if decision.approved:
+                new_lambdas.update(event["proposed"])
+                self.lambda_ctl.initial = dict(new_lambdas)
+            else:
+                outcome.notes.append("Human Gate blocked G2 lambda adjustment")
+        self.solution.lambda_values = new_lambdas
+
+        # Epoch 末冻结 Candidate，运行 validation（只读；不进归因/建议/回归池）
+        validation = self.run_validation(epoch) if self.validation_samples else None
+        outcome.validation = validation
+        if validation and validation["pass_rate"] is not None:
+            outcome.pass_rate = validation["pass_rate"]
+            self.validation_series.append(validation["pass_rate"])
+        else:
+            outcome.pass_rate = outcome.adaptation_pass_rate
+
+        cost_usd = sum(s.cost_usd for s in steps) + (validation["cost_usd"] if validation else 0.0)
 
         # ⑨ 日志（Auditor 哈希链）
+        loss_distribution: dict[str, int] = {}
+        for lt in all_loss_traces:
+            loss_distribution[lt.root_cause_layer] = loss_distribution.get(lt.root_cause_layer, 0) + 1
         self.log.append(EpochEntry(
             epoch=epoch, solution_version=self.solution.version, pass_rate=outcome.pass_rate,
-            loss_distribution=agg.layer_share_counts() if hasattr(agg, "layer_share_counts") else
-            {k: int(v * agg.total) for k, v in agg.layer_share.items()},
-            updates_applied=[{"layer": p.layer, "action": p.action, "element": getattr(p.element, "id", str(p.element))}
-                             for p in (approved if not outcome.rolled_back else [])],
+            loss_distribution=loss_distribution,
+            updates_applied=applied_changes,
             regularization={k: round(v, 4) for k, v in reg.layer_reg.items()},
-            behavioral={k: round(v, 4) for k, v in reg.values.items() if k in ("chain_coverage", "human_intervention", "communication_overhead", "atom_growth")},
+            behavioral={},
             regression={"tested": len(self.regression_pool.samples),
                         "passed": sum(1 for s in self.regression_pool.samples
-                                      if self.executor.evaluate(
-                                          self._execute_recorded(
-                                              self.solution, s, epoch, "regression",
-                                          ),
-                                          s.expected,
-                                      ))},
+                                      if s.id in self.regression_pool.passed_ids)},
             lambda_values=dict(self.solution.lambda_values),
-            cost_usd=sum(t.cost_usd for t in traces),
+            cost_usd=cost_usd,
             execution_errors=outcome.execution_errors,
             rolled_back=outcome.rolled_back,
             note="; ".join(outcome.notes),
         ))
-        self.regression_pool.update({s.id: self.executor.evaluate(t, s.expected)
-                                     for s, t in zip(batch, traces)})
-        for s, t in zip(batch, traces):
-            self.regression_pool.add(s, self.executor.evaluate(t, s.expected))
-
-        # ⑨ 落链 + 落盘（Auditor）——保存完整链记录（entry+hash+previous_hash）
         if self.auditor:
             new_traffic = self.bus.traffic[self._traffic_cursor:]
             self._traffic_cursor = len(self.bus.traffic)
-            self.auditor.persist_epoch(epoch, self.log.entries[-1], loss_traces, new_traffic)
+            self.auditor.persist_epoch(epoch, self.log.entries[-1], all_loss_traces, new_traffic)
 
-        outcome.converged = self._check_convergence()
+        # Early Stopping（确定性 Validator 裁决，停止原因可重算）
+        outcome.stop_reason = self._decide_stop(epoch)
+        outcome.converged = outcome.stop_reason == "no_improvement"
         self.outcomes.append(outcome)
         return outcome
 
-    # ---------- 收敛 / 预算 ----------
+    # ---------- 收敛 / 预算 / Early Stopping ----------
+    def _decide_stop(self, epoch: int) -> str | None:
+        """确定性 Validator 裁决：候选晋升/继续/恢复/停止。返回规范停止原因或 None（继续）。
+
+        停止原因全部可从 RunStore 重算：validation 曲线 + 预算 + 轮数上限。
+        """
+        if self.budget_exceeded():
+            return "budget_exceeded"
+        if not self.validation_samples:
+            return None
+        rate = self.validation_series[-1]
+        best = self._best["rate"]
+        if rate > best + self.config.validation_min_improvement:
+            self._best = {"rate": rate, "solution": copy.deepcopy(self.solution),
+                          "version": self.solution.version}
+            self._patience = 0
+            return None
+        if best >= 0 and rate < best - self.config.validation_degradation:
+            # validation 退化 → 恢复已保留最佳候选并停止
+            self.solution = copy.deepcopy(self._best["solution"])
+            self._prev_solution = copy.deepcopy(self.solution)
+            return "validation_degraded"
+        self._patience += 1
+        if self._patience >= self.config.validation_patience:
+            return "no_improvement"
+        return None
+
     def _check_convergence(self) -> bool:
         series = self.log.pass_rate_series()
         if len(series) < self.config.convergence_window:
@@ -390,12 +499,42 @@ class Orchestrator:
         self._last_summary = summary
         return self.delivery_decision
 
+    def run_train_replay(self) -> dict:
+        """显式诊断重放：完整 adaptation 一次，分型 train_replay，不冒充 validation。
+
+        成本单独核算（summary.train_replay），不进入 epoch 成本或总成本曲线。
+        """
+        total = passed = errors = 0
+        cost = 0.0
+        epoch = len(self.outcomes) + 1
+        for sample in self.pool.all_tasks:
+            trace = self._execute_recorded(self.solution, sample, epoch, "train_replay")
+            total += 1
+            cost += trace.cost_usd
+            if trace.result == "ERROR":
+                errors += 1
+            elif self.executor.evaluate(trace, sample.expected):
+                passed += 1
+        record = {"total": total, "passed": passed, "failed": total - passed - errors,
+                  "errors": errors, "pass_rate": (passed / total) if total else None,
+                  "cost_usd": round(cost, 6), "candidate_version": self.solution.version}
+        if self.auditor:
+            self.auditor.store.save_train_replay(record)
+            summary = self.auditor.store.load_json("summary.json") \
+                if (self.auditor.store.root / "summary.json").exists() else {}
+            summary["train_replay"] = record
+            self.auditor.persist_summary(summary)
+        return record
+
     def train(self) -> list[EpochOutcome]:
         self._traffic_cursor = 0
+        stop_reason = "max_epochs"
         for epoch in range(1, self.config.max_epochs + 1):
             outcome = self.run_epoch(epoch)
-            if outcome.converged or self.budget_exceeded():
+            if outcome.stop_reason:
+                stop_reason = outcome.stop_reason
                 break
+        self._stop_reason = stop_reason
         series = self.log.pass_rate_series()
         summary = {
             "epochs_run": len(self.outcomes),
@@ -403,9 +542,13 @@ class Orchestrator:
             "final_solution_version": self.solution.version,
             "lambda_values": dict(self.solution.lambda_values),
             "total_cost_usd": round(self.total_cost(), 4),
-            "converged": bool(self.outcomes and self.outcomes[-1].converged),
+            "converged": stop_reason in ("no_improvement", "validation_degraded"),
             "budget_exceeded": self.budget_exceeded(),
             "log_chain_valid": self.log.verify(),
+            "stop_reason": stop_reason,
+            "validation_series": list(self.validation_series),
+            "best_validation_rate": self._best["rate"] if self._best["rate"] >= 0 else None,
+            "best_candidate_version": self._best["version"],
         }
         self._last_summary = summary
         summary["delivery_approved"] = False
@@ -413,7 +556,6 @@ class Orchestrator:
         summary["delivery_reviewer"] = "unassigned"
         if self.auditor:
             self.auditor.persist_summary(summary)
-        if self.auditor:
             # 运行完成仪制：训练结果 + 对 AgentFit 自身的建议
             from ..log.meta_review import generate_meta_review
             from ..log.report import generate_report

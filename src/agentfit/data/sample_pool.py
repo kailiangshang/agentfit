@@ -14,6 +14,8 @@ class SamplePool:
         self._cursor = 0
         self._train = tasks
         self._rng.shuffle(self._train)
+        self._seed = seed
+        self._epoch = 0
 
     @property
     def all_tasks(self) -> list[TaskSample]:
@@ -22,8 +24,18 @@ class SamplePool:
     def by_id(self) -> dict[str, TaskSample]:
         return {task.id: task for task in self.all_tasks}
 
+    def epoch_batches(self, batch_size: int, epoch: int) -> list[list[TaskSample]]:
+        """规范的 Epoch 分批：每个 SampleRef 恰好进入一个 Batch，不重复不放回。
+
+        每轮用 epoch 派生种子重排（G0 未批准有放回采样时唯一合法语义）。
+        """
+        order = list(self._train)
+        rng = random.Random(self._seed + epoch)
+        rng.shuffle(order)
+        return [order[i:i + batch_size] for i in range(0, len(order), batch_size)]
+
     def next_batch(self, size: int) -> list[TaskSample]:
-        """顺序取批；池子耗尽后重新洗牌（epoch 语义）。"""
+        """顺序取批；池子耗尽后重新洗牌（旧语义，仅为兼容保留）。"""
         batch = []
         while len(batch) < size:
             if self._cursor >= len(self._train):

@@ -323,11 +323,14 @@ def test_training_regression_reuses_the_same_recorded_execution_contract(
     from agentfit.models.config import AutoApprove, TrainingConfig
     from telecom_world import make_initial_solution, make_samples
 
-    sample = next(item for item in make_samples() if item.id == "F1-0")
+    # F1-0 恒通过；F3-0 在首个 Step 失败驱动提交 → 第二个 Step 的提交触发回归重放。
+    # 状态机语义（正本 §Batch、Step、Epoch）：每 Epoch 两个 Step（batch_size=1），
+    # forward 每 Epoch 恰好执行每个样本一次；regression 只发生在有提交的 Step。
+    world = {item.id: item for item in make_samples()}
     run_dir = tmp_path / "training-run"
     orchestrator = Orchestrator(
         make_initial_solution(),
-        SamplePool([sample]),
+        SamplePool([world["F1-0"], world["F3-0"]]),
         SimulatorExecutor(),
         TrainingConfig(
             batch_size=1,
@@ -346,12 +349,24 @@ def test_training_regression_reuses_the_same_recorded_execution_contract(
         json.loads(path.read_text(encoding="utf-8"))["identity"]
         for path in forward + regression
     ]
-    assert len(forward) == 2
+    # 2 个 Epoch × 2 个 Step × 每批 1 样本 = 4 次 forward
+    assert len(forward) == 4
+    # epoch1 step2（F3-0 修复提交）时回归池含 F1-0 → 恰好 1 次 regression
     assert len(regression) == 1
-    by_candidate: dict[str, list[int]] = {}
-    for identity in identities:
-        by_candidate.setdefault(identity["candidate_ref"], []).append(identity["run_index"])
-    assert sorted(sorted(indices) for indices in by_candidate.values()) == [[0], [0, 1]]
+    # 回归复用与 forward 相同的记录执行合同：同一 (candidate_ref, sample_ref) 身份
+    forward_keys = {
+        (identity["candidate_ref"], identity["sample_ref"]["sample_id"])
+        for identity in (
+            json.loads(path.read_text(encoding="utf-8"))["identity"] for path in forward
+        )
+    }
+    regression_keys = {
+        (identity["candidate_ref"], identity["sample_ref"]["sample_id"])
+        for identity in (
+            json.loads(path.read_text(encoding="utf-8"))["identity"] for path in regression
+        )
+    }
+    assert regression_keys <= forward_keys
 
 
 def test_regression_runtime_error_blocks_commit_without_claiming_solution_forgetting() -> None:

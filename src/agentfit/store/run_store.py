@@ -143,6 +143,20 @@ class RunStore:
         for lt in loss_traces:
             _write(self.root / "loss_traces" / f"epoch_{epoch:03d}" / f"{lt.sample_id}.json", lt)
 
+    def save_step(self, epoch: int, step_index: int, record: dict) -> Path:
+        """Step 分型落盘：一次 adaptation Batch 的完整更新单元（正本 §Batch、Step、Epoch）。"""
+        return _write(self.root / "steps" / f"epoch_{epoch:03d}_step_{step_index:03d}.json", record)
+
+    def save_validation(self, epoch: int, record: dict) -> Path:
+        """Epoch 末 validation 分型落盘（不产生 ChangeProposal）。"""
+        return _write(self.root / "validation" / f"epoch_{epoch:03d}.json", record)
+
+    def save_train_replay(self, record: dict) -> Path:
+        """显式 train_replay 分型落盘（诊断用，不冒充 validation）。"""
+        directory = self.root / "train_replay"
+        existing = len(list(directory.glob("*.json"))) if directory.is_dir() else 0
+        return _write(directory / f"replay_{existing + 1:03d}.json", record)
+
     def save_messages(self, epoch: int, traffic: list[dict]) -> None:
         _write(self.root / "messages" / f"epoch_{epoch:03d}.json", traffic)
 
@@ -199,7 +213,8 @@ class RunStore:
                                    "objective": None, "acceptance": None,
                                    "candidate_manifest": None, "external_evidence": [],
                                    "training_evidence": [], "evaluation_evidence": [],
-                                   "epochs": [],
+                                   "epochs": [], "steps": [], "validation": [],
+                                   "train_replay": [],
                                    "loss_traces": {}, "solutions": {}, "messages": {}, "summary": None}
         if (self.root / "run.json").exists():
             payload["run"] = self.load_json("run.json")
@@ -217,6 +232,12 @@ class RunStore:
             payload["sample_sets"] = self.load_json("sample_sets.json")
         if (self.root / "candidate_manifest.json").exists():
             payload["candidate_manifest"] = self.load_json("candidate_manifest.json")
+        for path in sorted((self.root / "steps").glob("*.json")) if (self.root / "steps").is_dir() else []:
+            payload["steps"].append(json.loads(path.read_text(encoding="utf-8")))
+        for path in sorted((self.root / "validation").glob("*.json")) if (self.root / "validation").is_dir() else []:
+            payload["validation"].append(json.loads(path.read_text(encoding="utf-8")))
+        for path in sorted((self.root / "train_replay").glob("*.json")) if (self.root / "train_replay").is_dir() else []:
+            payload["train_replay"].append(json.loads(path.read_text(encoding="utf-8")))
         for index in self.external_evidence_indices():
             payload["external_evidence"].append(
                 self.load_json(f"external_evidence/record_{index:06d}.json")
