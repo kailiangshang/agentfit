@@ -78,10 +78,9 @@ AgentTeams 是外部运行底座，核心库不导入其 SDK。`team.yaml` 是�
 `hiclaw.io/v1beta1` `Team`：内联 Leader（Steward）和两个 Workers（Attributor、Architect）。
 Leader 没有 `runtime` 字段；两个 Worker 显式使用 `runtime: copaw`。三者绑定到同一
 `agentfit.io/model-ref`，当前唯一目标模型是 `deepseek-v4-flash`。目标运行环境应让
-AgentTeams 的 OpenAI-compatible provider 直连 `https://api.deepseek.com/v1`，凭证只从
-本机 `DEEPSEEK_API_KEY` 或 AgentTeams secret 读取。仓库当前只生成模型引用，不配置或验证
-provider base 与 secret binding，因此 DeepSeek 官网 API 直连尚未完成预检，状态为
-`BLOCKED_NOT_VERIFIED`。
+AgentTeams AI Gateway 的 OpenAI-compatible provider 把模型流量路由到
+`https://api.deepseek.com/v1`，凭证只从本机 `AGENTTEAMS_LLM_API_KEY` 或平台 secret 读取。
+仓库当前只生成模型引用，不配置或验证 AI Gateway 上游和 secret binding，因此 DeepSeek 官网 API 上游尚未完成预检，状态为 `BLOCKED_NOT_VERIFIED`。
 
 ```bash
 # 检查生成物是否与 Registry 一致
@@ -143,9 +142,9 @@ print(f"imported {count} AgentTeams episodes")
 当前状态：`BLOCKED_NOT_VERIFIED`。在 AgentTeams 运行环境完成以下预检前，不运行
 adaptation、四集合评价或 τ²-bench 5 题：
 
-1. provider base 指向 `https://api.deepseek.com/v1`；
+1. AgentTeams AI Gateway 的 provider base 指向 `https://api.deepseek.com/v1`；
 2. provider model 精确为 `deepseek-v4-flash`；
-3. 用户自有 API key 只存在于本地环境或 AgentTeams secret；
+3. 用户自有 API key 只存在于本地 `AGENTTEAMS_LLM_API_KEY` 或平台 secret；
 4. 无敏感信息的最小调用成功，并留下脱敏的 provider、model、时间和结果证据；
 5. `render_team.py --check`、只读 drift 和 dry-run 均通过。
 

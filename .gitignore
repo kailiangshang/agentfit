@@ -4,6 +4,8 @@ __pycache__/
 dist/
 build/
 .env
+.env.*
+!.env.example
 .local-demo/
 
 # macOS / editor artifacts

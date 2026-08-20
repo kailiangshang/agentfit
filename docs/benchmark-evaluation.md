@@ -24,7 +24,7 @@ DeepSeek 官网已经正式发布 `deepseek-v4-flash`。当前实验只使用用
 
 - API base：`https://api.deepseek.com/v1`；
 - model：`deepseek-v4-flash`；
-- secret：只从本地 `DEEPSEEK_API_KEY` 或 AgentTeams secret 配置读取；
+- secret：只从本地 `AGENTTEAMS_LLM_API_KEY` 或平台 secret 配置读取；
 - 不使用 LiteLLM 网关、代理或路由；
 - API key 不写入 Git、RunStore、Trace、日志、Dashboard 或报告。
 

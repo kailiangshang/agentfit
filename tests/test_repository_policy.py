@@ -401,8 +401,8 @@ def test_current_execution_uses_user_owned_deepseek_official_api() -> None:
     assert "用户自有的 DeepSeek 官网 API" in benchmark
     assert "https://api.deepseek.com/v1" in benchmark
     assert "https://api.deepseek.com/v1" in scenario
-    assert "DEEPSEEK_API_KEY" in benchmark
-    assert "DEEPSEEK_API_KEY" in scenario
+    assert "AGENTTEAMS_LLM_API_KEY" in benchmark
+    assert "AGENTTEAMS_LLM_API_KEY" in scenario
     assert "不使用 LiteLLM 网关、代理或路由" in benchmark
     assert benchmark.count("LiteLLM") == 1
     assert "LiteLLM" not in plan
@@ -413,7 +413,7 @@ def test_deepseek_official_api_runtime_is_blocked_until_preflight() -> None:
     scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
 
     assert "BLOCKED_NOT_VERIFIED" in scenario
-    assert "DeepSeek 官网 API 直连尚未完成预检" in scenario
+    assert "DeepSeek 官网 API 上游尚未完成预检" in scenario
 
 
 def test_agentteams_live_validation_is_archival_not_a_current_runbook() -> None:
@@ -430,3 +430,40 @@ def test_agentteams_live_validation_is_archival_not_a_current_runbook() -> None:
     assert "BLOCKED_NOT_VERIFIED" in live_validation
     assert "AgentTeams 历史联动证据" in docs_index
     assert "证据边界；当前复现入口阻断" in docs_index
+
+
+def test_deepseek_env_example_is_safe_and_reproducible() -> None:
+    example = REPO / ".env.example"
+    assert example.is_file()
+
+    values = {}
+    for line in example.read_text(encoding="utf-8").splitlines():
+        if line and not line.startswith("#"):
+            key, value = line.split("=", 1)
+            values[key] = value
+
+    assert values == {
+        "AGENTTEAMS_LLM_PROVIDER": "openai-compat",
+        "AGENTTEAMS_OPENAI_BASE_URL": "https://api.deepseek.com/v1",
+        "AGENTTEAMS_DEFAULT_MODEL": "deepseek-v4-flash",
+        "AGENTTEAMS_LLM_API_KEY": "",
+    }
+
+    gitignore = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert ".env" in gitignore
+    assert ".env.*" in gitignore
+    assert "!.env.example" in gitignore
+
+
+def test_deepseek_reproduction_uses_agentteams_gateway_secret_contract() -> None:
+    docs_index = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
+    benchmark = (REPO / "docs" / "benchmark-evaluation.md").read_text(encoding="utf-8")
+    scenario = (REPO / "docs" / "test-scenario.md").read_text(encoding="utf-8")
+
+    for document in (docs_index, benchmark, scenario):
+        assert "AGENTTEAMS_LLM_API_KEY" in document
+        assert "DEEPSEEK_API_KEY" not in document
+
+    assert "cp .env.example .env" in docs_index
+    assert "chmod 600 .env" in docs_index
+    assert "AgentTeams AI Gateway" in scenario

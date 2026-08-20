@@ -32,8 +32,26 @@ L1  Solid 层       最小原子能力合同 + 输入输出 + 作用语义
 | [AgentTeams 历史联动证据](agentteams-live-validation.md) | 2026-08-18 真实模型/Matrix/Worker 往返及证据边界；当前复现入口阻断 |
 | [业务维护评测](benchmark-evaluation.md) | 唯一 τ²-bench 路线：先做透 telecom 5→20→74/40，再用 retail 验证四层资产复用 |
 
-当前评测目标模型固定为用户自有 DeepSeek 官网 API 的 `deepseek-v4-flash`；模型凭证只保存在
-本地运行环境或 AgentTeams secret 中。
+当前评测目标模型固定为用户自有 DeepSeek 官网 API 的 `deepseek-v4-flash`；AgentTeams
+通过 AI Gateway 连接该上游，模型凭证只保存在本地 `AGENTTEAMS_LLM_API_KEY` 或平台 secret
+中。
+
+## DeepSeek 本地配置
+
+仓库只提交无密钥的 `.env.example`。首次使用时复制为本地 `.env`，填写
+`AGENTTEAMS_LLM_API_KEY`，再加载到启动 AgentTeams 或运行桥接命令的同一个 shell：
+
+```bash
+cp .env.example .env
+chmod 600 .env
+${EDITOR:-vi} .env
+set -a
+. ./.env
+set +a
+```
+
+`.env` 和其他本地变体均被 Git 忽略，只有 `.env.example` 可以提交。不要在聊天、命令参数、
+日志、RunStore、Trace、Dashboard 或报告中输出密钥。
 
 ## 快速验证
 
