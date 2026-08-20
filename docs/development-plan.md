@@ -50,13 +50,30 @@ CandidateRef、SampleRef、run_index 和 runtime_ref 回到 Trace；是否通过
 公开数据、Flat→AgentFit 四层维护对照和外部参照边界以
 [业务维护评测](benchmark-evaluation.md) 为正本：
 
-1. 从同一业务行为生成语义等价的 Flat 与 AgentFit 初始方案；
-2. 从业务材料编译并由 Human 冻结四个 SampleSetManifest 和连续变化波次；
-3. 两组获得相同 Trace、更新模型、Human 次数和维护预算；
-4. Flat 直接维护资产，AgentFit 判断缺口属于 L1、L2、L3 还是 L4，并用事务提交；
-5. 每波 validation 同时检查新需求和累计旧需求，运行 ERROR 单独处理；
-6. 最终方案冻结后再运行 sealed_holdout 和 stress_and_failure；
-7. 比较业务质量、累计回归、变更范围、达标成本、复用、回滚、风险和复杂度。
+当前只建设一个 benchmark adapter：`τ²-bench`。执行范围固定为 telecom 主证明与 retail
+复用证明，且严格按以下顺序推进：
+
+1. **telecom 5 题协议与证据 smoke**：先对 `small=20` 执行 pilot G0，在候选生成前冻结
+   四个互不重叠的 pilot manifest、Objective、变化材料、预算和权限，再验证 AgentTeams、
+   Adapter、reward、Trace、Episode 和 RunStore 完整往返；
+2. **telecom 20 题完整维护闭环**：跑完初始基线、五波业务变化、诊断、更新、回归和
+   Dashboard，只作工程 pilot；
+3. **telecom 74 个 train 样本扩大与优化**：扩大 adaptation/validation，比较更新前后
+   业务质量、累计回归、变更范围、达标成本、复用和回滚；
+4. **telecom 40 个 official test 封存验收**：两个最终方案 freeze 后才运行，结果不回流；
+5. **retail 小规模复用验证**：从已封存的 telecom CandidateRef 投影完整 L1–L4，复用同一
+   Adapter、scheduler、scorer 和 Dashboard，通过资产复用账本量化直接复用、局部替换与
+   新增，再决定是否扩大。
+
+telecom `full=2,285` 只在 20 题闭环稳定后抽取少量压力样本，不做全量跑分。Terminal-Bench、
+MCPAtlas、SWE-bench、CorpusQA、GDPval、Toolathlon 等当前不排期、不开发 Adapter；不能在
+telecom → retail 主线完成前并行建设。
+
+每个阶段仍遵守同一实验协议：从同一业务行为生成语义等价的 Flat 与 AgentFit 初始方案；
+由 Human 冻结 SampleSetManifest、变化材料和 Objective；两组获得相同 Trace、更新模型、
+Human 次数和维护预算；Flat 直接维护资产，AgentFit 按 L1–L4 归因并事务提交；validation
+检查新需求和累计旧需求，运行 ERROR 单列；最终方案冻结后再运行 sealed_holdout 和
+stress_and_failure。
 
 完成定义：报告能回答四层维护是否以更小变更和更低回归达到相同业务目标；每个结论都
 可回到 `candidate_ref + sample_ref + run_index` 对应的 Episode，评价集合结果不会反向

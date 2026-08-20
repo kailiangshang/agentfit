@@ -29,9 +29,10 @@ Human Gate 变化检验 L2，政策、Skill 与路由变化检验 L3，角色、
 3. **官方外部参照**：保留 DeepSeek 公布的分数及协议边界，不宣称复现，也不进入主实验
    的显著性检验。
 
-首个主证据选择 τ²-bench，因为它包含持续用户交互、业务 policy、状态、工具、逐任务
-reward 和完整 trajectory，能够构造连续业务变化并观察维护过程。Terminal-Bench 2.0、
-MCPAtlas 和其他通用榜单降为主实验完成后的外部适用性验证。
+当前执行范围进一步收敛为一个 benchmark、一个主业务域和一个复用业务域：只建设
+τ²-bench Adapter，先把 telecom 的完整维护闭环做透，再用 retail 检验同一套 Adapter、
+scheduler、scorer、Dashboard 和四层资产是否能够低成本复用。其他公开 benchmark 只保留
+背景与未来候选身份，不进入当前排期。
 
 本方案要回答的核心问题是：
 
@@ -58,32 +59,13 @@ LiteLLM 只是统一模型路由。它也可以承载用户模拟、评分和诊
 
 ### 1.2 DeepSeek-V4-Flash 官方结果
 
-下表来自 DeepSeek-V4 技术报告 Table 7。所有值都是官方报告值，不是 AgentFit 当前运行
-结果。
+下表只摘录 DeepSeek-V4 技术报告 Table 7 中与 Agent 工具调用直接相关的三项。所有值都
+是官方报告值，不是 AgentFit 当前运行结果，也不是本项目当前要复现的主实验。
 
 | Benchmark | 指标 | Non-think | High | Max |
 |---|---:|---:|---:|---:|
-| MMLU-Pro | EM | 83.0 | 86.4 | 86.2 |
-| SimpleQA-Verified | Pass@1 | 23.1 | 28.9 | 34.1 |
-| Chinese-SimpleQA | Pass@1 | 71.5 | 73.2 | 78.9 |
-| GPQA Diamond | Pass@1 | 71.2 | 87.4 | 88.1 |
-| HLE | Pass@1 | 8.1 | 29.4 | 34.8 |
-| LiveCodeBench | Pass@1-COT | 55.2 | 88.4 | 91.6 |
-| Codeforces | Rating | - | 2816 | 3052 |
-| HMMT 2026 Feb | Pass@1 | 40.8 | 91.9 | 94.8 |
-| IMOAnswerBench | Pass@1 | 41.9 | 85.1 | 88.4 |
-| Apex | Pass@1 | 1.0 | 19.1 | 33.0 |
-| Apex Shortlist | Pass@1 | 9.3 | 72.1 | 85.7 |
-| MRCR 1M | MMR | 37.5 | 76.9 | 78.7 |
-| CorpusQA 1M | ACC | 15.5 | 59.3 | 60.5 |
 | Terminal-Bench 2.0 | ACC | 49.1 | 56.6 | 56.9 |
-| SWE-bench Verified | Resolved | 73.7 | 78.6 | 79.0 |
-| SWE-bench Pro | Resolved | 49.1 | 52.3 | 52.6 |
-| SWE-bench Multilingual | Resolved | 69.7 | 70.2 | 73.3 |
-| BrowseComp | Pass@1 | - | 53.5 | 73.2 |
-| HLE with tools | Pass@1 | - | 40.3 | 45.1 |
 | MCPAtlas Public | Pass@1 | 64.0 | 67.4 | 69.0 |
-| GDPval-AA | Elo | - | - | 1395 |
 | Toolathlon | Pass@1 | 40.7 | 43.5 | 47.8 |
 
 ### 1.3 官网分数的可比边界
@@ -104,53 +86,39 @@ DeepSeek 技术报告明确说明：
 才能把自测结果与 56.9 放在同一张“近似复现”表中。即使如此，也应同时报告 harness
 差异，不能写成官方结果已复现。
 
-## 2. 官方 Agent benchmark 与公开数据
+## 2. 当前执行范围
 
-### 2.1 数据集总览
+当前只建设一个 benchmark adapter：`τ²-bench`。当前主业务域只有 telecom，第二业务域
+只有 retail；执行顺序不得并行展开，也不能在 telecom 证据链尚未稳定时增加第三个域。
 
-| Benchmark | 当前公开规模与任务形态 | 环境与主信号 | 许可/公开边界 | AgentFit 用途 |
-|---|---|---|---|---|
-| Terminal-Bench 2.0 | 89 个终端任务；每题有 instruction、独立环境、人工 solution 和 tests | 容器/Harbor；测试是否通过 | `terminal-bench-2` 为 Apache-2.0 | 官网同 benchmark 参照，优先级 2 |
-| SWE-bench Verified | 500 个工程师确认可解的 GitHub issue | Docker；issue resolved | SWE-bench 实现 MIT；任务仍受原仓库许可约束 | 软件研发验证，后续 |
-| SWE-bench Pro | 共 1,865 题：731 public、276 commercial、858 held-out | 容器与人工审查测试；resolved | 公开实现 MIT；只有 public 子集可直接取得 | 更长、更难的软件研发验证，后续 |
-| SWE-bench Multilingual | 当前任务仓库 300 题，覆盖 C、Go、Java、JavaScript、PHP、Ruby、Rust | 每题 Dockerfile、patch 与 eval | 当前仓库未声明顶层 license | 许可核验后再用，不 vendor |
-| BrowseComp | 1,266 个高难网页检索问题 | 搜索 Agent；Pass@1 | `openai/simple-evals` 为 MIT | 检索策略验证，不作为首轮主证据 |
-| HLE / HLE with tools | 2,500 道专家级多学科题，含数据污染 canary | 自动评分；可加搜索工具 | MIT；不得进入训练语料 | 通用推理/搜索校准，不适合训练方案主线 |
-| MCPAtlas Public | 当前公开仓库 500 题、36 个 MCP server、307 个 tool | Docker MCP 沙箱；预期工具调用与 LLM judge | MIT；20 个 server 无需 key，其余需外部凭证/数据 | Tool/MCP 结构适配，优先级 3 |
-| GDPval Gold | 公开 Gold subset 220 题，9 个行业、44 个职业 | 专业工作产物；AA grader/Elo | 官方数据位于 `openai/gdpval`；再分发和 grader 条件需单独核验 | 专业工作产物验证，许可核验后再用 |
-| Toolathlon-Verified | 108 题，32 类应用，600+ 工具，长链路调用 | 每题独立容器；仓库描述了公共评测服务或自建服务路径 | `BLOCKED_LICENSE`：顶层许可证、数据权利和服务条款快照均未核验 | 许可解锁后的跨应用长链路候选，不进入当前运行计划 |
-| CorpusQA | 1,316 题，128K 到 10M 上下文 | 跨文档聚合与推理；accuracy | MIT | 业务材料长上下文验证，后续 |
+唯一执行梯度是：
 
-DeepSeek 报告正文一处写 `Tool-Decathlon`，Table 7 写 `Toolathlon`；当前可运行公开仓库
-是 `hkust-nlp/Toolathlon`。报告中保留这一命名差异，避免把两个字符串当成两个独立结果。
+1. **telecom 5 题协议与证据 smoke**：只验证 Adapter、AgentTeams、reward 与 RunStore
+   往返，不报告效果；
+2. **telecom 20 题完整维护闭环**：跑通 Flat/AgentFit、五波变化、诊断、更新、回归和
+   Dashboard，证明全流程可运行；
+3. **telecom 74 个 train 样本扩大与优化**：扩大 adaptation/validation，比较多轮更新
+   前后的质量、回归、变更范围和成本；
+4. **telecom 40 个 official test 封存验收**：最终方案 freeze 后成对运行，只用于正式
+   泛化验收；
+5. **retail 小规模复用验证**：复用相同 Adapter、scheduler、scorer、Dashboard 和四层
+   资产，先回答换业务域是否需要重做系统，再决定是否扩大。
+
+telecom `full=2,285` 不是新的执行阶段，也不做全量跑分。只有 20 题完整闭环稳定后，才从
+中固定抽取少量边界任务形成 `stress_and_failure`；抽样清单必须在正式 74/40 流程前冻结。
+
+Terminal-Bench、MCPAtlas、SWE-bench、CorpusQA、GDPval、Toolathlon 等均为未来候选：当前
+不排期、不开发 Adapter、不进入 Dashboard 和验收结论。DeepSeek 官网成绩只保留为
+Published Reference，不能反向扩大当前实施范围。
 
 Toolathlon 当前状态为 `BLOCKED_LICENSE`。在许可证、数据权利和服务条款快照全部确认前，
-禁止 clone、运行、vendor 或调用公共服务；仓库提到某条执行路径不等于 AgentFit 已获得
-使用授权。解锁决定和证据必须进入运行前冻结记录。
+禁止 clone、运行、vendor 或调用公共服务；即使以后重新考虑，也必须先通过独立 Human
+许可审核，不能因公开仓库或公共服务存在而默认可用。
 
-### 2.2 版本漂移与口径差异
-
-公开 benchmark 会持续变化，不能以 `latest` 作为实验身份：
-
-- `harbor-framework/terminal-bench` 已发展为持续 benchmark，2026-07-23 发布
-  `terminal-bench@3.0.0`；
-  复现 DeepSeek 结果必须锁定独立的 `terminal-bench-2` 仓库和 2.0 数据。
-- `tau2-bench@1.0.1` 修复了 `banking_knowledge` 的评分问题；更早快照的该域结果与
-  `tau2-bench@1.0.1` 及以后不可直接比较。
-- MCPAtlas 论文口径为 1,000 题、36 servers、220 tools；当前公开仓库口径为 500 题、
-  36 servers、307 tools。运行报告必须写明使用的是哪一个任务清单。
-- Toolathlon 当前公开仓库是 Toolathlon-Verified；旧轨迹和旧任务池不能与 Verified
-  结果无标注混用。
-- SWE-bench 评测缓存使用 `run_id + instance_id`；不同候选复用同一个 run_id 可能错误
-  命中旧结果。
-
-每次运行至少冻结：repository URL、commit/tag、任务 ID 列表、任务内容哈希、镜像摘要、
-评分器版本和许可证快照。仓库 commit 只描述代码版本，不能替代任务内容哈希。
-
-## 3. 为什么首轮选择 τ²-bench
+## 3. 为什么只做 τ²-bench telecom → retail
 
 τ²-bench 不在 DeepSeek-V4 官方表中，但它比纯问答或只看最终 patch 的任务更适合回答
-AgentFit 的核心问题：
+AgentFit 的四层维护问题：
 
 - Agent 与用户模拟器持续交互，能观察沟通、澄清和拒绝策略；
 - 任务包含真实风格的业务 policy、状态与工具；
@@ -159,18 +127,25 @@ AgentFit 的核心问题：
 - 相同任务可以让 Flat Maintenance 与 AgentFit Four-layer Maintenance 成对运行；
 - 失败能够定位为 L1 能力、L2 合同、L3 知识/路由或 L4 行为拓扑，而不只是“答错”。
 
-建议冻结 `tau2-bench@1.0.1`，其提交为
-`fc0055dc4e0a316c3f83133267fbd6faaa770992`。该版本的公开任务口径为：
+当前冻结 `tau2-bench@1.0.1`，提交为
+`fc0055dc4e0a316c3f83133267fbd6faaa770992`。当前只使用两个业务域：
 
 | Domain | base | train | test | 额外集合 |
 |---|---:|---:|---:|---:|
-| airline | 50 | 30 | 20 | - |
-| retail | 114 | 74 | 40 | - |
-| telecom | 114 | 74 | 40 | small=20，full=2,285 |
-| banking_knowledge | 97 | 无官方 split | 无官方 split | `tau2-bench@1.0.1` 修复评分 |
+| telecom | 114 | 74 | 40 | `small=20` 用于工程闭环；`full=2,285` 只抽取 stress |
+| retail | 114 | 74 | 40 | 先从 train 固定抽取小规模迁移子集 |
 
 `base` 是完整、与原始 τ-bench 结构相符的评价集合；它不是 AgentFit 的“Base Agent”。
-文档和 Dashboard 必须把 `task split` 与 `candidate arm` 分开命名。
+文档和 Dashboard 必须把 `task split` 与 `candidate arm` 分开命名。airline 与
+banking_knowledge 不进入当前执行范围；不为它们生成 manifest、Adapter 分支或展示占位。
+
+telecom 是主证明：在一个业务域内完成从 5 到 20、再到 74/40 的全流程、扩样、优化和
+验收。retail 是复用证明：先用固定小子集检查已有 L1 能力、L2 合同、L3 知识/路由和 L4
+拓扑中哪些可直接复用、哪些必须局部替换。只有小规模证据表明确实在复用同一套运行与
+维护机制，而不是重做另一套 Demo，并且预算重新获批，才扩大到 retail train/test。
+
+每次运行至少冻结 repository URL、commit/tag、任务 ID 清单、任务内容哈希、评分器版本、
+运行配置和许可证快照。仓库 commit 只描述代码版本，不能替代任务内容哈希。
 
 ## 4. 公平对照实验
 
@@ -235,8 +210,9 @@ Frozen SampleSetManifest
 ```
 
 每个 `CandidateRef × SampleRef × RunIndex` 使用独立 Worker/session，避免历史上下文污染。
-AgentTeams 可从源码启动；不需要为了 AgentFit 重编 AgentTeams 镜像。benchmark 自带的
-Docker/Harbor 容器继续作为任务权威环境，AgentTeams 的隔离环境作为调用与会话边界。
+AgentTeams 可从源码启动；不需要为了 AgentFit 重编 AgentTeams 镜像。τ²-bench 的 domain
+environment、数据库状态、工具和 scorer 继续作为任务权威环境，AgentTeams 的隔离环境
+作为模型调用、方案装载与会话边界。
 
 ### 4.4 四类样本集合
 
@@ -247,16 +223,21 @@ Docker/Harbor 容器继续作为任务权威环境，AgentTeams 的隔离环境�
 - `sealed_holdout`：两个最终方案 freeze 后才能执行，结果不得返回更新闭环；
 - `stress_and_failure`：异常、长链路、边界和运行失败压力样本。
 
-τ²-bench telecom 建议按以下方法构造，不在文档中硬编码具体 ID：
+τ²-bench telecom 按两种证据身份运行，不在文档中硬编码具体 ID：
 
-1. 使用 `tau2-bench@1.0.1` 的 74 个 train ID，经稳定哈希和任务类型分层后切成 adaptation 与
+1. `small=20` 是工程 pilot：在任何 pilot 候选生成前，经稳定哈希和任务类型分层形成四个
+   互不重叠的 pilot manifest，并通过 pilot G0 一次性冻结 Objective、五波变化材料、预算、
+   权限和访问顺序；
+2. 从 pilot adaptation 中预先指定 5 题做协议与证据 smoke，再用四个 pilot manifest 跑完
+   五波维护闭环。5 题可以在 20 题流程中复用，但整个 small 结果只证明工程闭环，不进入
+   正式效果统计；
+3. 20 题闭环稳定后，74 个 train ID 经稳定哈希和任务类型分层切成正式 adaptation 与
    validation；
-2. 40 个 official test ID 全部进入 sealed_holdout，两个最终方案 freeze 前不向
+4. 40 个 official test ID 全部进入 sealed_holdout，两个最终方案 freeze 前不向
    Steward、Attributor、Architect 暴露结果；
-3. 从 2,285 个 full telecom 任务中排除 base 和 smoke ID，再固定抽取边界任务形成
-   stress_and_failure；
-4. 20 个 `small` 任务只用于 adapter smoke，正式 manifest 排除已被人工查看的 ID；
-5. manifest 保存版本、content hash、access policy 和完整 ID 清单。
+5. 20 题闭环稳定后才从 2,285 个 full telecom 任务中排除 base/small ID，并固定抽取少量
+   边界任务形成 stress_and_failure；它们在正式候选生成前与其他三个 manifest 一起冻结；
+6. 每个 manifest 保存版本、content hash、access policy 和完整 ID 清单。
 
 公开题目只能形成**本次运行内的 sealed holdout**，不能证明模型预训练时从未见过题目。
 报告必须把“实验访问隔离”与“训练语料无污染”分开表述。
@@ -375,74 +356,82 @@ wall timeout 和全局停止条件。预算超限是独立停止原因，不得�
 2. 用无敏感信息的最小调用确认 reasoning effort 和 tool call；
 3. 记录 LiteLLM route、模型响应中的 usage、价格表版本和 context limit；
 4. 源码启动 AgentTeams，确认每个 EvaluationUnit 可创建独立 Worker/session；
-5. 检查 Docker/Harbor 环境和磁盘预算，不运行正式样本。
+5. 检查 τ²-bench 环境、磁盘和预算，不运行正式样本。
 
 完成定义：只证明运行前置条件，不产生效果结论。
 
-### 阶段 B：τ²-bench adapter 与初始等价 smoke
+### 阶段 B：telecom 5 题协议与证据 smoke
 
 1. 锁定 `tau2-bench@1.0.1`；
-2. 从 `small` 中选择 5 个协议覆盖样本；
-3. 构造语义等价的 Flat 初始方案与 AgentFit 四层初始方案，各跑 1 次；
-4. 验证原始 trajectory、reward、TaskSample、Trace、Episode、runtime_ref 和 RunStore
+2. 对 `small=20` 执行 pilot G0：形成四个互不重叠的 pilot manifest，冻结 ObjectiveSpec、
+   五波变化材料、预算、权限和访问顺序；
+3. 在候选生成前完成 Human freeze，再构造语义等价的 Flat 初始方案与 AgentFit 四层初始
+   方案；
+4. 从 pilot adaptation 中预先指定 5 个协议覆盖样本，两组各跑 1 次；
+5. 验证原始 trajectory、reward、TaskSample、Trace、Episode、runtime_ref 和 RunStore
    哈希链能够完整往返；
-5. 核对两组可用工具、上下文、预算、初始行为和 scorer 相同；
-6. smoke ID 不进入正式 sealed_holdout。
+6. 核对两组可用工具、上下文、预算、初始行为和 scorer 相同。
 
 完成定义：没有身份错配、结果丢失、跨会话污染或无法重算的 reward；没有由 Adapter 或
 初始语义不等价造成的系统性组间差异。
 
-### 阶段 C：冻结连续业务变化实验
+### 阶段 C：telecom 20 题完整维护闭环
 
-1. Human freeze 四类 manifest 与 ObjectiveSpec；
-2. 冻结 Flat 与 AgentFit 两组的初始方案身份和语义等价证明；
-3. 冻结 L1、L2、L3、L4 和跨层五波业务变化材料及内容哈希；
-4. 为每波冻结 adaptation、validation、累计回归样本和最大维护轮数；
-5. 冻结两组可读证据、更新模型、Human 次数、token/cost/time 和允许修改资产范围；
-6. sealed_holdout 在所有维护波次结束前保持不可见。
+1. 沿用已经 Human freeze 的四个 pilot manifest、Objective、变化材料和两个初始候选；
+2. 用 `small=20` 跑通初始基线与 L1、L2、L3、L4、跨层五波变化；
+3. 每波完成 adaptation 运行、Trace 归因、Flat/AgentFit 更新、validation 回归和方案回退；
+4. pilot 最终候选 freeze 后才运行 sealed_holdout 和 stress_and_failure，结果不回流更新；
+5. 打通业务质量、累计回归、变更范围、达标轮数/成本、复用、回滚和风险的 Dashboard；
+6. 允许包含已执行的 5 题 smoke，但整个 20 题结果只标记为工程 pilot，不做显著性结论；
+7. 在独立 RunStore 中封存原始 trajectory、模型 usage、Human 决策与 Candidate 变化。
 
-完成定义：Flat Base 不是弱化对照；两个维护组除维护机制外没有已知差异。
+完成定义：从业务变化到可追溯方案更新和结果展示的完整链路可重复运行；失败能区分
+业务 FAIL、协议 ERROR、平台 ERROR 和预算停止，且没有靠人工补写结果。
 
-### 阶段 D：逐波维护 pilot
+### 阶段 D：telecom 74 个 train 样本扩大与优化
 
-按 L1 → L2 → L3 → L4 → 跨层顺序执行，每波遵守相同协议：
+1. 冻结 Flat 与 AgentFit 两组的初始方案身份和语义等价证明；
+2. 冻结 L1、L2、L3、L4 和跨层五波业务变化材料及内容哈希；
+3. 将 74 个 train 样本稳定分层到 adaptation、validation 和累计回归视图；
+4. 只在 20 题闭环稳定后从 `full=2,285` 固定抽取少量 stress_and_failure；
+5. 实例化四类 manifest 与 ObjectiveSpec，由 Human 在候选生成前一次性 freeze；
+6. 同时冻结每波最大维护轮数、两组可读证据、更新模型、Human 次数、token/cost/time 和
+   允许修改资产范围；
+7. 按 L1 → L2 → L3 → L4 → 跨层顺序运行，每个 SampleRef 内对 Flat/AgentFit 做配对 trial；
+8. validation 同时检查本波新需求和累计旧需求，比较更新前后质量、回归、变更范围、成本、
+   复用和回滚，未达标时在 hard budget 内继续或回退。
 
-1. 两组读取相同的本波业务变化材料；
-2. 在本波 adaptation 上各运行 3 个 trial，保存完整 Trace；
-3. Flat 组按扁平资产维护，AgentFit 组按 L1–L4 归因并提交 ChangeTransaction；
-4. 两组使用相同更新模型、维护预算和 Human Gate 次数；
-5. validation 同时检查本波新需求与所有已通过旧需求；
-6. 未达标时在 hard budget 内继续一轮或回退，超限则记录失败，不降低门槛；
-7. 每波封存变更资产、回归、达标轮数、成本、复用、回滚和审计链。
+完成定义：至少得到一条可审计的“扩大样本 → 诊断失败簇 → 更新方案 → 回归验证”路径，
+并明确哪些优化有效、哪些无效、哪些因预算或运行错误无法判断。Flat Base 不是弱化对照。
 
-完成定义：每次业务变化都能回答改了什么、为什么改、影响了哪些旧能力、用了多少成本，
-而不只是保留最终方案。
+### 阶段 E：telecom 40 个 official test 封存验收
 
-### 阶段 E：最终 sealed-holdout 与 stress 验收
-
-1. 五波维护结束后冻结两组最终方案；
+1. 74 train 的维护和 validation 完成后冻结两个最终方案；
 2. 在 40 个 official test ID 上成对运行，优先每题各 5 次，预算不足时至少 3 次；
 3. stress_and_failure 最后执行，不回流任一维护组；
 4. 同时报告最终业务质量、累计回归曲线、变更范围、达标成本、复用、回滚和风险；
-5. 只有同时通过业务质量门和维护优势门，才声明四层维护在本次实验中有效。
+5. 只有同时通过业务质量门和维护优势门，才声明四层维护在本次 telecom 实验中有效。
 
-完成定义：能回答 AgentFit 四层维护相对常见扁平维护的业务价值，而不是展示一次高分。
+完成定义：能回答 AgentFit 四层维护相对常见扁平维护的业务价值，而不是展示一次高分；
+sealed_holdout 访问发生在方案 freeze 之后，结果没有进入任何更新。
 
-### 阶段 F：外部适用性扩展
+### 阶段 F：retail 小规模复用验证
 
-业务维护主结论成立后，再按需扩展：
+1. 保持同一个 τ²-bench Adapter、scheduler、scorer、Dashboard 和 AgentTeams 执行外壳；
+2. 从 retail train 中稳定抽取小规模任务，冻结业务材料和四类 manifest；
+3. 以已封存的 telecom CandidateRef 的完整 L1–L4 为源进行投影，再只替换 retail 必需的
+   政策、数据、能力合同和局部拓扑；
+4. 建立资产复用账本，逐项记录原引用直接复用、局部替换、无法复用和新增资产，并关联
+   迁移后的质量与回归证据；
+5. 若迁移必须重做 Adapter、调度、评分、Dashboard 或核心合同，则复用假设未成立，停止
+   扩大并先诊断；
+6. 只有小规模证据显示是跨域复用而非重做 Demo，且预算重新获批，才决定是否扩大到
+   retail 74 train / 40 test。
 
-1. Terminal-Bench 2.0：与 DeepSeek 官网 56.9 建立同 benchmark 量级参照，不宣称内部
-   harness 复现；
-2. MCPAtlas：先使用 20 个无需 key 的 server，验证不同 Tool/MCP 绑定下四层合同是否稳定；
-3. SWE-bench：验证软件研发需求连续变化下的维护能力；
-4. CorpusQA：验证大量业务材料下的知识与上下文维护；
-5. Toolathlon-Verified：保持 `BLOCKED_LICENSE`，只有许可证、数据权利和服务条款快照
-   全部通过 Human 审核后才允许运行；
-6. GDPval：在数据许可与 AA grader 条件明确后验证专业工作产物。
+完成定义：回答“换一个相邻业务域需要改多少”，而不是再产出一套孤立的 retail Demo。
 
-外部框架对比不是主实验门禁，不得阻塞业务维护证据，也不得替代 Flat 与 AgentFit 的
-同框架公平对照。
+以上六个阶段是当前完整路线。其他 benchmark 当前不排期、不开发 Adapter，也不作为
+retail 之后的自动下一阶段。
 
 ## 7. AgentFit 应交付和展示什么
 
@@ -507,7 +496,7 @@ benchmark 的 runner、镜像和任务数据不复制进核心方案包；只保
 | AgentFit 作为 τ² 原生 Agent | 尚未实现 | 增加 benchmark-native adapter，经 AgentTeams 调用冻结 Candidate |
 | 双维护组成对调度 | 尚未实现 | 同一变化波次、SampleRef、trial、更新模型、Human 和预算下运行两组 |
 | 维护证据与统计 | 尚未实现 | 记录层级定位、变更范围、累计回归、达标轮数/成本、复用和回滚，并保留 paired statistics |
-| 外部 benchmark bridge | 尚未实现 | 主实验后逐个增加，不改 `src/agentfit` 四层核心合同 |
+| telecom → retail 复用路径 | 尚未实现 | 在同一 τ²-bench Adapter 中切换 domain，量化四层资产直接复用、局部替换和重复新建 |
 
 最关键的缺口不是再发明 Agent 抽象或追逐更多榜单，而是建立一个公平的连续维护实验：
 让相同业务变化分别进入 Flat 与 AgentFit，两组在同一 AgentTeams/benchmark 沙箱中维护，
@@ -525,9 +514,10 @@ benchmark 的 runner、镜像和任务数据不复制进核心方案包；只保
 5. 把 LiteLLM usage/cost、runtime error、benchmark reward、维护成本和 Human 决策写入
    标准证据；
 6. 增加层级定位、变更范围、复用、回滚、配对统计与 Dashboard 映射；
-7. 完成 5 题等价 smoke 和第一波 20 题 pilot，证据门禁通过后再批准五波正式维护实验；
-8. 主实验稳定后再扩展 Terminal-Bench、MCPAtlas 和 SWE-bench；Toolathlon 仅在
-   `BLOCKED_LICENSE` 解除后进入实施，不并行建设多套半成品 adapter。
+7. 依次完成 telecom 5 题协议与证据 smoke、telecom 20 题完整维护闭环、telecom 74 个
+   train 样本扩大与优化、telecom 40 个 official test 封存验收；
+8. telecom 正式结果封存后才做 retail 小规模复用验证；当前只建设一个 benchmark
+   adapter：`τ²-bench`，其他 benchmark 不排期、不开发 Adapter。
 
 行为变更必须先有失败测试；所有活构件使用稳定名称并原位迭代，Git 记录演化。不可修改
 已经冻结的 `competition/2026-08-16/submission/`。
@@ -555,15 +545,5 @@ benchmark 的 runner、镜像和任务数据不复制进核心方案包；只保
 - [DeepSeek-V4 发布页](https://api-docs.deepseek.com/zh-cn/news/news260424)
 - [DeepSeek-V4 技术报告](https://arxiv.org/abs/2606.19348)
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-- [Terminal-Bench 2.0](https://github.com/harbor-framework/terminal-bench-2)
 - [τ²-bench](https://github.com/sierra-research/tau2-bench)
-- [SWE-bench](https://github.com/SWE-bench/SWE-bench)
-- [SWE-bench Pro](https://github.com/scaleapi/SWE-bench_Pro-os)
-- [SWE-bench Multilingual tasks](https://github.com/SWE-bench/swe-bench-multilingual-tasks)
-- [BrowseComp reference implementation](https://github.com/openai/simple-evals)
-- [Humanity's Last Exam](https://github.com/centerforaisafety/hle)
-- [MCPAtlas](https://github.com/scaleapi/mcp-atlas)
-- [GDPval dataset](https://huggingface.co/datasets/openai/gdpval)
-- [GDPval paper](https://arxiv.org/abs/2510.04374)
 - [Toolathlon](https://github.com/hkust-nlp/Toolathlon)
-- [CorpusQA](https://github.com/Tongyi-Zhiwen/CorpusQA)

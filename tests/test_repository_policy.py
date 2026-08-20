@@ -340,3 +340,50 @@ def test_benchmark_plan_blocks_unlicensed_sources_and_clusters_trials() -> None:
     assert "paired bootstrap 以 SampleRef 为重采样 cluster" in benchmark
     assert "McNemar 使用 sample-level paired outcome" in benchmark
     assert "trial 不能作为独立样本扩大统计样本量" in benchmark
+
+
+def test_benchmark_execution_scope_is_tau2_telecom_then_retail() -> None:
+    benchmark = (REPO / "docs" / "benchmark-evaluation.md").read_text(encoding="utf-8")
+    plan = (REPO / "docs" / "development-plan.md").read_text(encoding="utf-8")
+
+    for document in (benchmark, plan):
+        assert "当前只建设一个 benchmark adapter：`τ²-bench`" in document
+        assert "telecom 5 题协议与证据 smoke" in document
+        assert "telecom 20 题完整维护闭环" in document
+        assert "telecom 74 个 train 样本扩大与优化" in document
+        assert "telecom 40 个 official test 封存验收" in document
+        assert "retail 小规模复用验证" in document
+        assert "不排期、不开发 Adapter" in document
+
+    route = (
+        "telecom 5 题协议与证据 smoke",
+        "telecom 20 题完整维护闭环",
+        "telecom 74 个 train 样本扩大与优化",
+        "telecom 40 个 official test 封存验收",
+        "retail 小规模复用验证",
+    )
+    for document in (benchmark, plan):
+        positions = [document.index(label) for label in route]
+        assert positions == sorted(positions)
+
+    stage_titles = (
+        "### 阶段 B：telecom 5 题协议与证据 smoke",
+        "### 阶段 C：telecom 20 题完整维护闭环",
+        "### 阶段 D：telecom 74 个 train 样本扩大与优化",
+        "### 阶段 E：telecom 40 个 official test 封存验收",
+        "### 阶段 F：retail 小规模复用验证",
+    )
+    stage_positions = [benchmark.index(title) for title in stage_titles]
+    assert stage_positions == sorted(stage_positions)
+    assert "pilot G0" in benchmark
+    assert "候选生成前" in benchmark
+    assert "四个互不重叠的 pilot manifest" in benchmark
+    assert "telecom CandidateRef 的完整 L1–L4" in benchmark
+    assert "资产复用账本" in benchmark
+    assert "完整 L1–L4" in plan
+    assert "资产复用账本" in plan
+    assert "### 2.1 数据集总览" not in benchmark
+    assert "阶段 F：外部适用性扩展" not in benchmark
+    assert "主实验稳定后再扩展 Terminal-Bench" not in benchmark
+    assert "外部 benchmark bridge" not in benchmark
+    assert not re.search(r"^### 阶段.*full", benchmark, re.MULTILINE)
