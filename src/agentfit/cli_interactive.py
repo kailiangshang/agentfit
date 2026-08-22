@@ -169,7 +169,13 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
     from agentfit.agents.orchestrator import Orchestrator
     from agentfit.agents.team import build_team
     from agentfit.data.sample_pool import SamplePool
-    from agentfit.executors.simulator import SimulatorExecutor
+    # 真实执行：AgentTeams Worker → Matrix → deepseek-v4-flash
+    from bridges.agentteams.candidate_sandbox import (CandidateWorkerLifecycle,
+        DockerAgentTeamsControl, render_candidate_worker)
+    from bridges.agentteams.matrix_sandbox import (MatrixHttpTransport,
+        MatrixSandboxAdapter, load_manager_matrix_credentials)
+    from bridges.agentteams.executor import AgentTeamsSandboxExecutor
+    from agentfit.models.evidence import CandidateManifest
     from agentfit.models.config import TrainingConfig, AutoApprove
     from agentfit.models.manifest import SampleSetPurpose
 
@@ -193,12 +199,37 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
         review_policy=gate_policy,
     )
 
-    orchestrator = Orchestrator(
-        solution, SamplePool(adaptation_samples), SimulatorExecutor(), config,
-        run_dir=str(output_dir), scenario=bundle.get("scenario", "interactive"),
-        validation_samples=validation_samples,
+    # 真实执行链路：起一个专用 Worker
+    candidate = CandidateManifest.for_solution(solution)
+    _show("🔌 启动 AgentTeams 真实执行 Worker")
+    lc = CandidateWorkerLifecycle(DockerAgentTeamsControl("agentteams-manager"))
+    worker_manifest = render_candidate_worker(
+        candidate_ref=candidate.candidate_ref,
+        run_id=f"interactive-{output_dir.name}",
+        model_ref=model,
     )
-    build_team(orchestrator)
+    endpoint = lc.provision(worker_manifest, timeout_seconds=300)
+    print(f"  Worker 就绪: {endpoint.name}（deepseek-v4-flash）")
+    credentials = load_manager_matrix_credentials(homeserver_override="http://127.0.0.1:18080")
+    transport = MatrixHttpTransport(credentials)
+    sandbox = MatrixSandboxAdapter(transport, room_id=endpoint.room_id,
+                                    worker_user_id=endpoint.matrix_user_id)
+    executor = AgentTeamsSandboxExecutor(
+        sandbox,
+        deployment_ref=f"agentteams://worker/{endpoint.name}",
+        sandbox_ref=f"agentteams://worker/{endpoint.name}",
+        model_ref=model,
+        binding_mode="semantic_dry_run",
+        cost_accounting="unavailable",
+    )
+
+    try:
+        orchestrator = Orchestrator(
+            solution, SamplePool(adaptation_samples), executor, config,
+            run_dir=str(output_dir), scenario=bundle.get("scenario", "interactive"),
+            validation_samples=validation_samples,
+        )
+        build_team(orchestrator)
 
     _show("🔄 训练开始")
     for outcome in orchestrator.train():
