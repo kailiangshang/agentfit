@@ -32,6 +32,18 @@ th{color:#74d0c7;text-align:left;padding:5px 8px;border-bottom:1px solid #28516d
 .runtime-line{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.learning-story{margin-top:14px;padding-top:14px;border-top:1px solid #28516d}.learning-story h3{margin-top:0}.final-verdict{margin-top:10px;color:#a8c4d8}.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .flow-step{min-width:0;background:#0f293e;border:1px solid #28516d;border-radius:10px;padding:12px;min-height:92px}.flow-step b{display:block;color:#74d0c7;margin-bottom:6px}.flow-step strong{display:block;font:700 17px/1.3 monospace;margin-bottom:5px}.flow-step span{overflow-wrap:anywhere;color:#a8c4d8;font-size:12px}
 .evidence-wrap{overflow-x:auto}.result-pass{color:#74d0c7}.result-fail,.result-error{color:#f26b4b}.mono{font-family:monospace}
+.layer-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.layer-card{border:1px solid #28516d;border-radius:10px;padding:10px 12px;background:rgba(0,0,0,0.15)}
+.layer-title{font-weight:700;color:#e8edf2;margin-bottom:8px;font-size:13px}
+.provenance-group{border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.frozen-group{background:rgba(214,164,59,0.06);border:1px solid rgba(214,164,59,0.3)}
+.trained-group{background:rgba(26,141,133,0.06);border:1px solid rgba(26,141,133,0.3)}
+.group-label{font-size:11.5px;font-weight:700;margin-bottom:6px}
+.frozen-group .group-label{color:#d6a43b}
+.trained-group .group-label{color:#74d0c7}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:4px}
+.frozen-chip{display:inline-block;border:1px solid #d6a43b;border-radius:5px;padding:2px 7px;font-size:11px;color:#d6a43b;background:rgba(214,164,59,0.1)}
+.trained-chip{display:inline-block;border:1px solid #1a8d85;border-radius:5px;padding:2px 7px;font-size:11px;color:#74d0c7;background:rgba(26,141,133,0.1)}
 .frozen-element{display:inline-block;border:1px solid #d6a43b;border-radius:6px;padding:2px 8px;margin:2px;font-size:11.5px;color:#d6a43b;background:rgba(214,164,59,0.08)}
 .trained-element{display:inline-block;border:1px solid #1a8d85;border-radius:6px;padding:2px 8px;margin:2px;font-size:11.5px;color:#74d0c7;background:rgba(26,141,133,0.08)}
 legend-bar{padding:12px 32px;display:flex;flex-wrap:wrap;gap:8px 16px;border-bottom:1px solid #28516d;font-size:12px}
@@ -239,39 +251,47 @@ def _render_training(payload: dict) -> str:
         acceptance_html += '<div class="mut">最终评价尚未运行；当前只展示 adaptation 学习证据。</div>'
     sections.append(acceptance_html + "</section>")
 
-    # ③ 材料与四层映射
+    # ③ 材料与四层映射（冻结/训练分栏卡片）
     versions = sorted((payload.get("solutions") or {}).keys(), key=lambda v: int(v))
     first = (payload.get("solutions") or {}).get(versions[0]) if versions else None
     mapping_html = "<section><h2>③ 材料与四层映射（初始方案）</h2>"
     if first:
         solution = first.get("solution") or {}
-        def _element_badge(item: dict, extra: str = "") -> _Raw:
-            frozen = item.get("frozen", False)
-            marker = "🔒" if frozen else "✦"
-            cls = "frozen-element" if frozen else "trained-element"
-            return _Raw(f'<span class="{cls}">{_e(marker)} {_e(item.get("id", "?"))}'
-                        + (f"（{_e(extra)}）" if extra else "") + "</span>")
 
-        frozen_count = sum(1 for pool in ("L1_atoms", "L2_tools", "L3_knowledge")
-                          for item in (solution.get(pool) or []) if item.get("frozen"))
-        trained_count = (len(solution.get("L1_atoms") or []) + len(solution.get("L2_tools") or [])
-                        + len(solution.get("L3_knowledge") or []) - frozen_count)
-        mapping_html += f'<div class="mut" style="margin-bottom:8px">🔒 用户预指定 {frozen_count} 个 · ✦ 训练产生 {trained_count} 个</div>'
+        def _layer_card(layer_label: str, elements: list, formatter) -> _Raw:
+            frozen = [e for e in elements if e.get("frozen")]
+            trained = [e for e in elements if not e.get("frozen")]
+            html_parts = [f'<div class="layer-card"><div class="layer-title">{_e(layer_label)} <span class="mut">{len(elements)} 个</span></div>']
 
-        mapping_html += _table(["层", "元素数", "清单"], [
-            ["L1 Solid", len(solution.get("L1_atoms") or []),
-             _Raw("".join(str(_element_badge(item, f"{item.get('domain', 'data_interface')}·{item.get('type')}"))
-                      for item in solution.get("L1_atoms") or []))],
-            ["L2 能力", len(solution.get("L2_tools") or []),
-             _Raw("".join(str(_element_badge(item, ", ".join(item.get("wraps") or [])))
-                      for item in solution.get("L2_tools") or []))],
-            ["L3 知识", len(solution.get("L3_knowledge") or []),
-             _Raw("".join(str(_element_badge(item, item.get("type", "")))
-                      for item in solution.get("L3_knowledge") or []))],
-            ["L4 拓扑", len((solution.get("L4_topology") or {}).get("agents") or []),
-             _Raw("".join(str(_element_badge(item, item.get("role", "")))
-                      for item in (solution.get("L4_topology") or {}).get("agents") or []))],
-        ])
+            if frozen:
+                chips = "".join(f'<span class="frozen-chip">{_e(formatter(e))}</span>' for e in frozen)
+                html_parts.append(f'<div class="provenance-group frozen-group"><div class="group-label">🔒 用户预指定（{len(frozen)}）</div><div class="chip-wrap">{chips}</div></div>')
+            if trained:
+                chips = "".join(f'<span class="trained-chip">{_e(formatter(e))}</span>' for e in trained)
+                html_parts.append(f'<div class="provenance-group trained-group"><div class="group-label">✦ 训练产生（{len(trained)}）</div><div class="chip-wrap">{chips}</div></div>')
+            if not elements:
+                html_parts.append('<div class="mut" style="padding:8px">（空）</div>')
+            html_parts.append("</div>")
+            return _Raw("".join(html_parts))
+
+        total_frozen = sum(1 for pool_key in ("L1_atoms", "L2_tools", "L3_knowledge")
+                          for item in (solution.get(pool_key) or []) if item.get("frozen"))
+        total_trained = (len(solution.get("L1_atoms") or []) + len(solution.get("L2_tools") or [])
+                        + len(solution.get("L3_knowledge") or []) - total_frozen)
+        mapping_html += (f'<div class="mut" style="margin-bottom:10px">'
+                        f'🔒 <b style="color:#d6a43b">{total_frozen}</b> 个用户预指定 · '
+                        f'✦ <b style="color:#74d0c7">{total_trained}</b> 个训练产生 · '
+                        f'训练<b>不可修改</b>🔒元素</div>')
+        mapping_html += '<div class="layer-grid">'
+        mapping_html += _layer_card("L1 原子接口", solution.get("L1_atoms") or [],
+            lambda a: f"{a.get('id','?')} · {a.get('domain','?').replace('_',' ')} · {a.get('type','?')}")
+        mapping_html += _layer_card("L2 能力封装", solution.get("L2_tools") or [],
+            lambda t: f"{t.get('id','?')} → [{', '.join(t.get('wraps') or [])}]")
+        mapping_html += _layer_card("L3 知识规则", solution.get("L3_knowledge") or [],
+            lambda k: f"{k.get('id','?')} · {k.get('type','?')}" + (f" → {k.get('dispatches_to')}" if k.get('dispatches_to') else ""))
+        mapping_html += _layer_card("L4 Agent 拓扑", (solution.get("L4_topology") or {}).get("agents") or [],
+            lambda a: f"{a.get('id','?')} · {a.get('role','?')} · 引用{len(a.get('uses') or [])}条知识")
+        mapping_html += "</div>"
     sections.append(mapping_html + "</section>")
 
     # ④ 样本与聚类分组
