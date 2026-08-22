@@ -75,7 +75,7 @@ def _bundle() -> dict:
 
 
 def test_material_bundle_compiles_traceable_samples_and_four_frozen_sets() -> None:
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
 
     compiled = compile_material_bundle(_bundle())
     assert len(compiled.observations) == 1
@@ -107,7 +107,7 @@ def test_material_bundle_compiles_traceable_samples_and_four_frozen_sets() -> No
 
 
 def test_material_change_invalidates_task_and_manifest_hashes() -> None:
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
 
     before = compile_material_bundle(_bundle())
     changed = copy.deepcopy(_bundle())
@@ -123,7 +123,7 @@ def test_material_change_invalidates_task_and_manifest_hashes() -> None:
 
 
 def test_material_metadata_change_invalidates_lineage_hashes() -> None:
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
 
     before = compile_material_bundle(_bundle())
     changed = copy.deepcopy(_bundle())
@@ -164,7 +164,7 @@ def test_material_metadata_change_invalidates_lineage_hashes() -> None:
     ],
 )
 def test_material_compiler_rejects_incomplete_or_conflicting_contracts(mutate, message: str) -> None:
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
 
     bundle = _bundle()
     mutate(bundle)

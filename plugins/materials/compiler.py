@@ -4,19 +4,19 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from ..models.loss import Expected, ExpectedAction
-from ..models.manifest import (
+from agentfit.models.loss import Expected, ExpectedAction
+from agentfit.models.manifest import (
     FreezeDecision,
     SampleSetCollection,
     SampleSetManifest,
     SampleSetPurpose,
     default_access_policy,
 )
-from ..models.objective import ObjectiveSpec, objective_spec_from_material
-from ..models.project import CapabilityInventory
-from ..models.sample import SourceObservation, TaskSample
-from ..models.freeze_policy import freeze_default
-from ..models.solution import CapabilityTool, HumanGate, SolidAtom
+from agentfit.models.objective import ObjectiveSpec, objective_spec_from_material
+from agentfit.models.project import CapabilityInventory
+from agentfit.models.sample import SourceObservation, TaskSample
+from agentfit.models.freeze_policy import freeze_default
+from agentfit.models.solution import CapabilityTool, HumanGate, SolidAtom
 
 
 @dataclass(frozen=True)
@@ -79,7 +79,7 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
     capability_data = bundle.get("capabilities")
     if not isinstance(capability_data, dict):
         raise ValueError("capability inventory is required")
-    from ..models.taxonomy import registry_from_dict
+    from agentfit.models.taxonomy import registry_from_dict
     taxonomy_data = bundle.get("taxonomy") or {}
     try:
         registry = registry_from_dict(taxonomy_data)
@@ -221,7 +221,7 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
 
 
 def _taxonomy_document(registry) -> dict[str, Any]:
-    from ..models.taxonomy import CustomType, TypeRegistry
+    from agentfit.models.taxonomy import CustomType, TypeRegistry
     if not isinstance(registry, TypeRegistry):
         registry = TypeRegistry()
     return {

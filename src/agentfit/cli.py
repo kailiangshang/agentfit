@@ -12,14 +12,14 @@ from typing import Any
 from .adapters.protocols import ExternalEvidenceProjector
 from .agents.orchestrator import Orchestrator
 from .agents.team import build_team
-from .dashboard import generate_dashboard
+from plugins.dashboard.generate import generate_dashboard
 from .data.sample_pool import SamplePool
 from .delivery.approval import assert_delivery_approved, verify_delivery_decision
-from .delivery.boundary import write_boundary
-from .delivery.package import export_evidence_package, export_package
+from plugins.boundary import write_boundary
+from plugins.solution_package import export_evidence_package, export_package
 from .executors.simulator import SimulatorExecutor
-from .log.report import generate_report
-from .materials.compiler import compile_material_bundle
+from plugins.report import generate_report
+from plugins.materials.compiler import compile_material_bundle
 from .models.evidence import CandidateManifest, ExternalEvidenceRecord
 from .models.config import AutoApprove, TrainingConfig
 from .models.loss import Expected, ExpectedAction

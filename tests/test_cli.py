@@ -8,7 +8,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from agentfit.materials.compiler import compile_material_bundle
+from plugins.materials.compiler import compile_material_bundle
 from agentfit.models.loss import Expected, ExpectedAction
 from agentfit.models.manifest import AccessPolicy, FreezeDecision, SampleSetManifest, SampleSetPurpose
 from agentfit.models.project import CapabilityInventory

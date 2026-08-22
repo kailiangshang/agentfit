@@ -8,13 +8,13 @@ import json
 
 from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
-from agentfit.dashboard import generate_dashboard
+from plugins.dashboard.generate import generate_dashboard
 from agentfit.data.sample_pool import SamplePool
-from agentfit.delivery.package import analyze_boundary, export_package
-from agentfit.delivery.boundary import write_boundary
-from agentfit.delivery.package import export_evidence_package
+from plugins.solution_package import analyze_boundary, export_package
+from plugins.boundary import write_boundary
+from plugins.solution_package import export_evidence_package
 from agentfit.executors.simulator import SimulatorExecutor
-from agentfit.log.report import generate_report
+from plugins.report import generate_report
 from agentfit.models.evidence import CandidateManifest
 from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.models.manifest import (FreezeDecision, SampleSetCollection,

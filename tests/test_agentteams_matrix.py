@@ -899,7 +899,7 @@ def test_live_runner_cleans_up_worker_when_provisioning_fails(tmp_path: Path) ->
 def test_executor_preserves_safe_matrix_error_code() -> None:
     executor_module = importlib.import_module("bridges.agentteams.executor")
     from agentfit.adapters.protocols import SandboxResult
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
     from agentfit.solution.builder import build_candidate
 
     bundle = json.loads(

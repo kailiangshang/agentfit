@@ -298,7 +298,7 @@ def test_active_docs_keep_four_layer_semantics_separate_from_runtime_bindings() 
 
 
 def test_telecom_materials_compile_to_four_traceable_sets() -> None:
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
 
     materials = json.loads(
         (REPO / "examples" / "telecom-materials.json").read_text(encoding="utf-8")

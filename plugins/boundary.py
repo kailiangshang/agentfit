@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..store.run_store import RunStore
+from agentfit.store.run_store import RunStore
 
 
 def analyze_boundary(run_dir: str | Path) -> dict:

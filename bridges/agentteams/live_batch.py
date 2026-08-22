@@ -15,11 +15,11 @@ from agentfit.models.evidence import CandidateManifest
 from agentfit.models.manifest import SampleSetPurpose
 from agentfit.models.objective import evaluate_acceptance, summarize_episodes
 from agentfit.models.sample import Episode, canonical_hash
-from agentfit.materials.compiler import compile_material_bundle
+from plugins.materials.compiler import compile_material_bundle
 from agentfit.solution.builder import build_candidate
 from agentfit.store.run_store import RunStore
-from agentfit.dashboard.generate import generate_dashboard
-from agentfit.log.report import generate_report
+from plugins.dashboard.generate import generate_dashboard
+from plugins.report import generate_report
 
 from bridges.agentteams.executor import AgentTeamsSandboxExecutor
 

@@ -9,7 +9,7 @@ import json
 import os
 from pathlib import Path
 
-from ..store.run_store import RunStore
+from agentfit.store.run_store import RunStore
 
 NARRATIVE_PROMPT = """你是 AgentFit 的 Steward（交互官），面向非技术用户解释这次训练发生了什么。
 基于以下训练数据，用中文写一段 200 字以内的叙事，包含：

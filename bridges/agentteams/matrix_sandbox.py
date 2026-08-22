@@ -355,7 +355,7 @@ class MatrixSandboxAdapter:
         except Exception:
             return SandboxResult(status="error", error="agentteams_matrix_transport_error")
 
-        from agentfit.models.envelope import validate_envelope, retry_message_with_errors
+        from bridges.agentteams.envelope import validate_envelope, retry_message_with_errors
         deadline = self.monotonic() + max(request.timeout_seconds, 0.0)
         retries_used = 0
         max_retries = 3

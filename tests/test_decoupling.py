@@ -16,7 +16,29 @@ SRC = REPO / "src" / "agentfit"
 FORBIDDEN = ("agentteams", "tau2", "tau2bench")
 
 
-def test_no_platform_dependency_inside_library():
+def test_core_does_not_import_plugins():
+    """薄核心原则：src/agentfit 不得静态 import plugins/（插件通过接口注入）。
+
+    动态加载（importlib）是允许的——orchestrator 的 _invoke_plugin 用的就是动态加载。
+    """
+    # 组合根例外：cli.py 是唯一同时引核心和插件的文件
+    COMPOSITION_ROOT = "cli.py"
+    violations = []
+    for py in SRC.rglob("*.py"):
+        if py.name == COMPOSITION_ROOT:
+            continue
+        content = py.read_text(encoding="utf-8")
+        for i, line in enumerate(content.splitlines(), 1):
+            stripped = line.strip()
+            if (stripped.startswith("from plugins.") or stripped.startswith("import plugins.")
+                    and "importlib" not in stripped):
+                violations.append(f"{py.relative_to(REPO)}:{i} {stripped[:60]}")
+    assert not violations, (
+        "核心不得静态 import plugins（薄核心原则）：\n" + "\n".join(violations)
+    )
+
+
+def test_core_does_not_import_platform_dependency_inside_library():
     violations = []
     for py in SRC.rglob("*.py"):
         relative = py.relative_to(SRC).as_posix().lower()
@@ -80,9 +102,9 @@ def test_architecture_level_complete():
         "agentfit.data.sample_pool", "agentfit.data.clustering",
         "agentfit.executors.base", "agentfit.executors.simulator",
         "agentfit.solution.validator", "agentfit.solution.builder",
-        "agentfit.log.training_log", "agentfit.log.report",
-        "agentfit.store.run_store", "agentfit.dashboard.generate",
-        "agentfit.monitoring.monitor", "agentfit.delivery.package", "agentfit.delivery.boundary",
+        "agentfit.log.training_log", "plugins.report",
+        "agentfit.store.run_store", "plugins.dashboard.generate",
+        "agentfit.monitoring.monitor", "plugins.solution_package", "plugins.boundary",
         "agentfit.skills.registry", "agentfit.gates.human", "agentfit.adapters.protocols",
         "agentfit.cli",
     ]

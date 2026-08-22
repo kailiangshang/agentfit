@@ -4,10 +4,10 @@ import re
 
 from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
-from agentfit.dashboard import generate_dashboard
+from plugins.dashboard.generate import generate_dashboard
 from agentfit.data.sample_pool import SamplePool
 from agentfit.executors.simulator import SimulatorExecutor
-from agentfit.log.report import generate_report
+from plugins.report import generate_report
 from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.store.run_store import RunStore
 
@@ -189,7 +189,7 @@ def test_dashboard_cli(tmp_path):
     run_dir = _train_with_store(tmp_path)
     src = Path(__file__).resolve().parents[1] / "src"
     env = {**os.environ, "PYTHONPATH": str(src)}
-    r = subprocess.run([sys.executable, "-m", "agentfit.dashboard", str(run_dir)],
+    r = subprocess.run([sys.executable, "-m", "plugins.dashboard", str(run_dir)],
                        capture_output=True, text=True, env=env)
     assert r.returncode == 0, r.stderr
     assert (run_dir / "dashboard.html").exists()

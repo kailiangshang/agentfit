@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..store.run_store import RunStore
+from agentfit.store.run_store import RunStore
 
 
 _STYLE = """

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..store.run_store import RunStore
+from agentfit.store.run_store import RunStore
 
 
 def _collect_signals(store: RunStore) -> dict:

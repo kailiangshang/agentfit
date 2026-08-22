@@ -50,7 +50,7 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
     sys.path.insert(0, str(REPO / "src"))
     sys.path.insert(0, str(REPO))
 
-    from agentfit.materials.compiler import compile_material_bundle
+    from plugins.materials.compiler import compile_material_bundle
     from agentfit.models.taxonomy import registry_from_dict
 
     bundle = json.loads(bundle_path.read_text(encoding="utf-8"))

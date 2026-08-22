@@ -64,7 +64,7 @@ class TestCompilerFollowsPolicy:
 
     def test_materials_compiler_l1_frozen_l2_trainable(self):
         """编译 pilot bundle 后：L1 冻结、L2 可训练。"""
-        from agentfit.materials.compiler import compile_material_bundle
+        from plugins.materials.compiler import compile_material_bundle
         bundle = json.load(open("output/pilot/telecom-pilot-bundle.json"))
         compiled = compile_material_bundle(bundle)
         inv = compiled.capability_inventory
@@ -73,7 +73,7 @@ class TestCompilerFollowsPolicy:
 
     def test_builder_l3_l4_trainable(self):
         """bootstrap 产物：L3/L4 不冻结。"""
-        from agentfit.materials.compiler import compile_material_bundle
+        from plugins.materials.compiler import compile_material_bundle
         from agentfit.solution.builder import build_candidate
         bundle = json.load(open("output/pilot/telecom-pilot-bundle.json"))
         compiled = compile_material_bundle(bundle)
@@ -86,7 +86,7 @@ class TestCompilerFollowsPolicy:
 
     def test_bundle_explicit_frozen_l2_is_respected(self):
         """bundle 中显式 frozen=true 的 L2 工具（合规门禁）被尊重。"""
-        from agentfit.materials.compiler import compile_material_bundle
+        from plugins.materials.compiler import compile_material_bundle
         bundle = json.load(open("output/pilot/telecom-pilot-bundle.json"))
         # 模拟用户显式冻结一个工具
         bundle["capabilities"]["tools"][0]["frozen"] = True

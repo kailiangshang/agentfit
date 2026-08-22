@@ -15,7 +15,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "src"))
 
 from agentfit.models.evidence import CandidateManifest  # noqa: E402
-from agentfit.materials.compiler import compile_material_bundle  # noqa: E402
+from plugins.materials.compiler import compile_material_bundle  # noqa: E402
 from agentfit.solution.builder import build_candidate  # noqa: E402
 from bridges.agentteams.candidate_sandbox import (  # noqa: E402
     CandidateWorkerLifecycle,

@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from ..bus.messages import ResultMsg, TaskMsg
-from ..materials.compiler import compile_material_bundle
+import importlib
+compile_material_bundle = importlib.import_module("plugins.materials.compiler").compile_material_bundle
 from ..models.sample import TaskSample
 
 

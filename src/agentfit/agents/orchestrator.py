@@ -485,6 +485,20 @@ class Orchestrator:
     def budget_exceeded(self) -> bool:
         return self.total_cost() > self.config.budget_usd
 
+    # ---------- 插件接口（动态加载，核心不依赖具体插件） ----------
+    def _invoke_plugin(self, module_path: str, function_name: str, *args) -> Any:
+        """动态加载插件并调用。失败不阻塞训练（插件是可选的）。"""
+        try:
+            import importlib
+            full_path = f"plugins.{module_path}"
+            module = importlib.import_module(full_path)
+            func = getattr(module, function_name, None)
+            if func:
+                return func(*args)
+        except Exception:
+            pass
+        return None
+
     # ---------- 冻结分流与 advisory ----------
     def _root_element_frozen(self, loss_trace) -> bool:
         element_id = loss_trace.root_cause_element
@@ -689,14 +703,8 @@ class Orchestrator:
         if self.auditor:
             self.auditor.persist_summary(summary)
             # 运行完成仪制：训练结果 + 对 AgentFit 自身的建议
-            from ..log.meta_review import generate_meta_review
-            from ..log.report import generate_report
-            generate_report(self.auditor.store.root)
-            generate_meta_review(self.auditor.store.root)
-            # 非阻塞叙事：LLM 失败不影响 dashboard
-            try:
-                from ..dashboard.narrative import generate_narrative
-                generate_narrative(self.auditor.store.root)
-            except Exception:
-                pass
+            # 运行完成仪制：通过插件接口动态加载（核心不依赖具体插件）
+            self._invoke_plugin("report", "generate_report", self.auditor.store.root)
+            self._invoke_plugin("meta_review", "generate_meta_review", self.auditor.store.root)
+            self._invoke_plugin("dashboard.narrative", "generate_narrative", self.auditor.store.root)
         return self.outcomes

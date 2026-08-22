@@ -6,9 +6,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from ..models.sample import canonical_hash
-from ..models.solution import Solution
-from ..store.run_store import RunStore
+from agentfit.models.sample import canonical_hash
+from agentfit.models.solution import Solution
+from agentfit.store.run_store import RunStore
 
 
 def export_package(solution: Solution, run_dir: str | Path,
@@ -41,7 +41,7 @@ def export_package(solution: Solution, run_dir: str | Path,
 
 def analyze_boundary(run_dir: str | Path) -> dict:
     """Compatibility import for callers of the original package module."""
-    from .boundary import analyze_boundary as _analyze
+    from plugins.boundary import analyze_boundary as _analyze
     return _analyze(run_dir)
 
 

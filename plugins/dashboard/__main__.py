@@ -1,4 +1,4 @@
-"""CLI: python -m agentfit.dashboard <run_dir> [-o out.html]"""
+"""CLI: python -m plugins.dashboard <run_dir> [-o out.html]"""
 import argparse
 
 from .generate import generate_dashboard

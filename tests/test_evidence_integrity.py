@@ -13,7 +13,7 @@ from agentfit.agents.orchestrator import Orchestrator
 from agentfit.agents.team import build_team
 from agentfit.core.regularization import LambdaController, RegReport
 from agentfit.data.sample_pool import SamplePool
-from agentfit.delivery.package import analyze_boundary, export_package
+from plugins.solution_package import analyze_boundary, export_package
 from agentfit.executors.simulator import SimulatorExecutor
 from agentfit.models.config import AutoApprove, TrainingConfig
 from agentfit.models.loss import Expected
