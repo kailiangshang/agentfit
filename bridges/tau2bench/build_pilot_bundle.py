@@ -120,7 +120,7 @@ def build(tasks_path: Path, smoke: bool) -> dict:
                    "reason": ("pilot G0 (stage-B smoke derivation): four non-overlapping sets from "
                               "tau2 telecom small=20, deterministic index split, smoke adaptation="
                               + ",".join(f"tau2-small-{i:02d}" for i in SMOKE_ADAPTATION))},
-        "training": {"batch_size": 5 if smoke else 8, "max_epochs": 1},
+        "training": {"batch_size": 5 if smoke else 4, "max_epochs": 3},
         "taxonomy": {
             "customs": [{"name": "telecom_network_api", "layer": "L1_domain", "parent": "external_system",
                          "label": "电信网管接口", "description": "运营商网元操作与查询接口族"}],
