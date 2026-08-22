@@ -222,6 +222,8 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
 """)
 
 
+from agentfit.models.config import AutoApprove
+
 class DelegatedGatePolicy(AutoApprove):
     """用户代理人审批：Agent 按用户偏好自动审阅 G1 提案。
 
