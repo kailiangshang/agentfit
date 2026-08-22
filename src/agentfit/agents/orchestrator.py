@@ -86,6 +86,7 @@ class Orchestrator:
         self._best = {"rate": -1.0, "solution": copy.deepcopy(solution), "version": solution.version}
         self._patience = 0
         self._stop_reason: str | None = None
+        self.rejection_feedback: list[dict] = []   # 代理人/人审拒绝的理由（下轮提案参考）
         self.validation_series: list[float] = []
         self.runtime_provenance = executor.runtime_provenance()
         self.runtime_ref = canonical_hash(self.runtime_provenance)
@@ -178,8 +179,13 @@ class Orchestrator:
             output_summary=f"超阈: {step_reg.over_threshold or '无'}")
 
         # ④ 更新建议 = 任务梯度提案 ∪ 正则简化提案（λᵢ∇Rᵢ）+ 反向依赖传播
+        rejection_context = (f"注意：之前 {len(self.rejection_feedback)} 次提案被拒绝，理由："
+                             + "; ".join(f"「{r['reason']}」" for r in self.rejection_feedback[-3:])
+                             + "。请确保提案包含根因分析，说明为什么这个修改能解决底层问题。"
+                             ) if self.rejection_feedback else ""
         proposals, notes = self._send(MsgType.PROPOSE, ctx,
-                                      {"loss_traces": actionable_loss_traces},
+                                      {"loss_traces": actionable_loss_traces,
+                                       "rejection_feedback": rejection_context},
                                       lambda _: propose_updates(aggregate(actionable_loss_traces), self.pool.by_id(), self.solution))
         from ..core.proposals import (propagate_reverse_dependencies,
                                       annotate_reg_conflicts, semantic_for_proposal)
@@ -217,6 +223,17 @@ class Orchestrator:
         approved = proposals if g1_decision.approved else []
         if proposals and not g1_decision.approved:
             step.notes.append("Human Gate blocked G1")
+            # 记录拒绝理由 → 反馈给下轮提案生成（闭环）
+            self.rejection_feedback.append({
+                "epoch": epoch, "step": step_index,
+                "reviewer": g1_decision.reviewer,
+                "reason": g1_decision.reason,
+                "rejected_proposals": [
+                    {"layer": p.layer, "action": p.action,
+                     "semantic": p.semantic, "element": getattr(p.element, "id", str(p.element))}
+                    for p in proposals[:3]
+                ],
+            })
 
         step.passed = sum(1 for s, t in zip(batch, traces) if self.executor.evaluate(t, s.expected))
         step.failed = len(batch) - step.passed - step.execution_errors
@@ -492,7 +509,18 @@ class Orchestrator:
             "non_blocking": True,
         })
 
+    _advisory_signatures: set = set()  # 类级别去重（同 run 内）
+
     def _save_advisory(self, record: dict) -> None:
+        """Advisory 去重：同签名只落盘一次（每轮重复的冻结诊断不重复报）。"""
+        import hashlib, json as _json
+        signature = hashlib.sha256(
+            _json.dumps({k: record.get(k) for k in ("kind", "layer", "metric", "frozen_elements")},
+                        sort_keys=True, ensure_ascii=False, default=str).encode()
+        ).hexdigest()[:16]
+        if signature in Orchestrator._advisory_signatures:
+            return
+        Orchestrator._advisory_signatures.add(signature)
         if self.auditor:
             self.auditor.store.save_optimization_suggestion(record)
 
