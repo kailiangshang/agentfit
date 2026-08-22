@@ -135,7 +135,35 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
         print("G0 未确认，训练不开始。")
         return
 
-    print("  ✓ G0 冻结完成，开始训练。")
+    print("  ✓ G0 冻结完成。")
+
+    # ============ 3.5 用户代理人（Delegate Reviewer）============
+    _show("🤖 Steward · 用户代理审批")
+    delegate_preferences = None
+    if _confirm("""
+  是否允许 Agent 模拟你进行后续审批（G1 方案变更等）？
+  
+  允许后你只需写一次偏好习惯，Agent 会按照你的标准自动审批，
+  所有决策会落盘可追溯。不允许则每轮都需要你在终端手动确认。
+"""):
+        print("""
+  请写下你的审批偏好习惯（自由文本，写完按回车）：
+  例：我偏好保守变更，单层修改优先批准；拓扑变更必须暂停问我；
+      涉及人工门禁的调整要说明理由；通过率低于60%时倾向激进修改。
+""")
+        delegate_preferences = input("  你的偏好：").strip()
+        if delegate_preferences:
+            print(f"""
+  ✓ 已记录你的审批偏好。
+  后续 G1 提案将由 Agent 按以下标准审阅：
+  ┌─────────────────────────────────────────┐
+  │ {delegate_preferences[:60]}{'...' if len(delegate_preferences) > 60 else ''} │
+  └─────────────────────────────────────────┘
+  所有审批决策会标注"delegate:用户代理人"并落盘。
+""")
+        else:
+            print("  （未写偏好，回退到终端手动审批）")
+            delegate_preferences = None
 
     # ============ 4. 训练循环 ============
     from agentfit.agents.orchestrator import Orchestrator
@@ -152,10 +180,17 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
     validation_samples = [s for s in samples if s.id not in adaptation_ids]
 
     training_cfg = bundle.get("training", {})
+    if delegate_preferences:
+        gate_policy = DelegatedGatePolicy(preferences=delegate_preferences)
+        print(f"  🤖 审批模式：用户代理人（偏好已注入）")
+    else:
+        gate_policy = InteractiveGatePolicy()
+        print(f"  👤 审批模式：终端手动")
+
     config = TrainingConfig(
         batch_size=int(training_cfg.get("batch_size", len(adaptation_samples))),
         max_epochs=int(training_cfg.get("max_epochs", 3)),
-        review_policy=InteractiveGatePolicy(),
+        review_policy=gate_policy,
     )
 
     orchestrator = Orchestrator(
@@ -185,6 +220,101 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
   
   在浏览器打开：http://localhost:8765/{output_dir.name}/dashboard.html
 """)
+
+
+class DelegatedGatePolicy(AutoApprove):
+    """用户代理人审批：Agent 按用户偏好自动审阅 G1 提案。
+
+    偏好作为 System Prompt 的一部分，决策附上"基于用户偏好"的标签。
+    所有决策落盘到 RunStore（通过 ReviewDecision 的 reviewer 字段）。
+    """
+
+    def __init__(self, preferences: str):
+        super().__init__()
+        self.preferences = preferences
+        self._decision_log: list[dict] = []
+
+    def review(self, request):
+        import json as _json
+        from agentfit.gates.human import GateType, ReviewDecision
+        if request.gate != GateType.G1:
+            return super().review(request)
+
+        proposals = (request.payload or {}).get("proposals", [])
+        if not proposals:
+            return ReviewDecision(True, "no proposals", "delegate:no-op")
+
+        # 构建审批 prompt（用户偏好 + 提案摘要）
+        proposal_summaries = []
+        for i, p in enumerate(proposals, 1):
+            summary = f"{i}. [{p.get('origin', '?')}] {p.get('semantic', '?')}"
+            if p.get("reg_conflict"):
+                summary += f"（⚔冲突：{p['reg_conflict']}）"
+            evidence = p.get("evidence") or {}
+            if evidence.get("type") == "samples":
+                summary += f" 证据：{', '.join(evidence.get("sample_ids", [])[:3])}"
+            elif evidence.get("type") == "metric":
+                summary += f" 指标：{evidence.get("name")}={evidence.get("value")}"
+            proposal_summaries.append(summary)
+
+        prompt = f"""你是用户的审批代理人。用户写下的审批偏好如下：
+
+{self.preferences}
+
+以下是本轮训练产生的方案变更提案：
+
+{chr(10).join(proposal_summaries)}
+
+基于用户的偏好，判断是否批准这些提案。
+只输出 JSON：{{"approved": true/false, "reason": "一句话理由"}}
+"""
+
+        # 调用 LLM（与 narrative 同款直连）
+        decision = self._llm_review(prompt)
+        if decision is None:
+            # LLM 不可用 → 保守拒绝（回到手动）
+            print("  ⚠️ 用户代理人不可用，回退到手动审批")
+            return InteractiveGatePolicy().review(request)
+
+        self._decision_log.append({
+            "preferences": self.preferences,
+            "proposals": proposal_summaries,
+            "decision": decision,
+        })
+        approved = decision.get("approved", False)
+        reason = decision.get("reason", "?")
+        print(f"  🤖 用户代理人：{'✓ 批准' if approved else '✗ 拒绝'} — {reason}")
+        return ReviewDecision(
+            approved, f"delegate: {reason}", "delegate:user-simulator",
+        )
+
+    def _llm_review(self, prompt: str) -> dict | None:
+        import os, json, urllib.request
+        api_key = (os.environ.get("AGENTTEAMS_LLM_API_KEY")
+                   or os.environ.get("DEEPSEEK_API_KEY"))
+        if not api_key:
+            return None
+        payload = json.dumps({
+            "model": "deepseek-v4-flash",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 200,
+        }).encode()
+        req = urllib.request.Request(
+            "https://api.deepseek.com/v1/chat/completions",
+            data=payload,
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {api_key}"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read())
+            content = body["choices"][0]["message"]["content"].strip()
+            # 提取 JSON
+            if content.startswith("```"):
+                content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            return json.loads(content)
+        except Exception:
+            return None
 
 
 class InteractiveGatePolicy(AutoApprove):
