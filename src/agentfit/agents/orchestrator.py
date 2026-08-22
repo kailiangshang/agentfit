@@ -91,6 +91,8 @@ class Orchestrator:
         self.runtime_ref = canonical_hash(self.runtime_provenance)
         self._run_indices: dict[tuple[str, str], int] = {}
         self.auditor = None
+        from ..agents.activity import ActivityTracker
+        self.activity = ActivityTracker()
         if run_dir:
             from ..agents.auditor import Auditor
             from ..store.run_store import RunStore
@@ -132,6 +134,10 @@ class Orchestrator:
                 loss_traces.append(self._send(MsgType.ATTRIBUTE, ctx, {"sample": s, "trace": t},
                                               lambda _, s=s, t=t: attribute_loss(s, t, self.solution)))
         step.loss_traces = loss_traces
+        self.activity.record("attributor", "attribution", epoch, step_index,
+            input_summary=f"{len(loss_traces)} 个失败样本归因",
+            output_summary="; ".join(f"{lt.sample_id}→{lt.root_cause_layer}/{lt.failure_mode}"
+                                     for lt in loss_traces[:3]) or "无失败")
 
         actionable_loss_traces = list(loss_traces)
         # 冻结分流：根因落在冻结元素的失败 → advisory（可追踪、非阻塞），不进提案聚合
@@ -158,12 +164,18 @@ class Orchestrator:
 
         # ③ 聚合
         agg = aggregate(actionable_loss_traces)
+        self.activity.record("orchestrator", "aggregation", epoch, step_index,
+            input_summary=f"{len(actionable_loss_traces)} 个失败样本",
+            output_summary=f"瓶颈层={agg.bottleneck_layer or '无'} 模式数={len(agg.patterns)}")
 
         # ③' 正则计算（trained 子集；行为项用本步真实 traces）
         from ..core.regularization import compute_structural, compute_behavioral, \
             merge_behavioral, regularization_proposals
         step_reg = compute_structural(self.solution)
         step.behavioral = compute_behavioral(self.solution, traces, self._prev_solution)
+        self.activity.record("validator", "validation", epoch, step_index,
+            input_summary="结构正则 + 行为正则计算",
+            output_summary=f"超阈: {step_reg.over_threshold or '无'}")
 
         # ④ 更新建议 = 任务梯度提案 ∪ 正则简化提案（λᵢ∇Rᵢ）+ 反向依赖传播
         proposals, notes = self._send(MsgType.PROPOSE, ctx,
@@ -181,6 +193,9 @@ class Orchestrator:
             if not proposal.semantic:
                 proposal.semantic = semantic_for_proposal(proposal)
         step.notes.extend(notes)
+        self.activity.record("architect", "proposal", epoch, step_index,
+            input_summary=f"聚合损失 {len(agg.patterns)} 模式 + 正则违规",
+            output_summary=f"任务提案 {sum(1 for p in proposals if p.origin=='task')} 正则提案 {sum(1 for p in proposals if p.origin=='regularization')}")
         step.task_proposals = sum(1 for p in proposals if p.origin == "task")
         step.regularization_proposals = sum(1 for p in proposals if p.origin == "regularization")
         step.proposals = len(proposals)
@@ -207,6 +222,9 @@ class Orchestrator:
         step.failed = len(batch) - step.passed - step.execution_errors
 
         # ⑦ 原子应用（机械）+ ⑧ 回归验证（回归池 = adaptation 历史行为）
+        self.activity.record("orchestrator", "cascade", epoch, step_index,
+            input_summary=f"{len(proposals)} 条提案经 G1（{'批准' if approved else '拒绝'}）",
+            output_summary=f"应用 {len(approved)} 条")
         if approved:
             previous_solution = copy.deepcopy(self.solution)
             tx = ChangeTransaction(self.solution, approved)
@@ -267,6 +285,9 @@ class Orchestrator:
                     self._prev_solution = previous_solution
                     self.solution = candidate
                     step.applied = len(approved)
+                    self.activity.record("validator", "regression", epoch, step_index,
+                        input_summary=f"回归池 {len(self.regression_pool.samples)} 样本重放",
+                        output_summary="COMMIT（零遗忘）")
                     step.applied_changes = [
                         {"layer": p.layer, "action": p.action,
                          "element": getattr(p.element, "id", str(p.element))}
@@ -315,6 +336,9 @@ class Orchestrator:
             "cost_usd": round(cost, 6),
             "candidate_version": self.solution.version,
         }
+        self.activity.record("validator", "regression", epoch, 0,
+            input_summary=f"validation 集 {total} 样本只读评价",
+            output_summary=f"{passed}/{total} 通过")
         if self.auditor:
             self.auditor.store.save_validation(epoch, record)
         return record
@@ -391,6 +415,7 @@ class Orchestrator:
             new_traffic = self.bus.traffic[self._traffic_cursor:]
             self._traffic_cursor = len(self.bus.traffic)
             self.auditor.persist_epoch(epoch, self.log.entries[-1], all_loss_traces, new_traffic)
+        self.activity.save(self.auditor.store.root if self.auditor else "/tmp/agentfit-no-store", epoch)
 
         # Early Stopping（确定性 Validator 裁决，停止原因可重算）
         outcome.stop_reason = self._decide_stop(epoch)
@@ -635,4 +660,10 @@ class Orchestrator:
             from ..log.report import generate_report
             generate_report(self.auditor.store.root)
             generate_meta_review(self.auditor.store.root)
+            # 非阻塞叙事：LLM 失败不影响 dashboard
+            try:
+                from ..dashboard.narrative import generate_narrative
+                generate_narrative(self.auditor.store.root)
+            except Exception:
+                pass
         return self.outcomes

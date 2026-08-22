@@ -169,6 +169,9 @@ def _render_training(payload: dict) -> str:
     if final_evidence:
         story.append(f'<div class="final-verdict">最终验收：{_e(_outcome_counts(final_evidence))}</div>')
     story.append("</div>")
+    narrative = (payload.get("narrative") or {}).get("narrative")
+    if narrative:
+        story.append(f'<div class="final-verdict mut">{_e(narrative)}</div>')
     suggestions = payload.get("optimization_suggestions") or []
     if suggestions:
         story.append("<h3>整体优化建议（advisory · 非阻塞 · 决策权在用户）</h3>")
@@ -369,6 +372,24 @@ def _render_training(payload: dict) -> str:
         [[f"e{epoch}", len(items),
           " · ".join(i.get("type", "") for i in items if i.get("dir") == "task")[:80]]
          for epoch, items in (payload.get("messages") or {}).items()])
+
+    # Agent 协同明细（谁用哪个 Skill 在哪步做了什么）
+    activity = payload.get("agent_activity") or []
+    if activity:
+        transactions_html += "<h3>Agent 协同明细（Skill 调用记录）</h3>"
+        rows = []
+        for epoch_activities in activity:
+            for act in epoch_activities:
+                rows.append([
+                    f"e{act.get('epoch')}.{act.get('step')}",
+                    _badge(act.get("agent", "?"), "L3"),
+                    f"{act.get('skill', '?')}@{act.get('skill_version', '?')[:8]}",
+                    act.get("input_summary", ""),
+                    act.get("output_summary", ""),
+                ])
+        transactions_html += _table(
+            ["轮.步", "Agent", "Skill@版本", "输入", "产出"], rows)
+
     sections.append(transactions_html + "</section>")
 
     return "<main>" + "".join(sections) + "</main>"

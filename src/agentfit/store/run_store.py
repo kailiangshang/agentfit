@@ -263,6 +263,14 @@ class RunStore:
             payload["optimization_suggestions"].append(json.loads(path.read_text(encoding="utf-8")))
         if (self.root / "taxonomy.json").exists():
             payload["taxonomy"] = self.load_json("taxonomy.json")
+        if (self.root / "narrative.json").exists():
+            payload["narrative"] = self.load_json("narrative.json")
+        activity_dir = self.root / "agent_activity"
+        if activity_dir.is_dir():
+            payload["agent_activity"] = [
+                json.loads(path.read_text(encoding="utf-8"))
+                for path in sorted(activity_dir.glob("*.json"))
+            ]
         for index in self.external_evidence_indices():
             payload["external_evidence"].append(
                 self.load_json(f"external_evidence/record_{index:06d}.json")

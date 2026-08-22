@@ -355,8 +355,11 @@ class MatrixSandboxAdapter:
         except Exception:
             return SandboxResult(status="error", error="agentteams_matrix_transport_error")
 
+        from agentfit.models.envelope import validate_envelope, retry_message_with_errors
         deadline = self.monotonic() + max(request.timeout_seconds, 0.0)
-        envelope_retried = False
+        retries_used = 0
+        max_retries = 3
+        last_validation_error = "no parseable result"
         while True:
             remaining = deadline - self.monotonic()
             if remaining <= 0:
@@ -371,8 +374,8 @@ class MatrixSandboxAdapter:
                     continue
                 result = _extract_result(event.body)
                 if result is None or result.get("schema") != RESULT_SCHEMA:
-                    if not envelope_retried:
-                        envelope_retried = True
+                    if retries_used < max_retries:
+                        retries_used += 1
                         try:
                             self.transport.send(
                                 self.room_id,
@@ -388,6 +391,29 @@ class MatrixSandboxAdapter:
                     return SandboxResult(
                         status="error",
                         error="agentteams_result_envelope_error",
+                    )
+                # Pydantic 结构校验：失败时带具体错误重试（不是笼统"格式错了"）
+                envelope, validation_error = validate_envelope(result)
+                if envelope is None:
+                    last_validation_error = validation_error or "unknown"
+                    if retries_used < max_retries:
+                        retries_used += 1
+                        try:
+                            self.transport.send(
+                                self.room_id,
+                                self.worker_user_id,
+                                retry_message_with_errors(
+                                    self.worker_user_id, task, last_validation_error),
+                            )
+                        except Exception:
+                            return SandboxResult(
+                                status="error",
+                                error="agentteams_matrix_transport_error",
+                            )
+                        continue
+                    return SandboxResult(
+                        status="error",
+                        error="agentteams_result_contract_error",
                     )
                 if not _identity_matches(result, task):
                     # 串行批内常见错序：这是之前任务的迟到回复（合法信封、
