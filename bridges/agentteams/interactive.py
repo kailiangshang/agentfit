@@ -214,7 +214,7 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
     transport = MatrixHttpTransport(credentials)
     sandbox = MatrixSandboxAdapter(transport, room_id=endpoint.room_id,
                                     worker_user_id=endpoint.matrix_user_id)
-    executor = AgentTeamsSandboxExecutor(
+    raw_executor = AgentTeamsSandboxExecutor(
         sandbox,
         deployment_ref=f"agentteams://worker/{endpoint.name}",
         sandbox_ref=f"agentteams://worker/{endpoint.name}",
@@ -222,6 +222,8 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
         binding_mode="semantic_dry_run",
         cost_accounting="unavailable",
     )
+    executor = ProgressExecutor(raw_executor, total_samples=len(adaptation_samples),
+                                 label="adaptation")
 
     try:
         orchestrator = Orchestrator(
@@ -257,6 +259,50 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
 
 
 from agentfit.models.config import AutoApprove
+
+
+class ProgressExecutor:
+    """包装任意 ExecutorBase，逐样本推送进度到终端。"""
+
+    def __init__(self, inner_executor, total_samples: int, label: str = "执行"):
+        self.inner = inner_executor
+        self.total = total_samples
+        self.count = 0
+        self.label = label
+        self.passed = 0
+        self.failed = 0
+        self.errors = 0
+
+    def execute(self, solution, sample):
+        import time as _time
+        print(f"  ⏳ {self.label} {self.count + 1}/{self.total}: {sample.id}...", flush=True)
+        start = _time.monotonic()
+        trace = self.inner.execute(solution, sample)
+        elapsed = _time.monotonic() - start
+        self.count += 1
+        if trace.result == "PASS":
+            self.passed += 1
+            icon = "✓"
+        elif trace.result == "FAIL":
+            self.failed += 1
+            icon = "✗"
+        else:
+            self.errors += 1
+            icon = "⚠"
+        print(f"  {icon} {sample.id} → {trace.result} ({elapsed:.0f}s)"
+              f"  [累计 ✓{self.passed} ✗{self.failed} ⚠{self.errors}]",
+              flush=True)
+        return trace
+
+    def evaluate(self, trace, expected):
+        return self.inner.evaluate(trace, expected)
+
+    def replay(self, solution, samples):
+        return self.inner.replay(solution, samples)
+
+    def runtime_provenance(self):
+        return self.inner.runtime_provenance()
+
 
 class DelegatedGatePolicy(AutoApprove):
     """用户代理人审批：Agent 按用户偏好自动审阅 G1 提案。
