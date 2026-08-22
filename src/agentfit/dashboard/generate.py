@@ -292,6 +292,13 @@ def _render_training(payload: dict) -> str:
         mapping_html += _layer_card("L4 Agent 拓扑", (solution.get("L4_topology") or {}).get("agents") or [],
             lambda a: f"{a.get('id','?')} · {a.get('role','?')} · 引用{len(a.get('uses') or [])}条知识")
         mapping_html += "</div>"
+
+        # 四层依赖关系图（SVG 连接线）
+        from .dependency_graph import render_dependency_svg
+        svg = render_dependency_svg(solution)
+        if svg:
+            mapping_html += f'<h3>依赖关系图（连线=引用 · 金=🔒预指定 · 青=✦训练 · 虚线=不可达）</h3>'
+            mapping_html += f'<div style="overflow-x:auto">{svg}</div>'
     sections.append(mapping_html + "</section>")
 
     # ④ 样本与聚类分组
