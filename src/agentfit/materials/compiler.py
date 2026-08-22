@@ -15,6 +15,7 @@ from ..models.manifest import (
 from ..models.objective import ObjectiveSpec, objective_spec_from_material
 from ..models.project import CapabilityInventory
 from ..models.sample import SourceObservation, TaskSample
+from ..models.freeze_policy import freeze_default
 from ..models.solution import CapabilityTool, HumanGate, SolidAtom
 
 
@@ -100,7 +101,7 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
                     type=str(item.get("type", "")).strip(),
                     description=str(item.get("description", "")),
                     domain=str(item.get("domain", "data_interface")),
-                    frozen=bool(item.get("frozen", True)),  # L1 基础设施默认冻结
+                    frozen=bool(item.get("frozen")) if item.get("frozen") is not None else freeze_default("L1"),
                     input_schema=dict(item.get("input_schema") or {}),
                     output_schema=dict(item.get("output_schema") or {}),
                 )
@@ -112,7 +113,7 @@ def compile_material_bundle(bundle: dict[str, Any]) -> CompiledProjectCase:
                     wraps=list(item.get("wraps") or []),
                     description=str(item.get("description", "")),
                     capability_type=str(item.get("capability_type", "safe_wrapper")),
-                    frozen=bool(item.get("frozen", False)),  # L2 封装是设计决策，默认可训练
+                    frozen=bool(item.get("frozen")) if item.get("frozen") is not None else freeze_default("L2"),
                     preconditions=list(item.get("preconditions") or []),
                     postconditions=list(item.get("postconditions") or []),
                     human_gate=(

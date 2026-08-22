@@ -56,7 +56,7 @@ def build(tasks_path: Path, smoke: bool) -> dict:
     for cause, (feature, atom_id, atom_type, atom_desc, tool_id, tool_desc, gate) in ROOT_CAUSE_MAP.items():
         if atom_id not in atoms:
             atoms[atom_id] = {"id": atom_id, "type": atom_type, "description": atom_desc,
-                              "domain": "telecom_network_api"}
+                              "domain": "telecom_network_api", "frozen": True}  # L1 基础设施
         if tool_id not in tools:
             tool = {"id": tool_id, "wraps": [atom_id], "description": tool_desc,
                     "capability_type": "review_routing" if gate else "safe_wrapper"}
