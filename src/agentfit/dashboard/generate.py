@@ -260,17 +260,17 @@ def _render_training(payload: dict) -> str:
 
         mapping_html += _table(["层", "元素数", "清单"], [
             ["L1 Solid", len(solution.get("L1_atoms") or []),
-             "".join(_element_badge(item, f"{item.get('domain', 'data_interface')}·{item.get('type')}")
-                      for item in solution.get("L1_atoms") or [])],
+             _Raw("".join(str(_element_badge(item, f"{item.get('domain', 'data_interface')}·{item.get('type')}"))
+                      for item in solution.get("L1_atoms") or []))],
             ["L2 能力", len(solution.get("L2_tools") or []),
-             "".join(_element_badge(item, ", ".join(item.get("wraps") or []))
-                      for item in solution.get("L2_tools") or [])],
+             _Raw("".join(str(_element_badge(item, ", ".join(item.get("wraps") or [])))
+                      for item in solution.get("L2_tools") or []))],
             ["L3 知识", len(solution.get("L3_knowledge") or []),
-             "".join(_element_badge(item, item.get("type", ""))
-                      for item in solution.get("L3_knowledge") or [])],
+             _Raw("".join(str(_element_badge(item, item.get("type", "")))
+                      for item in solution.get("L3_knowledge") or []))],
             ["L4 拓扑", len((solution.get("L4_topology") or {}).get("agents") or []),
-             "".join(_element_badge(item, item.get("role", ""))
-                      for item in (solution.get("L4_topology") or {}).get("agents") or [])],
+             _Raw("".join(str(_element_badge(item, item.get("role", "")))
+                      for item in (solution.get("L4_topology") or {}).get("agents") or []))],
         ])
     sections.append(mapping_html + "</section>")
 
