@@ -245,12 +245,12 @@ def _render_training(payload: dict) -> str:
     mapping_html = "<section><h2>③ 材料与四层映射（初始方案）</h2>"
     if first:
         solution = first.get("solution") or {}
-        def _element_badge(item: dict, extra: str = "") -> str:
+        def _element_badge(item: dict, extra: str = "") -> _Raw:
             frozen = item.get("frozen", False)
             marker = "🔒" if frozen else "✦"
             cls = "frozen-element" if frozen else "trained-element"
-            return (f'<span class="{cls}">{marker} {item.get("id", "?")}'
-                    + (f"（{extra}）" if extra else "") + "</span>")
+            return _Raw(f'<span class="{cls}">{_e(marker)} {_e(item.get("id", "?"))}'
+                        + (f"（{_e(extra)}）" if extra else "") + "</span>")
 
         frozen_count = sum(1 for pool in ("L1_atoms", "L2_tools", "L3_knowledge")
                           for item in (solution.get(pool) or []) if item.get("frozen"))
