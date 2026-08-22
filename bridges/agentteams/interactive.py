@@ -231,26 +231,29 @@ def run_interactive(bundle_path: Path, output_dir: Path, model: str = "deepseek-
         )
         build_team(orchestrator)
 
-    _show("🔄 训练开始")
-    for outcome in orchestrator.train():
-        _show(f"Epoch {outcome.epoch} 完成")
-        print(f"  adaptation 通过率：{outcome.adaptation_pass_rate:.0%}")
-        if outcome.validation:
-            print(f"  validation 通过率：{outcome.validation['pass_rate']:.0%}")
-        print(f"  停止原因：{outcome.stop_reason or '继续'}")
-        if outcome.notes:
-            print(f"  备注：{', '.join(outcome.notes[:3])}")
+        _show("🔄 训练开始")
+        for outcome in orchestrator.train():
+            _show(f"Epoch {outcome.epoch} 完成")
+            print(f"  adaptation 通过率：{outcome.adaptation_pass_rate:.0%}")
+            if outcome.validation:
+                print(f"  validation 通过率：{outcome.validation['pass_rate']:.0%}")
+            print(f"  停止原因：{outcome.stop_reason or '继续'}")
+            if outcome.notes:
+                print(f"  备注：{', '.join(outcome.notes[:3])}")
 
-    # ============ 5. 结果 ============
-    _show("✅ 训练完成")
-    print(f"""
+        # ============ 5. 结果 ============
+        _show("✅ 训练完成")
+        print(f"""
   最终方案版本：v{orchestrator.solution.version}
   Dashboard：{output_dir}/dashboard.html
   训练报告：{output_dir}/training_report.md
   AgentFit 建议：{output_dir}/meta_review.md
-  
+
   在浏览器打开：http://localhost:8765/{output_dir.name}/dashboard.html
 """)
+    finally:
+        lc.retire(endpoint.name, timeout_seconds=120)
+        print("  Worker 已回收")
 
 
 from agentfit.models.config import AutoApprove
