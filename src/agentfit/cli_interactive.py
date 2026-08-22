@@ -242,7 +242,7 @@ class DelegatedGatePolicy(AutoApprove):
         if request.gate != GateType.G1:
             return super().review(request)
 
-        proposals = (request.payload or {}).get("proposals", [])
+        proposals = (request.evidence or {}).get("proposals", [])
         if not proposals:
             return ReviewDecision(True, "no proposals", "delegate:no-op")
 
@@ -327,7 +327,7 @@ class InteractiveGatePolicy(AutoApprove):
         if request.gate != GateType.G1:
             return super().review(request)
 
-        proposals = (request.payload or {}).get("proposals", [])
+        proposals = (request.evidence or {}).get("proposals", [])
         if not proposals:
             return ReviewDecision(True, "no proposals", "interactive")
 
