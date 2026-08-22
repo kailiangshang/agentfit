@@ -32,9 +32,24 @@ th{color:#74d0c7;text-align:left;padding:5px 8px;border-bottom:1px solid #28516d
 .runtime-line{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.learning-story{margin-top:14px;padding-top:14px;border-top:1px solid #28516d}.learning-story h3{margin-top:0}.final-verdict{margin-top:10px;color:#a8c4d8}.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .flow-step{min-width:0;background:#0f293e;border:1px solid #28516d;border-radius:10px;padding:12px;min-height:92px}.flow-step b{display:block;color:#74d0c7;margin-bottom:6px}.flow-step strong{display:block;font:700 17px/1.3 monospace;margin-bottom:5px}.flow-step span{overflow-wrap:anywhere;color:#a8c4d8;font-size:12px}
 .evidence-wrap{overflow-x:auto}.result-pass{color:#74d0c7}.result-fail,.result-error{color:#f26b4b}.mono{font-family:monospace}
+.frozen-element{display:inline-block;border:1px solid #d6a43b;border-radius:6px;padding:2px 8px;margin:2px;font-size:11.5px;color:#d6a43b;background:rgba(214,164,59,0.08)}
+.trained-element{display:inline-block;border:1px solid #1a8d85;border-radius:6px;padding:2px 8px;margin:2px;font-size:11.5px;color:#74d0c7;background:rgba(26,141,133,0.08)}
+legend-bar{padding:12px 32px;display:flex;flex-wrap:wrap;gap:8px 16px;border-bottom:1px solid #28516d;font-size:12px}
+.legend-item{color:#718190}.legend-item b{margin-right:4px}
 @media(max-width:900px){main{grid-template-columns:1fr;padding:14px}.flow{grid-template-columns:1fr}section{grid-column:1/-1}header{padding:18px 14px}}
 """
 
+
+_LEGEND_HTML = """<div class="legend-bar">
+<span class="legend-item"><b class="ok">PASS</b>执行成功且动作正确</span>
+<span class="legend-item"><b class="bad">FAIL</b>执行完成但动作不对（方案问题→归因）</span>
+<span class="legend-item"><b class="bad">ERROR</b>运行环境故障（非方案问题，不进归因）</span>
+<span class="legend-item"><b class="mut">advisory</b>给用户的建议（非提案·非阻塞·不需审批）</span>
+<span class="legend-item"><b class="L4">⚔冲突</b>任务提案与可维护性约束对抗</span>
+<span class="legend-item"><b class="L4">🔒冻结</b>用户预指定（训练不可改，只出建议）</span>
+<span class="legend-item"><b class="L3">来源:任务</b>失败样本证据驱动</span>
+<span class="legend-item"><b class="L3">来源:正则</b>指标超阈驱动</span>
+</div>"""
 
 # ---------- 静态渲染小工具（全部经 html.escape，值即文本） ----------
 class _Raw(str):
@@ -230,17 +245,32 @@ def _render_training(payload: dict) -> str:
     mapping_html = "<section><h2>③ 材料与四层映射（初始方案）</h2>"
     if first:
         solution = first.get("solution") or {}
+        def _element_badge(item: dict, extra: str = "") -> str:
+            frozen = item.get("frozen", False)
+            marker = "🔒" if frozen else "✦"
+            cls = "frozen-element" if frozen else "trained-element"
+            return (f'<span class="{cls}">{marker} {item.get("id", "?")}'
+                    + (f"（{extra}）" if extra else "") + "</span>")
+
+        frozen_count = sum(1 for pool in ("L1_atoms", "L2_tools", "L3_knowledge")
+                          for item in (solution.get(pool) or []) if item.get("frozen"))
+        trained_count = (len(solution.get("L1_atoms") or []) + len(solution.get("L2_tools") or [])
+                        + len(solution.get("L3_knowledge") or []) - frozen_count)
+        mapping_html += f'<div class="mut" style="margin-bottom:8px">🔒 用户预指定 {frozen_count} 个 · ✦ 训练产生 {trained_count} 个</div>'
+
         mapping_html += _table(["层", "元素数", "清单"], [
             ["L1 Solid", len(solution.get("L1_atoms") or []),
-             _badges([f"{item.get('id')}（{item.get('domain', 'data_interface')}·{item.get('type')}）"
-                      for item in solution.get("L1_atoms") or []])],
+             "".join(_element_badge(item, f"{item.get('domain', 'data_interface')}·{item.get('type')}")
+                      for item in solution.get("L1_atoms") or [])],
             ["L2 能力", len(solution.get("L2_tools") or []),
-             _badges([f"{item.get('id')} → [{', '.join(item.get('wraps') or [])}]"
-                      for item in solution.get("L2_tools") or []])],
+             "".join(_element_badge(item, ", ".join(item.get("wraps") or []))
+                      for item in solution.get("L2_tools") or [])],
             ["L3 知识", len(solution.get("L3_knowledge") or []),
-             _badges([f"{item.get('id')}: {item.get('type')}" for item in solution.get("L3_knowledge") or []])],
+             "".join(_element_badge(item, item.get("type", ""))
+                      for item in solution.get("L3_knowledge") or [])],
             ["L4 拓扑", len((solution.get("L4_topology") or {}).get("agents") or []),
-             _badges([item.get("id") for item in (solution.get("L4_topology") or {}).get("agents") or []])],
+             "".join(_element_badge(item, item.get("role", ""))
+                      for item in (solution.get("L4_topology") or {}).get("agents") or [])],
         ])
     sections.append(mapping_html + "</section>")
 
@@ -425,14 +455,14 @@ def _script_json(value: Any) -> str:
 
 
 def _document(*, run_name: str, generated_at: str, body: str,
-              payload_json: str, script: str = "") -> str:
+              payload_json: str, script: str = "", legend: str = "") -> str:
     safe_name = html.escape(run_name, quote=True)
     safe_generated = html.escape(generated_at, quote=True)
     script_block = (f"<script>\nconst DATA = {payload_json};\n{script}</script>") if script or payload_json else ""
     return f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <title>AgentFit Dashboard · {safe_name}</title><style>{_STYLE}</style></head><body>
 <header><h1>AgentFit 训练全景 · {safe_name}</h1><div class="sub">方案不是设计出来的，是训练出来的 · 生成于 {safe_generated}</div></header>
-{body}{script_block}</body></html>"""
+{legend}{body}{script_block}</body></html>"""
 
 
 def generate_dashboard(run_dir: str | Path, output: str | Path | None = None) -> Path:
@@ -453,6 +483,7 @@ def generate_dashboard(run_dir: str | Path, output: str | Path | None = None) ->
             run_name=run_name, generated_at=generated_at,
             body=_render_training(payload),
             payload_json=_script_json(payload),
+            legend=_LEGEND_HTML,
         )
     out = Path(output) if output else Path(run_dir) / "dashboard.html"
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -345,7 +345,12 @@ class Orchestrator:
 
     # ---------- Epoch：完整覆盖 adaptation + 冻结 + validation + Early Stopping ----------
     def run_epoch(self, epoch: int) -> EpochOutcome:
-        batches = self.pool.epoch_batches(self.config.batch_size, epoch)
+        batch_size = self.config.batch_size
+        if getattr(self.config, "auto_batch", True):
+            total = len(self.pool.all_tasks)
+            if total <= getattr(self.config, "single_batch_threshold", 8):
+                batch_size = total   # 小规模：整个 adaptation 一批（省 Step 开销）
+        batches = self.pool.epoch_batches(batch_size, epoch)
         outcome = EpochOutcome(epoch=epoch, pass_rate=0.0, steps=len(batches))
 
         steps: list[StepOutcome] = []

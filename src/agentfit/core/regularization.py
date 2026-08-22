@@ -23,6 +23,7 @@ STRUCTURAL_THRESHOLDS = {
     "agent_count": 5,         # L4 Agent > 5 = 需要理由
 }
 BEHAVIORAL_THRESHOLDS = {
+    "reasoning_overhead": 0.5,   # 推理 token 占比 > 50% → 简单任务过度推理
     "chain_coverage": 0.60,       # L3 单链覆盖 > 60% = 过度集中
     "human_intervention": 0.30,   # L4 人工介入 > 30% = 自动化价值低
     "communication_overhead": 10, # L4 消息 > 10 轮/样本

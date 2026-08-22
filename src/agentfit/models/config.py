@@ -33,6 +33,13 @@ class TrainingConfig:
     lambda_level1_cap: float = 0.5         # 累计变化上限 ±50%
     lambda_consecutive_rounds: int = 2     # 连续 N 轮超阈值触发 Level 1
     review_policy: HumanGatePolicy = field(default_factory=BlockingHumanGate)
+    # ---- 智能分批：小规模/低成本场景不硬拆 Step ----
+    auto_batch: bool = True              # 启用后：样本 ≤ single_batch_threshold 时单批覆盖
+    single_batch_threshold: int = 8      # 样本数不超过此值 → 整个 adaptation 一批（不分 Step）
+
+    # ---- Reasoning 成本控制 ----
+    reasoning_cost_threshold: float = 0.5   # 推理 token 占比超过此值 → 计入 reasoning_overhead 正则
+
     # ---- Epoch 末 validation 与 Early Stopping（架构正本 §Batch、Step、Epoch 与验证边界）----
     validation_patience: int = 2           # 连续 N 个 Epoch validation 无提升 → 停止
     validation_min_improvement: float = 0.02   # 判定提升的最小差值
